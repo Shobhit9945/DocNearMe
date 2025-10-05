@@ -14,6 +14,7 @@ const DEFAULT_ADDRESS = "AP House 5, Ritsumeikan APU, Jumonjibaru 1-5, Beppu Cit
 const GEOCODING_BASE_URL = "https://maps.googleapis.com/maps/api/geocode/json";
 
 
+
 /**
  * Converts latitude and longitude to a readable street address using Google Maps Geocoding API.
  */

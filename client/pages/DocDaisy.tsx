@@ -5,9 +5,10 @@ const apiKey = import.meta.env.GEMINI_API_KEY;
 
 // Configuration for the Gemini API call
 const model = 'gemini-2.5-flash-preview-05-20';
-// We'll proxy requests through our serverless function so the API key stays secret.
-// The proxy endpoint will be: /api/gemini?model=<model>
-const apiProxyBase = `/api/gemini?model=${encodeURIComponent(model)}`;
+// Security reminder: DO NOT expose a real API key in client-side code.
+// The empty string allows the execution environment to securely inject the key.
+//const apiKey = ""; 
+const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
 // --- Utility function for robust API calls with exponential backoff ---
 const fetchWithRetry = async (url, options, retries = 3) => {
@@ -79,7 +80,7 @@ const DocDaisy = () => {
 
       if (shouldConclude) {
          // --- Structured JSON Response Request for Final Assessment ---
-         const systemPrompt = `Based on the user's symptoms and the entire conversation history, provide a final, brief summary (under 30 words) and recommend the most appropriate medical specialization (Cardiologist, Dermatologist, ENT, General Physician, Pediatrician, Orthopedic Surgeon). If unsure, use 'Unsure'. ONLY respond with a JSON object conforming to the schema. Conversation History: ${messages.map(m => `${m.sender}: ${m.text}`).join(' | ')}. User's final input: ${userInput}`;
+         const systemPrompt = `Based on a thorough examination of the user's symptoms and the entire conversation history, provide a final, brief summary (under 30 words) and recommend the most appropriate medical specialization (Cardiologist, Dermatologist, ENT, General Physician, Pediatrician, Orthopedic Surgeon). If unsure, use 'Unsure'. ONLY respond with a JSON object conforming to the schema. Conversation History: ${messages.map(m => `${m.sender}: ${m.text}`).join(' | ')}. User's final input: ${userInput}`;
          
          const structuredPayload = {
              contents: [{ parts: [{ text: systemPrompt }] }],
@@ -96,11 +97,11 @@ const DocDaisy = () => {
              }
          };
 
-     const structuredResponse = await fetchWithRetry(apiProxyBase, {
-       method: "POST",
-       headers: { "Content-Type": "application/json" },
-       body: JSON.stringify(structuredPayload),
-     });
+         const structuredResponse = await fetchWithRetry(apiUrl, {
+             method: "POST",
+             headers: { "Content-Type": "application/json" },
+             body: JSON.stringify(structuredPayload),
+         });
 
          const structuredData = await structuredResponse.json();
          const jsonText = structuredData?.candidates?.[0]?.content?.parts?.[0]?.text;
@@ -127,11 +128,11 @@ const DocDaisy = () => {
             },
         };
         
-    const response = await fetchWithRetry(apiProxyBase, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
+        const response = await fetchWithRetry(apiUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+        });
 
         const data = await response.json();
         finalBotReply = data?.candidates?.[0]?.content?.parts?.[0]?.text ||
