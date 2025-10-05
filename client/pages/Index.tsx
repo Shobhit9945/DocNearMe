@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Navigation, ClipboardList, Activity, Ambulance } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav"; // Assuming this path is correct
-import TopNav from '@/components/TopNav';
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 // Default fallback address
@@ -94,13 +93,11 @@ export default function Index() {
 
 
   return (
-    <div className="min-h-screen bg-[#FAFAFE] md:bg-gray-100 flex flex-col">
-      {/* Center container: narrow on mobile, wider on desktop */}
-      <div className="w-full max-w-screen-xl mx-auto md:shadow-xl md:min-h-screen md:bg-[#FAFAFE] flex flex-col h-screen">
-        <TopNav />
+    <div className="min-h-screen bg-[#FAFAFE] pb-28 md:bg-gray-100">
+      <div className="md:max-w-md md:mx-auto md:shadow-xl md:min-h-screen md:bg-[#FAFAFE]">
         {/* Header */}
-  <header className="bg-white px-3.5 sm:px-4 pt-12 pb-4">
-  <div className="max-w-full mx-auto w-full px-2 sm:px-0">
+        <header className="bg-white px-3.5 sm:px-4 pt-12 pb-4">
+        <div className="max-w-md mx-auto w-full">
           <div className="flex items-start justify-between gap-2">
             <div className="flex items-start gap-2 flex-1 min-w-0">
               <Navigation className="w-8 h-8 text-[#0089FF] mt-0.5 flex-shrink-0" />
@@ -126,7 +123,7 @@ export default function Index() {
       </header>
 
       {/* Main Content */}
-  <main className="w-full mx-auto px-3.5 sm:px-4 pt-2.5 flex-1 overflow-auto">
+      <main className="max-w-md mx-auto px-3.5 sm:px-4 pt-2.5 w-full">
         {/* Hero Banner */}
         <div className="relative bg-gradient-to-b from-[#FAFAFE] to-[#E1F6FF] border border-[#D4EBFF] rounded-[10px] shadow-[0_1px_14px_0_#DFE8EC] p-4 mb-3.5 overflow-hidden">
           <div className="flex items-start justify-between gap-2">
@@ -141,16 +138,16 @@ export default function Index() {
                 Learn more
               </button>
             </div>
-              <img
+            <img
               src="https://api.builder.io/api/v1/image/assets/TEMP/94dd9abcae8bb5e056848f9449decbaac63a2b5f?width=312"
               alt="Doctors illustration"
-              className="w-[120px] sm:w-[156px] md:w-[220px] h-auto max-h-[140px] object-contain flex-shrink-0"
+              className="w-[140px] sm:w-[156px] h-auto max-h-[102px] object-contain flex-shrink-0"
             />
           </div>
         </div>
 
         {/* Action Cards Grid */}
-  <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-3 mb-5">
+        <div className="grid grid-cols-2 gap-2.5 sm:gap-3 mb-5">
           {/* Book Appointment - Navigates to /appointment */}
           <button 
             className="bg-[#0089FF] rounded-[20px] shadow-[2px_0_20px_0_rgba(24,57,107,0.05)] p-3 sm:p-4 min-h-[88px] flex flex-col items-center justify-center gap-1 hover:bg-[#0077E6] transition-colors"

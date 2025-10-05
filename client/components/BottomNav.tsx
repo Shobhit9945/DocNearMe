@@ -13,9 +13,8 @@ export function BottomNav() {
   ];
 
   return (
-    // Hidden on larger screens where a desktop layout is expected
-    <div className="fixed bottom-0 left-0 right-0 bg-white shadow-[2px_0_20px_0_rgba(24,57,107,0.05)] z-50 border-t border-gray-100 md:hidden">
-      <div className="max-w-lg mx-auto px-3 sm:px-4 w-full">
+    <div className="fixed bottom-0 left-0 right-0 bg-white shadow-[2px_0_20px_0_rgba(24,57,107,0.05)] z-50 border-t border-gray-100">
+      <div className="max-w-md mx-auto px-3 sm:px-4 w-full">
         <nav className="flex justify-between items-start pt-1.5 pb-1.5">
           {navItems.map((item) => {
             const Icon = item.icon;
