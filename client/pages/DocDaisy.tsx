@@ -1,14 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Send, Loader2, ChevronLeft } from 'lucide-react'; 
 import { useNavigate } from 'react-router-dom';
-<<<<<<< HEAD
-<<<<<<< HEAD
 const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-=======
-import TopNav from '@/components/TopNav';
->>>>>>> parent of 45b22e9 (DocDaisy changes)
-=======
->>>>>>> parent of 74adb7b (updated DocDaisyAI)
 
 // Configuration for the Gemini API call
 const model = 'gemini-2.5-flash-preview-05-20';
@@ -32,9 +25,7 @@ const fetchWithRetry = async (url, options, retries = 3) => {
           continue;
         }
       }
-      // Include response body for better debugging when upstream returns errors
-      const text = await response.text();
-      throw new Error(`HTTP error! status: ${response.status} body: ${text.slice(0, 1000)}`);
+      throw new Error(`HTTP error! status: ${response.status}`);
     } catch (error) {
       if (i < retries - 1) {
         const delay = Math.pow(2, i) * 1000;
@@ -155,12 +146,11 @@ const DocDaisy = () => {
       }
       
 
-    } catch (err: any) {
+    } catch (err) {
       console.error("Gemini API Error:", err);
-      const msg = err?.message ? `⚠️ Error connecting to the AI: ${err.message}` : "⚠️ Error connecting to the AI. Please check your network.";
       setMessages(prev => [
         ...prev,
-        { sender: "bot", text: msg },
+        { sender: "bot", text: "⚠️ Error connecting to the AI. Please check your network." },
       ]);
     } finally {
       setIsLoading(false);
