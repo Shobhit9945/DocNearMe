@@ -3,7 +3,7 @@ import { Navigation, ClipboardList, Activity, Ambulance } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav"; // Assuming this path is correct
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+const GOOGLE_MAPS_API_KEY = import.meta.env.GOOGLE_MAPS_API_KEY;
 // Default fallback address
 const DEFAULT_ADDRESS = "AP House 5, Ritsumeikan APU, Jumonjibaru 1-5, Beppu City, Oita 874-0011";
 
