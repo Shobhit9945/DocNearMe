@@ -2,7 +2,7 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import { handleDemo } from "./routes/demo";
-import geminiRouter from "./routes/gemini.js"; // 👈 import Gemini route
+//import geminiRouter from "./routes/gemini.js"; // 👈 import Gemini route
 
 export function createServer() {
   const app = express();
