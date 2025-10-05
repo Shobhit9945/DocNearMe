@@ -3,6 +3,7 @@ import { Navigation, ClipboardList, Activity, Ambulance } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav"; // Assuming this path is correct
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
+const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 // Default fallback address
 const DEFAULT_ADDRESS = "AP House 5, Ritsumeikan APU, Jumonjibaru 1-5, Beppu City, Oita 874-0011";
 
@@ -10,28 +11,28 @@ const DEFAULT_ADDRESS = "AP House 5, Ritsumeikan APU, Jumonjibaru 1-5, Beppu Cit
 // NOTE: In a production app, the API key should be handled securely (e.g., proxied via a backend)
 // We set it to "" here, assuming the Canvas environment handles the injection, but you can paste your key here for testing.
 //const GOOGLE_MAPS_API_KEY = ""; 
-// We proxy geocoding requests through our serverless function so the API key stays secret.
-const GEOCODING_PROXY_BASE = "/api/google-maps/geocode";
+const GEOCODING_BASE_URL = "https://maps.googleapis.com/maps/api/geocode/json";
 
 
 /**
  * Converts latitude and longitude to a readable street address using Google Maps Geocoding API.
  */
 const getGoogleMapsAddress = async (lat: number, lon: number) => {
-  // Use our serverless proxy which will attach the API key server-side.
-  const url = `${GEOCODING_PROXY_BASE}?latlng=${lat},${lon}`;
-
+  const url = `${GEOCODING_BASE_URL}?latlng=${lat},${lon}&key=${GOOGLE_MAPS_API_KEY}`;
+  
   // Implemented retry logic for robustness
   for (let i = 0; i < 3; i++) {
     try {
       const response = await fetch(url);
       if (!response.ok) {
-        if (i === 2) throw new Error(`Geocoding failed with status: ${response.status}`);
-        continue;
+          // If 4xx or 5xx error, throw it unless it's the last retry
+          if (i === 2) throw new Error(`Geocoding failed with status: ${response.status}`);
+          continue; 
       }
-
+      
       const data = await response.json();
-
+      
+      // Success check and result extraction
       if (data.results && data.results.length > 0) {
         return data.results[0].formatted_address;
       } else {
@@ -39,8 +40,9 @@ const getGoogleMapsAddress = async (lat: number, lon: number) => {
       }
     } catch (error) {
       console.error(`Geocoding Attempt ${i + 1} failed:`, error);
-      if (i === 2) throw error;
-      await new Promise((res) => setTimeout(res, 1000 * Math.pow(2, i)));
+      if (i === 2) throw error; // Re-throw error after final failed attempt
+      // Exponential backoff wait
+      await new Promise(res => setTimeout(res, 1000 * Math.pow(2, i)));
     }
   }
 };

@@ -1,11 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Send, Loader2, ChevronLeft } from 'lucide-react'; 
 import { useNavigate } from 'react-router-dom';
+const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
 
 // Configuration for the Gemini API call
 const model = 'gemini-2.5-flash-preview-05-20';
+<<<<<<< HEAD
 // Use the serverless proxy so API keys are never exposed in browser code.
 const apiProxyBase = `/api/gemini?model=${encodeURIComponent(model)}`;
+=======
+// Security reminder: DO NOT expose a real API key in client-side code.
+// The empty string allows the execution environment to securely inject the key.
+//const apiKey = ""; 
+const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+>>>>>>> parent of de8716d (Env changes)
 
 // --- Utility function for robust API calls with exponential backoff ---
 const fetchWithRetry = async (url, options, retries = 3) => {
@@ -94,7 +102,11 @@ const DocDaisy = () => {
              }
          };
 
+<<<<<<< HEAD
      const structuredResponse = await fetchWithRetry(apiProxyBase, {
+=======
+         const structuredResponse = await fetchWithRetry(apiUrl, {
+>>>>>>> parent of de8716d (Env changes)
              method: "POST",
              headers: { "Content-Type": "application/json" },
              body: JSON.stringify(structuredPayload),
@@ -125,7 +137,11 @@ const DocDaisy = () => {
             },
         };
         
+<<<<<<< HEAD
     const response = await fetchWithRetry(apiProxyBase, {
+=======
+        const response = await fetchWithRetry(apiUrl, {
+>>>>>>> parent of de8716d (Env changes)
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload),
