@@ -33,7 +33,9 @@ const fetchWithRetry = async (url, options, retries = 3) => {
           continue;
         }
       }
-      throw new Error(`HTTP error! status: ${response.status}`);
+      // Include response body for better debugging when upstream returns errors
+      const text = await response.text();
+      throw new Error(`HTTP error! status: ${response.status} body: ${text.slice(0, 1000)}`);
     } catch (error) {
       if (i < retries - 1) {
         const delay = Math.pow(2, i) * 1000;
@@ -176,11 +178,12 @@ If you cannot determine a clear specialty from the available information, set "s
     }
       
 
-    } catch (err) {
+    } catch (err: any) {
       console.error("Gemini API Error:", err);
+      const msg = err?.message ? `⚠️ Error connecting to the AI: ${err.message}` : "⚠️ Error connecting to the AI. Please check your network.";
       setMessages(prev => [
         ...prev,
-        { sender: "bot", text: "⚠️ Error connecting to the AI. Please check your network." },
+        { sender: "bot", text: msg },
       ]);
     } finally {
       setIsLoading(false);
