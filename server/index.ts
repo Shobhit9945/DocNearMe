@@ -21,7 +21,7 @@ export function createServer() {
   app.get("/api/demo", handleDemo);
 
   // 👇 Gemini API endpoint
-  app.use("/api/gemini", geminiRouter);
+  //app.use("/api/gemini", geminiRouter);
 
   return app;
 }
