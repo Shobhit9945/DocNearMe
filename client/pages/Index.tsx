@@ -4,7 +4,6 @@ import { BottomNav } from "@/components/BottomNav"; // Assuming this path is cor
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-//const GOOGLE_MAPS_API_KEY = "AIzaSyDVpj-5KbrF-L3INENdX8m8awiqS2z8oh8"
 // Default fallback address
 const DEFAULT_ADDRESS = "AP House 5, Ritsumeikan APU, Jumonjibaru 1-5, Beppu City, Oita 874-0011";
 
