@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Send, Loader2, ChevronLeft } from 'lucide-react'; 
 import { useNavigate } from 'react-router-dom';
+<<<<<<< HEAD
 const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+=======
+>>>>>>> parent of 74adb7b (updated DocDaisyAI)
 
 // Configuration for the Gemini API call
 const model = 'gemini-2.5-flash-preview-05-20';
