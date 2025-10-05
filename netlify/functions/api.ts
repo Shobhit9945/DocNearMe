@@ -30,10 +30,6 @@ export const handler = async (event: NetlifyEvent) => {
     // e.g. https://generativelanguage.googleapis.com/v1beta/models/<model>:generateContent
     targetApiUrl = 'https://generativelanguage.googleapis.com/v1beta/models';
     apiKey = process.env.GEMINI_API_KEY || '';
-    // Note: keep both options for compatibility:
-    // - GEMINI_BEARER_TOKEN: preferred, use as Authorization: Bearer <token>
-    // - GEMINI_API_KEY: legacy; include as query param `key` and also send as Authorization: Bearer <key>
-    // This preserves the prior behavior for users who only set GEMINI_API_KEY.
   } else if (path.startsWith('google-maps/geocode')) {
     // Direct geocoding route: maps geocode JSON endpoint
     targetApiUrl = 'https://maps.googleapis.com/maps/api/geocode/json';
@@ -61,8 +57,9 @@ export const handler = async (event: NetlifyEvent) => {
       }
     }
 
-    // For Google Maps geocoding we must pass the API key as a `key` query parameter
+    // For Google-style APIs (generative language + maps) we must pass the API key as a `key` query parameter
     if (path.startsWith('google-maps')) {
+      // If a key is present, append it to the URL query params
       if (apiKey) url.searchParams.set('key', apiKey);
     }
 
@@ -74,10 +71,8 @@ export const handler = async (event: NetlifyEvent) => {
       const genUrl = new URL(`${targetApiUrl}/${model}:generateContent`);
       // copy query params from previous `url` (which held other query params)
       for (const [k, v] of url.searchParams.entries()) genUrl.searchParams.set(k, v);
-      // Attach API key if present. For compatibility, include GEMINI_API_KEY as query param if set.
-      if (process.env.GEMINI_API_KEY) {
-        genUrl.searchParams.set('key', process.env.GEMINI_API_KEY);
-      }
+      // attach API key
+      if (apiKey) genUrl.searchParams.set('key', apiKey);
       // replace the URL used for the fetch
       url.href = genUrl.href;
     }
@@ -89,15 +84,9 @@ export const handler = async (event: NetlifyEvent) => {
       'Content-Type': 'application/json',
     };
 
-    if (path.startsWith('gemini')) {
-      // Authorization priority:
-      // 1) GEMINI_BEARER_TOKEN (preferred)
-      // 2) GEMINI_API_KEY (legacy) - send as Bearer for compatibility
-      if (process.env.GEMINI_BEARER_TOKEN) {
-        headers.Authorization = `Bearer ${process.env.GEMINI_BEARER_TOKEN}`;
-      } else if (process.env.GEMINI_API_KEY) {
-        headers.Authorization = `Bearer ${process.env.GEMINI_API_KEY}`;
-      }
+    if (!path.startsWith('google-maps')) {
+      // Non-Google APIs may use bearer auth
+      headers.Authorization = `Bearer ${apiKey}`;
     }
 
     // Merge some incoming headers that may be useful (e.g. Accept)
@@ -111,20 +100,6 @@ export const handler = async (event: NetlifyEvent) => {
     if (method !== 'GET' && event.body) {
       // event.body is a string in Netlify functions; forward as-is
       fetchOptions.body = event.body;
-    }
-
-    // Optional debug: show outgoing URL and masked headers when GEMINI_PROXY_DEBUG=true
-    if (process.env.GEMINI_PROXY_DEBUG === 'true') {
-      const mask = (s: string | undefined) => {
-        if (!s) return s;
-        if (s.length <= 8) return '****';
-        return `${s.slice(0, 4)}...${s.slice(-4)}`;
-      };
-      const maskedHeaders: Record<string, string | undefined> = {};
-      for (const [k, v] of Object.entries(headers)) {
-        maskedHeaders[k] = k.toLowerCase() === 'authorization' ? mask(v) : v;
-      }
-      console.log('Proxy outgoing:', { url: url.toString(), headers: maskedHeaders });
     }
 
     const resp = await fetch(url.toString(), fetchOptions);
