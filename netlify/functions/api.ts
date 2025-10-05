@@ -3,6 +3,7 @@ import serverless from "serverless-http";
 import { createServer } from "../../server";
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 export const handler = async (event: NetlifyEvent) => {
   // Normalize the incoming path to extract the target segment after /api/
   const incomingPath = event.path || '';
@@ -148,6 +149,9 @@ export const handler = async (event: NetlifyEvent) => {
 // Functions (which expect a Fetch Request/Response). This file lives under
 // `netlify/functions` and uses the Netlify Functions (serverless) handler
 // signature, so the Edge `config` export is not needed here.
+=======
+export const handler = serverless(createServer());
+>>>>>>> parent of de8716d (Env changes)
 =======
 export const handler = serverless(createServer());
 >>>>>>> parent of de8716d (Env changes)
