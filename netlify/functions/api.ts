@@ -1,9 +1,16 @@
-import serverless from "serverless-http";
+// netlify/functions/api.ts
+// Netlify Functions (serverless) handler acting as a secure proxy.
+// Netlify's Functions runtime expects an exported `handler` that returns
+// { statusCode, body, headers } rather than a Fetch `Request`/`Response` pair.
 
-import { createServer } from "../../server";
+type NetlifyEvent = {
+  path?: string;
+  httpMethod?: string;
+  headers?: Record<string, string>;
+  body?: string | null;
+  queryStringParameters?: Record<string, string> | null;
+};
 
-<<<<<<< HEAD
-<<<<<<< HEAD
 export const handler = async (event: NetlifyEvent) => {
   // Normalize the incoming path to extract the target segment after /api/
   const incomingPath = event.path || '';
@@ -149,9 +156,3 @@ export const handler = async (event: NetlifyEvent) => {
 // Functions (which expect a Fetch Request/Response). This file lives under
 // `netlify/functions` and uses the Netlify Functions (serverless) handler
 // signature, so the Edge `config` export is not needed here.
-=======
-export const handler = serverless(createServer());
->>>>>>> parent of de8716d (Env changes)
-=======
-export const handler = serverless(createServer());
->>>>>>> parent of de8716d (Env changes)
