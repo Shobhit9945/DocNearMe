@@ -6,20 +6,20 @@ interface ChatMessage {
 }
 
 const router = Router();
-const OPENAI_MODEL = process.env.OPENAI_MODEL ?? "gpt-4o-mini";
+const ZAI_MODEL = process.env.ZAI_MODEL ?? "glm-4.5-flash";
 
 const buildConversationTranscript = (messages: ChatMessage[]) =>
   messages
     .map((msg) => `${msg.sender === "user" ? "User" : "DocDaisy"}: ${msg.text}`)
     .join("\n");
 
-const callOpenAI = async (body: Record<string, unknown>) => {
-  const apiKey = process.env.OPENAI_API_KEY;
+const callZAI = async (body: Record<string, unknown>) => {
+  const apiKey = process.env.ZAI_API_KEY;
   if (!apiKey) {
-    throw new Error("Missing OPENAI_API_KEY environment variable");
+    throw new Error("Missing ZAI_API_KEY environment variable");
   }
 
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+  const response = await fetch("https://api.z.ai/api/paas/v4/chat/completions", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -30,7 +30,7 @@ const callOpenAI = async (body: Record<string, unknown>) => {
 
   if (!response.ok) {
     const errorPayload = await response.text();
-    throw new Error(`OpenAI request failed: ${response.status} ${errorPayload}`);
+    throw new Error(`Z.AI request failed: ${response.status} ${errorPayload}`);
   }
 
   return response.json();
@@ -50,7 +50,7 @@ router.post("/respond", async (req, res) => {
     return res.status(400).json({ error: "Conversation history is required" });
   }
 
-  if (!process.env.OPENAI_API_KEY) {
+  if (!process.env.ZAI_API_KEY) {
     return res.status(500).json({ error: "DocDaisy AI is not configured." });
   }
 
@@ -59,7 +59,7 @@ router.post("/respond", async (req, res) => {
 
     if (mode === "followup") {
       const payload = {
-        model: OPENAI_MODEL,
+        model: ZAI_MODEL,
         temperature: 0.2,
         messages: [
           {
@@ -72,9 +72,11 @@ router.post("/respond", async (req, res) => {
             content: `Conversation so far:\n${conversation}\n\nAsk the next clarifying question.`,
           },
         ],
+        stream: false,
+        thinking: { type: "enabled" },
       };
 
-      const completion = await callOpenAI(payload);
+      const completion = await callZAI(payload);
       const reply = completion?.choices?.[0]?.message?.content ??
         "I couldn't generate a response. Please try again.";
 
@@ -95,7 +97,7 @@ router.post("/respond", async (req, res) => {
           specialization: {
             type: "string",
             description:
-              "One of: Cardiologist, Dermatologist, ENT, General Physician, Pediatrician, Orthopedic Surgeon, Unsure.",
+              "The single best medical specialization for the case (e.g. Gastroenterology, Neurology, Orthopedics, Psychiatry).",
           },
         },
         required: ["summary", "specialization"],
@@ -103,34 +105,36 @@ router.post("/respond", async (req, res) => {
     } as const;
 
     const payload = {
-      model: OPENAI_MODEL,
+      model: ZAI_MODEL,
       temperature: 0.2,
       response_format: { type: "json_schema", json_schema: schema },
       messages: [
         {
           role: "system",
           content:
-            "You are DocDaisy, a medical triage assistant. Review the conversation and return a JSON object with a short summary and the single best specialization from the allowed list. If unsure, set specialization to Unsure.",
+            "You are DocDaisy, a medical triage assistant. Review the conversation and return a JSON object with a short summary and the single best specialization. If unsure, set specialization to Unsure.",
         },
         {
           role: "user",
           content: `Conversation history:\n${conversation}\n\nReturn only the JSON object conforming to the schema.`,
         },
       ],
+      stream: false,
+      thinking: { type: "enabled" },
     };
 
-    const completion = await callOpenAI(payload);
+    const completion = await callZAI(payload);
     const rawContent = completion?.choices?.[0]?.message?.content;
 
     if (typeof rawContent !== "string") {
-      throw new Error("Unexpected OpenAI response format");
+      throw new Error("Unexpected Z.AI response format");
     }
 
     const parsed = JSON.parse(rawContent);
 
     return res.json({ reply: parsed.summary, specialization: parsed.specialization });
   } catch (error) {
-    console.error("DocDaisy OpenAI error", error);
+    console.error("DocDaisy Z.AI error", error);
     return res.status(500).json({ error: "Unable to reach DocDaisy right now. Please try again." });
   }
 });

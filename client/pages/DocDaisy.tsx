@@ -145,6 +145,14 @@ const DocDaisy: React.FC = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  useEffect(() => {
+    if (recommendedSpecialization) {
+      navigate(
+        `/clinics?specialization=${encodeURIComponent(recommendedSpecialization)}`
+      );
+    }
+  }, [navigate, recommendedSpecialization]);
+
   const sendMessage = async () => {
     if (!input.trim() || isLoading) return;
 
@@ -184,7 +192,7 @@ const DocDaisy: React.FC = () => {
       setMessages((prev) => [...prev, { sender: "bot", text: finalBotReply }]);
 
       if (specialization && specialization !== "Unsure") {
-        setRecommendedSpecialization(specialization);
+        setRecommendedSpecialization(specialization.trim());
       }
     } catch (err) {
       console.error("DocDaisy Z.AI Error:", err);
