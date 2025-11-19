@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, Loader2, ChevronLeft } from 'lucide-react'; 
+import { Send, Loader2, ChevronLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { PageScaffold } from '@/components/PageScaffold';
 const apiKey = import.meta.env.GEMINI_API_KEY;
 
 // Configuration for the Gemini API call
@@ -167,91 +168,120 @@ const DocDaisy = () => {
   };
 
   return (
-    // The main container should utilize the whole screen for a chat UI feel
-    <div className="flex flex-col h-screen max-h-screen bg-gray-50 font-sans md:max-w-md md:mx-auto md:shadow-xl">
-      
-      {/* Header */}
-      <header className="bg-[#3A12DB] shadow-lg text-white py-4 px-4 font-extrabold text-xl sticky top-0 z-10 flex items-center">
-        {/* Back Button */}
-        <button onClick={() => navigate('/')} className="mr-3 p-1 rounded-full hover:bg-[#2A0F9D] transition-colors">
+    <PageScaffold contentClassName="pb-0">
+      <div className="flex flex-1 flex-col">
+        <header className="bg-[#3A12DB] text-white py-4 px-4 font-extrabold text-xl flex items-center lg:px-10 lg:rounded-t-3xl lg:shadow-md">
+          <button onClick={() => navigate('/')} className="mr-3 p-1 rounded-full hover:bg-[#2A0F9D] transition-colors">
             <ChevronLeft className="w-6 h-6" />
-        </button>
-        <span className="text-2xl mr-2">🌼</span> DocDaisy AI Assistant
-      </header>
+          </button>
+          <span className="text-2xl mr-2">🌼</span> DocDaisy AI Assistant
+        </header>
 
-      {/* Chat Messages Area */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 pt-6 pb-2 sm:p-6 sm:space-y-5">
-        {messages.map((msg, i) => (
-          <div
-            key={i}
-            className={`flex ${
-              msg.sender === "user" ? "justify-end" : "justify-start"
-            }`}
-          >
-            <div
-              className={`p-3 max-w-[85%] rounded-xl shadow-md transition-all duration-300 ease-in-out ${
-                msg.sender === "user"
-                  ? "bg-[#3A12DB] text-white rounded-tr-sm"
-                  : "bg-white text-gray-800 border border-gray-200 rounded-tl-sm"
-              }`}
-            >
-              {msg.text}
+        <div className="flex flex-1 flex-col lg:grid lg:grid-cols-[2.3fr_0.7fr]">
+          <section className="flex flex-col bg-gray-50">
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 pt-6 pb-2 sm:p-6 sm:space-y-5">
+              {messages.map((msg, i) => (
+                <div
+                  key={i}
+                  className={`flex ${
+                    msg.sender === "user" ? "justify-end" : "justify-start"
+                  }`}
+                >
+                  <div
+                    className={`p-3 max-w-[85%] rounded-xl shadow-md transition-all duration-300 ease-in-out ${
+                      msg.sender === "user"
+                        ? "bg-[#3A12DB] text-white rounded-tr-sm"
+                        : "bg-white text-gray-800 border border-gray-200 rounded-tl-sm"
+                    }`}
+                  >
+                    {msg.text}
+                  </div>
+                </div>
+              ))}
+
+              {isLoading && (
+                <div className="flex justify-start">
+                  <div className="p-3 bg-white text-gray-500 border border-gray-200 rounded-xl rounded-tl-sm flex items-center shadow-md">
+                    <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                    DocDaisy is typing...
+                  </div>
+                </div>
+              )}
+
+              <div ref={messagesEndRef} />
             </div>
-          </div>
-        ))}
 
-        {/* Loading Indicator */}
-        {isLoading && (
-          <div className="flex justify-start">
-            <div className="p-3 bg-white text-gray-500 border border-gray-200 rounded-xl rounded-tl-sm flex items-center shadow-md">
-              <Loader2 className="w-5 h-5 animate-spin mr-2" />
-              DocDaisy is typing...
-            </div>
-          </div>
-        )}
-
-        {/* Scroll Anchor */}
-        <div ref={messagesEndRef} />
-      </div>
-
-      {/* Input Area / Recommendation Button */}
-      <div className="p-4 border-t border-gray-200 bg-white sticky bottom-0 z-10 shadow-inner">
-        {recommendedSpecialization ? (
-            <div className="p-3 bg-[#E5DEFF] rounded-xl border border-[#3A12DB] shadow-lg">
-                <p className="text-sm font-semibold text-[#002D55] mb-3">
-                    Assessment Complete: We recommend a specialist in 
+            <div className="p-4 border-t border-gray-200 bg-white">
+              {recommendedSpecialization ? (
+                <div className="p-3 bg-[#E5DEFF] rounded-xl border border-[#3A12DB] shadow-lg">
+                  <p className="text-sm font-semibold text-[#002D55] mb-3">
+                    Assessment Complete: We recommend a specialist in
                     <strong className="font-extrabold text-[#3A12DB] ml-1">{recommendedSpecialization}</strong>.
-                </p>
-                <button
+                  </p>
+                  <button
                     onClick={handleSearchClick}
                     className="w-full bg-[#3A12DB] text-white text-base font-bold py-3 rounded-lg shadow-[0_4px_10px_0_rgba(58,18,219,0.3)] hover:bg-[#2A0F9D] transition-colors flex items-center justify-center"
-                >
+                  >
                     <Send className="w-5 h-5 mr-2" />
                     Search Clinics for {recommendedSpecialization}
-                </button>
-            </div>
-        ) : (
-            <div className="flex gap-3">
-                <input
+                  </button>
+                </div>
+              ) : (
+                <div className="flex gap-3">
+                  <input
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && sendMessage()}
                     className="flex-1 border border-gray-300 focus:border-[#3A12DB] rounded-xl px-4 py-3 text-gray-700 outline-none transition-all duration-200"
                     placeholder="Ask DocDaisy a question..."
                     disabled={isLoading}
-                />
-                <button
+                  />
+                  <button
                     onClick={sendMessage}
                     disabled={isLoading || !input.trim()}
                     className="bg-[#3A12DB] hover:bg-[#2A0F9D] text-white p-3 rounded-xl shadow-md transition-all duration-200 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center"
                     title="Send Message"
-                >
+                  >
                     <Send className="w-6 h-6" />
-                </button>
+                  </button>
+                </div>
+              )}
             </div>
-        )}
+          </section>
+
+          <aside className="hidden lg:flex flex-col gap-6 border-l border-indigo-100 bg-indigo-50/40 p-8">
+            <div className="rounded-2xl bg-white shadow-sm p-6">
+              <p className="text-xs uppercase tracking-wide text-[#3A12DB] font-semibold">Assessment status</p>
+              {recommendedSpecialization ? (
+                <>
+                  <p className="text-base text-slate-700 mt-3">
+                    DocDaisy recommends consulting a <span className="font-semibold">{recommendedSpecialization}</span> based on your inputs.
+                  </p>
+                  <button
+                    onClick={handleSearchClick}
+                    className="mt-4 w-full rounded-xl bg-[#3A12DB] py-3 text-sm font-semibold text-white shadow-md hover:bg-[#2A0F9D]"
+                  >
+                    Open search
+                  </button>
+                </>
+              ) : (
+                <p className="text-sm text-slate-600 mt-3">
+                  Share a few more details and we'll surface the perfect specialization for you.
+                </p>
+              )}
+            </div>
+            <div className="rounded-2xl border border-white/60 bg-white/60 p-6 text-sm text-slate-600">
+              <p className="font-semibold text-slate-700 mb-2">Conversation tips</p>
+              <ul className="space-y-2 list-disc list-inside">
+                <li>Mention duration and intensity of symptoms.</li>
+                <li>Call out recent travel or medication changes.</li>
+                <li>Include any existing diagnoses for better context.</li>
+              </ul>
+            </div>
+          </aside>
+        </div>
       </div>
-    </div>
+    </PageScaffold>
   );
 };
 
