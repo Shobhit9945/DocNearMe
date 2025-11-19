@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { BottomNav } from "@/components/BottomNav";
 import { DocDaisyBanner } from "@/components/DocDaisyBanner";
 import { PageScaffold } from "@/components/PageScaffold";
@@ -9,8 +9,6 @@ import {
   MapPin,
   Star,
   Users,
-  Compass,
-  Stethoscope,
 } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
@@ -288,6 +286,20 @@ const CLINICS = [
 export default function Clinics() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const [showFilters, setShowFilters] = useState(false);
+  const [facilityType, setFacilityType] = useState<"all" | "Hospital" | "Clinic">(
+    "all"
+  );
+  const [minRating, setMinRating] = useState(0);
+
+  const specializationParam = searchParams.get("specialization")?.trim();
+
+  const availableSpecializations = useMemo(() => {
+    if (!specializationParam) return BASE_SPECIALIZATIONS;
+
+    const exists = BASE_SPECIALIZATIONS.some(
+      (spec) => spec.id.toLowerCase() === specializationParam.toLowerCase()
+    );
 
   const specializationParam = searchParams.get("specialization")?.trim();
 
@@ -323,6 +335,7 @@ export default function Clinics() {
 
   const handleSpecializationChange = (specialization: string) => {
     setSearchParams({ specialization });
+    setShowFilters(false);
   };
 
   return (
@@ -342,21 +355,12 @@ export default function Clinics() {
           <section className="space-y-6">
             <div className="rounded-3xl border border-[#D4EBFF] bg-gradient-to-br from-white to-[#E4F2FF] p-6 shadow-sm lg:p-8">
               <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-                <div>
+                <div className="space-y-2">
                   <p className="text-sm font-semibold text-[#002D55]">{selectedLabel} specialists near you</p>
-                  <h2 className="text-2xl font-bold text-[#002D55] mt-1">{clinics.length} hospitals available in Beppu</h2>
-                  <p className="text-sm text-slate-600 mt-2">Based on your DocDaisy assessment and live location.</p>
-                  <div className="mt-4 flex flex-wrap gap-3 text-sm">
-                    <button className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-slate-700 shadow-sm">
-                      <Filter className="w-4 h-4" /> Filter
-                    </button>
-                    <button className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-slate-700 shadow-sm">
-                      <Compass className="w-4 h-4" /> Sort by distance
-                    </button>
-                    <button className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-slate-700 shadow-sm">
-                      <Stethoscope className="w-4 h-4" /> Specialisation
-                    </button>
-                  </div>
+                  <h2 className="text-2xl font-bold text-[#002D55]">
+                    {clinics.length} care centers available in Beppu
+                  </h2>
+                  <p className="text-sm text-slate-600">Refined by DocDaisy and your latest filters.</p>
                 </div>
                 <div className="rounded-2xl bg-white/80 p-4 text-sm text-slate-600 shadow-sm">
                   <p className="font-semibold text-[#002D55]">Live location</p>
@@ -369,73 +373,139 @@ export default function Clinics() {
             <div className="flex flex-wrap gap-2">
               {availableSpecializations.map((spec) => (
                 <button
-                  key={spec.id}
-                  onClick={() => handleSpecializationChange(spec.id)}
-                  className={`rounded-full border px-4 py-2 text-sm font-medium transition-all ${
-                    spec.id === selectedSpecialization
-                      ? "border-[#3A12DB] bg-[#E5DEFF] text-[#3A12DB] shadow-sm"
-                      : "border-slate-200 bg-white text-slate-600 hover:border-[#D4EBFF]"
-                  }`}
+                  onClick={() => setShowFilters((prev) => !prev)}
+                  className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-3 py-2 text-sm font-semibold text-[#002D55] hover:border-[#3A12DB] hover:text-[#3A12DB] lg:hidden"
                 >
-                  {spec.label}
+                  <Filter className="w-4 h-4" /> {showFilters ? "Hide" : "Show"} filters
                 </button>
-              ))}
+              </div>
+
+              <div
+                className={`${showFilters ? "grid" : "hidden lg:grid"} grid-cols-1 gap-4 border-t border-slate-100 px-4 py-4 sm:grid-cols-2 lg:grid-cols-3 lg:px-6 lg:py-6`}
+              >
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-slate-700" htmlFor="specialization">
+                    Specialization
+                  </label>
+                  <select
+                    id="specialization"
+                    value={selectedSpecialization}
+                    onChange={(e) => handleSpecializationChange(e.target.value)}
+                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm focus:border-[#3A12DB] focus:outline-none"
+                  >
+                    {availableSpecializations.map((spec) => (
+                      <option key={spec.id} value={spec.id}>
+                        {spec.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-2">
+                  <p className="text-sm font-semibold text-slate-700">Facility type</p>
+                  <div className="flex flex-wrap gap-2">
+                    {["all", "Hospital", "Clinic"].map((type) => (
+                      <button
+                        key={type}
+                        onClick={() => setFacilityType(type as typeof facilityType)}
+                        className={`rounded-full border px-4 py-2 text-sm font-semibold transition-all ${
+                          facilityType === type
+                            ? "border-[#3A12DB] bg-[#E5DEFF] text-[#3A12DB] shadow-sm"
+                            : "border-slate-200 bg-slate-50 text-slate-600 hover:border-[#D4EBFF]"
+                        }`}
+                      >
+                        {type === "all" ? "All" : type}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-slate-700" htmlFor="rating">
+                    Minimum rating
+                  </label>
+                  <div className="flex items-center gap-3">
+                    <input
+                      id="rating"
+                      type="range"
+                      min={0}
+                      max={5}
+                      step={0.1}
+                      value={minRating}
+                      onChange={(e) => setMinRating(Number(e.target.value))}
+                      className="flex-1 accent-[#3A12DB]"
+                    />
+                    <span className="flex items-center gap-1 rounded-full bg-[#F1EDFF] px-3 py-1 text-xs font-semibold text-[#3A12DB]">
+                      <Star className="w-4 h-4" /> {minRating.toFixed(1)}+
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500">Drag to prioritise higher-rated doctors.</p>
+                </div>
+              </div>
             </div>
 
-            <div className="space-y-4">
-              {clinics.map((clinic) => (
-                <article
-                  key={clinic.id}
-                  className="rounded-[28px] border border-slate-100 bg-white shadow-[0_10px_35px_rgba(21,47,81,0.05)] overflow-hidden"
-                >
-                  <div className="h-48 w-full overflow-hidden">
-                    <img src={clinic.image} alt={clinic.name} className="h-full w-full object-cover" />
-                  </div>
-                  <div className="p-5 space-y-4">
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div>
-                        <p className="text-xs uppercase tracking-wide text-slate-400">{clinic.type}</p>
-                        <h3 className="text-xl font-semibold text-[#002D55]">{clinic.name}</h3>
-                      </div>
-                      <div className="flex items-center gap-1 rounded-full bg-[#FFF3C8] px-3 py-1 text-sm font-semibold text-[#B06B00]">
-                        <Star className="w-4 h-4" fill="#B06B00" /> {clinic.rating}
-                      </div>
-                    </div>
+            <div className="grid gap-5 md:grid-cols-2">
+              {clinics.map((clinic) => {
+                const visibleSpecializations = clinic.specializations.slice(0, 4);
+                const remaining = clinic.specializations.length - visibleSpecializations.length;
 
-                    <div className="flex flex-wrap gap-4 text-sm text-slate-600">
-                      <div className="flex items-center gap-1">
-                        <Users className="w-4 h-4 text-[#0089FF]" /> {clinic.patients}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <MapPin className="w-4 h-4 text-[#0089FF]" /> {clinic.location} · {clinic.distance}
-                      </div>
+                return (
+                  <article
+                    key={clinic.id}
+                    className="flex h-full flex-col overflow-hidden rounded-[28px] border border-slate-100 bg-white shadow-[0_10px_35px_rgba(21,47,81,0.05)]"
+                  >
+                    <div className="h-40 w-full overflow-hidden">
+                      <img src={clinic.image} alt={clinic.name} className="h-full w-full object-cover" />
                     </div>
+                    <div className="flex flex-1 flex-col gap-4 p-5">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <p className="text-xs uppercase tracking-wide text-slate-400">{clinic.type}</p>
+                          <h3 className="text-xl font-semibold text-[#002D55]">{clinic.name}</h3>
+                        </div>
+                        <div className="flex items-center gap-1 rounded-full bg-[#FFF3C8] px-3 py-1 text-sm font-semibold text-[#B06B00]">
+                          <Star className="w-4 h-4" fill="#B06B00" /> {clinic.rating}
+                        </div>
+                      </div>
 
-                    <div className="flex flex-wrap gap-2 text-xs font-semibold text-[#3A12DB]">
-                      {clinic.specializations.map((spec) => (
-                        <span key={spec} className="rounded-full bg-[#F1EDFF] px-3 py-1">
-                          {spec}
-                        </span>
-                      ))}
-                    </div>
-
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                      <div className="flex items-center gap-2 text-sm text-slate-500">
-                        <CalendarClock className="w-4 h-4 text-[#0089FF]" /> Next availability: {clinic.nextAvailability}
+                      <div className="flex flex-wrap gap-4 text-sm text-slate-600">
+                        <div className="flex items-center gap-1">
+                          <Users className="w-4 h-4 text-[#0089FF]" /> {clinic.patients}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <MapPin className="w-4 h-4 text-[#0089FF]" /> {clinic.location} · {clinic.distance}
+                        </div>
                       </div>
-                      <button
-                        onClick={() => navigate(`/appointment?clinic=${clinic.id}`)}
-                        className="inline-flex items-center justify-center rounded-2xl bg-[#1648CE] px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-[#1648CE]/30 transition-colors hover:bg-[#0F3499]"
-                      >
-                        Book appointment
-                      </button>
+
+                      <div className="flex flex-wrap gap-2 text-xs font-semibold text-[#3A12DB]">
+                        {visibleSpecializations.map((spec) => (
+                          <span key={spec} className="rounded-full bg-[#F1EDFF] px-3 py-1">
+                            {spec}
+                          </span>
+                        ))}
+                        {remaining > 0 && (
+                          <span className="rounded-full bg-[#E4F2FF] px-3 py-1 text-[#1648CE]">+{remaining} more</span>
+                        )}
+                      </div>
+
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="flex items-center gap-2 text-sm text-slate-500">
+                          <CalendarClock className="w-4 h-4 text-[#0089FF]" /> Next availability: {clinic.nextAvailability}
+                        </div>
+                        <button
+                          onClick={() => navigate(`/appointment?clinic=${clinic.id}&specialization=${encodeURIComponent(selectedSpecialization)}`)}
+                          className="inline-flex items-center justify-center rounded-2xl bg-[#1648CE] px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-[#1648CE]/30 transition-colors hover:bg-[#0F3499]"
+                        >
+                          Book appointment
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                </article>
-              ))}
+                  </article>
+                );
+              })}
 
               {clinics.length === 0 && (
-                <div className="rounded-3xl border border-dashed border-slate-300 bg-white/70 p-8 text-center text-sm text-slate-500">
+                <div className="rounded-3xl border border-dashed border-slate-300 bg-white/70 p-8 text-center text-sm text-slate-500 md:col-span-2">
                   No clinics match this specialty yet. Try another selection or chat with DocDaisy.
                 </div>
               )}

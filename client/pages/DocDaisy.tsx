@@ -267,44 +267,49 @@ const DocDaisy: React.FC = () => {
               <div ref={messagesEndRef} />
             </div>
 
-            <div className="p-4 border-t border-gray-200 bg-white">
-              {recommendedSpecialization ? (
+            <div className="p-4 border-t border-gray-200 bg-white space-y-3">
+              {recommendedSpecialization && (
                 <div className="p-3 bg-[#E5DEFF] rounded-xl border border-[#3A12DB] shadow-lg">
                   <p className="text-sm font-semibold text-[#002D55] mb-3">
-                    Assessment Complete: We recommend a specialist in
+                    Assessment complete. We recommend a specialist in
                     <strong className="font-extrabold text-[#3A12DB] ml-1">
                       {recommendedSpecialization}
                     </strong>
                     .
                   </p>
-                  <button
-                    onClick={handleSearchClick}
-                    className="w-full bg-[#3A12DB] text-white text-base font-bold py-3 rounded-lg shadow-[0_4px_10px_0_rgba(58,18,219,0.3)] hover:bg-[#2A0F9D] transition-colors flex items-center justify-center"
-                  >
-                    <Send className="w-5 h-5 mr-2" />
-                    Search Clinics for {recommendedSpecialization}
-                  </button>
-                </div>
-              ) : (
-                <div className="flex gap-3">
-                  <input
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-                    className="flex-1 border border-gray-300 focus:border-[#3A12DB] rounded-xl px-4 py-3 text-gray-700 outline-none transition-all duration-200"
-                    placeholder="Ask DocDaisy a question..."
-                    disabled={isLoading}
-                  />
-                  <button
-                    onClick={sendMessage}
-                    disabled={isLoading || !input.trim()}
-                    className="bg-[#3A12DB] hover:bg-[#2A0F9D] text-white p-3 rounded-xl shadow-md transition-all duration-200 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center"
-                    title="Send Message"
-                  >
-                    <Send className="w-6 h-6" />
-                  </button>
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                    <button
+                      onClick={handleSearchClick}
+                      className="flex-1 bg-[#3A12DB] text-white text-base font-bold py-3 rounded-lg shadow-[0_4px_10px_0_rgba(58,18,219,0.3)] hover:bg-[#2A0F9D] transition-colors flex items-center justify-center"
+                    >
+                      <Send className="w-5 h-5 mr-2" />
+                      Search clinics for {recommendedSpecialization}
+                    </button>
+                    <span className="text-xs text-slate-500 text-center">
+                      You can continue chatting for clarifications.
+                    </span>
+                  </div>
                 </div>
               )}
+
+              <div className="flex gap-3">
+                <input
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+                  className="flex-1 border border-gray-300 focus:border-[#3A12DB] rounded-xl px-4 py-3 text-gray-700 outline-none transition-all duration-200"
+                  placeholder="Ask DocDaisy a question..."
+                  disabled={isLoading}
+                />
+                <button
+                  onClick={sendMessage}
+                  disabled={isLoading || !input.trim()}
+                  className="bg-[#3A12DB] hover:bg-[#2A0F9D] text-white p-3 rounded-xl shadow-md transition-all duration-200 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center"
+                  title="Send Message"
+                >
+                  <Send className="w-6 h-6" />
+                </button>
+              </div>
             </div>
           </section>
 
