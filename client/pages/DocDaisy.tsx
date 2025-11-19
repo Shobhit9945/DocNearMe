@@ -9,7 +9,7 @@ const model = 'gemini-2.5-flash-preview-05-20';
 // Security reminder: DO NOT expose a real API key in client-side code.
 // The empty string allows the execution environment to securely inject the key.
 //const apiKey = ""; 
-const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=AIzaSyAHQ-P0VzR0CgA09Sxmq7VSU7Iz9UAhSoQ`;
 
 // --- Utility function for robust API calls with exponential backoff ---
 const fetchWithRetry = async (url, options, retries = 3) => {
