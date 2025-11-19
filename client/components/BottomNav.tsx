@@ -14,9 +14,9 @@ export function BottomNav() {
   ];
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-white shadow-[2px_0_20px_0_rgba(24,57,107,0.05)] z-50 border-t border-gray-100">
-      <div className="max-w-md mx-auto px-3 sm:px-4 w-full">
-        <nav className="flex justify-between items-start pt-1.5 pb-1.5">
+    <div className="fixed inset-x-0 bottom-0 z-50 border-t border-gray-100 bg-white/95 shadow-[2px_0_20px_0_rgba(24,57,107,0.05)] backdrop-blur">
+      <div className="mx-auto w-full max-w-md px-3 pb-[max(env(safe-area-inset-bottom),12px)] pt-2 sm:px-4">
+        <nav className="flex items-start justify-between gap-1">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = location.pathname === item.path;
@@ -48,9 +48,6 @@ export function BottomNav() {
             );
           })}
         </nav>
-        <div className="h-[21px] flex items-center justify-center pb-safe">
-          <div className="w-[134px] h-[5px] bg-[#091F44] rounded-full" />
-        </div>
       </div>
     </div>
   );
