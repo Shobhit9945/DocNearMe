@@ -16,7 +16,7 @@ const buildConversationTranscript = (messages: ChatMessage[]) =>
 const callOpenAI = async (body: Record<string, unknown>) => {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
-    throw new Error("DocDaisy AI is not configured. Set OPENAI_API_KEY.");
+    throw new Error("Missing OPENAI_API_KEY environment variable");
   }
 
   const response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -48,6 +48,10 @@ router.post("/respond", async (req, res) => {
 
   if (!Array.isArray(messages) || messages.length === 0) {
     return res.status(400).json({ error: "Conversation history is required" });
+  }
+
+  if (!process.env.OPENAI_API_KEY) {
+    return res.status(500).json({ error: "DocDaisy AI is not configured." });
   }
 
   try {
@@ -127,8 +131,7 @@ router.post("/respond", async (req, res) => {
     return res.json({ reply: parsed.summary, specialization: parsed.specialization });
   } catch (error) {
     console.error("DocDaisy OpenAI error", error);
-    const message = error instanceof Error ? error.message : "Unable to reach DocDaisy right now. Please try again.";
-    return res.status(500).json({ error: message });
+    return res.status(500).json({ error: "Unable to reach DocDaisy right now. Please try again." });
   }
 });
 

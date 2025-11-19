@@ -1,26 +1,12 @@
-import React, { useState, useEffect, useRef } from "react";
-import { Send, Loader2, ChevronLeft } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import { PageScaffold } from "@/components/PageScaffold";
+import React, { useState, useEffect, useRef } from 'react';
+import { Send, Loader2, ChevronLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+const apiKey = import.meta.env.GEMINI_API_KEY;
 
-type ChatMessage = { sender: "user" | "bot"; text: string };
-
-interface DocDaisyResponse {
-  reply?: string;
-  specialization?: string;
-  error?: string;
-}
-
-const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
-const callDocDaisy = async (
-  mode: "followup" | "conclusion",
-  conversation: ChatMessage[],
-  retries = 3
-): Promise<DocDaisyResponse> => {
-  let lastError: Error | null = null;
-
-  for (let attempt = 0; attempt < retries; attempt++) {
+import { PageScaffold } from '@/components/PageScaffold';
+// --- Utility function for robust API calls with exponential backoff ---
+const fetchWithRetry = async (url, options, retries = 3) => {
+  for (let i = 0; i < retries; i++) {
     try {
       const response = await fetch("/api/docdaisy/respond", {
         method: "POST",
@@ -80,32 +66,57 @@ const DocDaisy = () => {
     if (!input.trim() || isLoading) return;
 
     const userInput = input.trim();
-    const newUserMessage: ChatMessage = { sender: "user", text: userInput };
+    const newUserMessage = { sender: "user", text: userInput };
     const updatedConversation = [...messages, newUserMessage];
     setMessages(updatedConversation);
 
     setInput("");
     setIsLoading(true);
+    setRecommendedSpecialization(null);
 
     try {
       const userTurns = updatedConversation.filter(msg => msg.sender === "user").length;
       const shouldConclude = userTurns >= 3;
-      const mode = shouldConclude ? "conclusion" : "followup";
-      const response = await callDocDaisy(mode, updatedConversation);
 
-      const finalBotReply = response.reply ||
-        (mode === "conclusion"
-          ? "I completed the assessment, but there was an issue generating the recommendation."
-          : "I couldn't generate a response. Please try again.");
+      let finalBotReply: string;
+      let specialization: string | null = null;
 
-      setMessages((prev) => [...prev, { sender: "bot", text: finalBotReply }]);
+      if (shouldConclude) {
+        const structuredResponse = await fetchWithRetry("/api/docdaisy/respond", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ mode: "conclusion", messages: updatedConversation }),
+        });
 
-      if (response.specialization && response.specialization !== "Unsure") {
-        setRecommendedSpecialization(response.specialization);
+        const structuredData = await structuredResponse.json();
+        if (structuredData?.error) {
+          throw new Error(structuredData.error);
+        }
+
+        finalBotReply = structuredData?.reply || "I completed the assessment, but there was an issue generating the recommendation.";
+        specialization = structuredData?.specialization || null;
+      } else {
+        const response = await fetchWithRetry("/api/docdaisy/respond", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ mode: "followup", messages: updatedConversation }),
+        });
+
+        const data = await response.json();
+        if (data?.error) {
+          throw new Error(data.error);
+        }
+
+        finalBotReply = data?.reply || "I couldn't generate a response. Please try again.";
+      }
+
+      setMessages(prev => [...prev, { sender: "bot", text: finalBotReply }]);
+
+      if (specialization && specialization !== "Unsure") {
+        setRecommendedSpecialization(specialization);
       }
     } catch (err) {
       console.error("DocDaisy API Error:", err);
-      const fallback = err instanceof Error ? err.message : "⚠️ Error connecting to the AI. Please check your network.";
       setMessages(prev => [
         ...prev,
         { sender: "bot", text: fallback },
@@ -116,9 +127,10 @@ const DocDaisy = () => {
   };
 
   const handleSearchClick = () => {
-    if (recommendedSpecialization) {
-      navigate(`/clinics?specialization=${encodeURIComponent(recommendedSpecialization)}`);
-    }
+      // Navigate to the clinics page (/clinics), passing the specialization as a query parameter
+      if (recommendedSpecialization) {
+          navigate(`/clinics?specialization=${encodeURIComponent(recommendedSpecialization)}`);
+      }
   };
 
   return (
@@ -161,6 +173,10 @@ const DocDaisy = () => {
                   </div>
                 </div>
               )}
+
+              <div ref={messagesEndRef} />
+            </div>
+
 
               <div ref={messagesEndRef} />
             </div>
