@@ -12,26 +12,32 @@ type ChatMessage = {
 type Mode = "followup" | "conclusion";
 
 // ---------- Env & helpers ----------
-const apiKey = "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";
-const OPENAI_URL = "https://api.openai.com/v1/chat/completions";
+// You can either:
+// 1) Put your key in .env as VITE_ZAI_API_KEY
+// 2) Or replace "YOUR_ZAI_API_KEY_HERE" directly for quick testing
+const ZAI_API_KEY =
+  (import.meta.env.VITE_ZAI_API_KEY as string | undefined) ||
+  "3346461ebc1a45aa86f21363b9284b6e.Qc0zucUoL66uZ5vA";
+
+const ZAI_URL = "https://api.z.ai/api/paas/v4/chat/completions";
 
 const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
 
-// Call OpenAI directly from the client (Option A)
-async function askOpenAIWithRetry(
+// Call Z.AI directly from the client
+async function askZAIWithRetry(
   mode: Mode,
   conversation: ChatMessage[],
   retries = 3
 ): Promise<{ reply: string; specialization?: string | null }> {
-  if (!apiKey) {
+  if (!ZAI_API_KEY || ZAI_API_KEY === "YOUR_ZAI_API_KEY_HERE") {
     throw new Error(
-      "OpenAI API key is missing. Set VITE_OPENAI_API_KEY in your .env file."
+      "Z.AI API key is missing. Set VITE_ZAI_API_KEY in .env or edit ZAI_API_KEY in DocDaisy.tsx."
     );
   }
 
   let lastError: Error | null = null;
 
-  // Map your UI messages to OpenAI's chat format
+  // Map UI messages to Z.AI / OpenAI-style chat format
   const chatMessages = conversation.map((msg) => ({
     role: msg.sender === "user" ? ("user" as const) : ("assistant" as const),
     content: msg.text,
@@ -46,14 +52,14 @@ async function askOpenAIWithRetry(
 
   for (let attempt = 0; attempt < retries; attempt++) {
     try {
-      const res = await fetch(OPENAI_URL, {
+      const res = await fetch(ZAI_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
+          Authorization: `Bearer ${ZAI_API_KEY}`,
         },
         body: JSON.stringify({
-          model: "gpt-4.1-mini", // adjust model as needed
+          model: "glm-4.5-flash", // GLM-4.5-Flash tier; adjust if docs say "glm-4.5-flash"
           messages: [
             {
               role: "system",
@@ -61,6 +67,11 @@ async function askOpenAIWithRetry(
             },
             ...chatMessages,
           ],
+          thinking: {
+            type: "enabled",
+          },
+          stream: false,
+          max_tokens: 4096,
           temperature: 0.4,
         }),
       });
@@ -71,7 +82,7 @@ async function askOpenAIWithRetry(
           continue;
         }
         const errBody = await res.text();
-        throw new Error(`OpenAI error ${res.status}: ${errBody}`);
+        throw new Error(`Z.AI error ${res.status}: ${errBody}`);
       }
 
       const data = await res.json();
@@ -79,7 +90,7 @@ async function askOpenAIWithRetry(
         data?.choices?.[0]?.message?.content?.trim() ?? "";
 
       if (!content) {
-        throw new Error("Empty response from OpenAI");
+        throw new Error("Empty response from Z.AI");
       }
 
       if (isConclusion) {
@@ -97,7 +108,7 @@ async function askOpenAIWithRetry(
       // followup mode – plain text
       return { reply: content };
     } catch (err) {
-      lastError = err instanceof Error ? err : new Error("Unknown OpenAI error");
+      lastError = err instanceof Error ? err : new Error("Unknown Z.AI error");
       if (attempt < retries - 1) {
         await delay(2 ** attempt * 1000);
         continue;
@@ -106,7 +117,7 @@ async function askOpenAIWithRetry(
     }
   }
 
-  throw lastError ?? new Error("Unable to reach OpenAI.");
+  throw lastError ?? new Error("Unable to reach Z.AI.");
 }
 
 // ---------- Component ----------
@@ -156,14 +167,14 @@ const DocDaisy: React.FC = () => {
       let specialization: string | null | undefined = null;
 
       if (shouldConclude) {
-        const { reply, specialization: spec } = await askOpenAIWithRetry(
+        const { reply, specialization: spec } = await askZAIWithRetry(
           "conclusion",
           updatedConversation
         );
         finalBotReply = reply;
         specialization = spec;
       } else {
-        const { reply } = await askOpenAIWithRetry(
+        const { reply } = await askZAIWithRetry(
           "followup",
           updatedConversation
         );
@@ -176,7 +187,7 @@ const DocDaisy: React.FC = () => {
         setRecommendedSpecialization(specialization);
       }
     } catch (err) {
-      console.error("DocDaisy OpenAI Error:", err);
+      console.error("DocDaisy Z.AI Error:", err);
       setMessages((prev) => [
         ...prev,
         {
@@ -319,7 +330,9 @@ const DocDaisy: React.FC = () => {
               )}
             </div>
             <div className="rounded-2xl border border-white/60 bg-white/60 p-6 text-sm text-slate-600">
-              <p className="font-semibold text-slate-700 mb-2">Conversation tips</p>
+              <p className="font-semibold text-slate-700 mb-2">
+                Conversation tips
+              </p>
               <ul className="space-y-2 list-disc list-inside">
                 <li>Mention duration and intensity of symptoms.</li>
                 <li>Call out recent travel or medication changes.</li>
