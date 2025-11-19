@@ -145,6 +145,14 @@ const DocDaisy: React.FC = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  useEffect(() => {
+    if (recommendedSpecialization) {
+      navigate(
+        `/clinics?specialization=${encodeURIComponent(recommendedSpecialization)}`
+      );
+    }
+  }, [navigate, recommendedSpecialization]);
+
   const sendMessage = async () => {
     if (!input.trim() || isLoading) return;
 

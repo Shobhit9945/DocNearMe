@@ -29,7 +29,6 @@ const BASE_SPECIALIZATIONS = [
   { id: "Rheumatology", label: "Rheumatology" },
   { id: "Gynecology", label: "Gynecology" },
   { id: "Urology", label: "Urology" },
-  { id: "Nephrology", label: "Nephrology" },
 ];
 
 const CLINICS = [
@@ -302,6 +301,15 @@ export default function Clinics() {
       (spec) => spec.id.toLowerCase() === specializationParam.toLowerCase()
     );
 
+  const specializationParam = searchParams.get("specialization")?.trim();
+
+  const availableSpecializations = useMemo(() => {
+    if (!specializationParam) return BASE_SPECIALIZATIONS;
+
+    const exists = BASE_SPECIALIZATIONS.some(
+      (spec) => spec.id.toLowerCase() === specializationParam.toLowerCase()
+    );
+
     return exists
       ? BASE_SPECIALIZATIONS
       : [...BASE_SPECIALIZATIONS, { id: specializationParam, label: specializationParam }];
@@ -310,20 +318,16 @@ export default function Clinics() {
   const selectedSpecialization =
     availableSpecializations.find(
       (spec) => spec.id.toLowerCase() === (specializationParam ?? "").toLowerCase()
-    )?.id ?? availableSpecializations[0]?.id ?? "";
+    )?.id ?? availableSpecializations[0].id;
 
   const clinics = useMemo(
     () =>
       CLINICS.filter((clinic) =>
-        clinic.specializations.some((spec) =>
-          spec.toLowerCase().includes(selectedSpecialization.toLowerCase())
+        clinic.specializations.some(
+          (spec) => spec.toLowerCase() === selectedSpecialization.toLowerCase()
         )
-      )
-        .filter((clinic) =>
-          facilityType === "all" ? true : clinic.type === facilityType
-        )
-        .filter((clinic) => clinic.rating >= minRating),
-    [facilityType, minRating, selectedSpecialization]
+      ),
+    [selectedSpecialization]
   );
 
   const selectedLabel =
@@ -366,12 +370,8 @@ export default function Clinics() {
               </div>
             </div>
 
-            <div className="rounded-3xl border border-slate-100 bg-white shadow-sm">
-              <div className="flex items-center justify-between px-4 py-3 sm:px-6">
-                <div>
-                  <p className="text-xs uppercase tracking-wide text-slate-400">Filters</p>
-                  <p className="text-sm text-slate-600">Keep the list focused without cluttering the page.</p>
-                </div>
+            <div className="flex flex-wrap gap-2">
+              {availableSpecializations.map((spec) => (
                 <button
                   onClick={() => setShowFilters((prev) => !prev)}
                   className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-3 py-2 text-sm font-semibold text-[#002D55] hover:border-[#3A12DB] hover:text-[#3A12DB] lg:hidden"
