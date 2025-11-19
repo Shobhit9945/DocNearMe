@@ -1,10 +1,12 @@
 import { Link, useLocation } from "react-router-dom";
+import { Home, Search, Calendar, User, MessageSquare, Building2 } from "lucide-react";
 import { Home, Search, Calendar, User, MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { path: "/", label: "Home", icon: Home },
   { path: "/search", label: "Search", icon: Search },
+  { path: "/clinics", label: "Clinics", icon: Building2 },
   { path: "/appointment", label: "Appointment", icon: Calendar },
   { path: "/profile", label: "Profile", icon: User },
 ];

@@ -160,10 +160,9 @@ const DocDaisy = () => {
   };
 
   const handleSearchClick = () => {
-      // Navigate to the search page (/search), passing the specialization as a query parameter
+      // Navigate to the clinics page (/clinics), passing the specialization as a query parameter
       if (recommendedSpecialization) {
-          // Pass the specialization directly to the search route
-          navigate(`/search?specialization=${encodeURIComponent(recommendedSpecialization)}`); 
+          navigate(`/clinics?specialization=${encodeURIComponent(recommendedSpecialization)}`);
       }
   };
 
