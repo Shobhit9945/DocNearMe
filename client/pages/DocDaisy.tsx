@@ -8,44 +8,54 @@ import { PageScaffold } from '@/components/PageScaffold';
 const fetchWithRetry = async (url, options, retries = 3) => {
   for (let i = 0; i < retries; i++) {
     try {
-      const response = await fetch(url, options);
-      if (response.ok) {
-        return response;
-      } else if (response.status === 429) {
-        // Too many requests: wait and retry
-        if (i < retries - 1) {
-          const delay = Math.pow(2, i) * 1000;
-          console.log(`Rate limit exceeded (429). Retrying in ${delay / 1000}s...`);
-          await new Promise(resolve => setTimeout(resolve, delay));
-          continue;
-        }
+      const response = await fetch("/api/docdaisy/respond", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode, messages: conversation }),
+      });
+
+      const payload = (await response.json().catch(() => ({}))) as DocDaisyResponse;
+
+      if (response.ok && !payload?.error) {
+        return payload;
       }
-      throw new Error(`HTTP error! status: ${response.status}`);
-    } catch (error) {
-      if (i < retries - 1) {
-        const delay = Math.pow(2, i) * 1000;
-        console.log(`Fetch error. Retrying in ${delay / 1000}s...`);
-        await new Promise(resolve => setTimeout(resolve, delay));
+
+      const errorMessage = payload?.error ?? `DocDaisy error (${response.status})`;
+
+      if (response.status === 429 && attempt < retries - 1) {
+        await delay(2 ** attempt * 1000);
         continue;
       }
-      throw error;
+
+      throw new Error(errorMessage);
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error("Unable to reach DocDaisy.");
+      if (attempt < retries - 1) {
+        await delay(2 ** attempt * 1000);
+        continue;
+      }
+      throw lastError;
     }
   }
+
+  throw lastError ?? new Error("Unable to reach DocDaisy.");
 };
-// -----------------------------------------------------------------------
 
 const DocDaisy = () => {
   const navigate = useNavigate(); // Initialize navigate hook
-  const [messages, setMessages] = useState([
-    { sender: "bot", text: "Hello! I'm DocDaisy, your AI Assistant. Please describe your main symptom so I can ask a few follow-up questions." },
+  const [messages, setMessages] = useState<ChatMessage[]>([
+    {
+      sender: "bot",
+      text: "Hello! I'm DocDaisy, your AI Assistant. Please describe your main symptom so I can ask a few follow-up questions.",
+    },
   ]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  
+
   // State to hold the AI's final recommended specialization
-  const [recommendedSpecialization, setRecommendedSpecialization] = useState<string | null>(null); 
-  
-  const messagesEndRef = useRef(null);
+  const [recommendedSpecialization, setRecommendedSpecialization] = useState<string | null>(null);
+
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
   // Scroll to the latest message whenever messages update
   useEffect(() => {
@@ -109,7 +119,7 @@ const DocDaisy = () => {
       console.error("DocDaisy API Error:", err);
       setMessages(prev => [
         ...prev,
-        { sender: "bot", text: "⚠️ Error connecting to the AI. Please check your network." },
+        { sender: "bot", text: fallback },
       ]);
     } finally {
       setIsLoading(false);
