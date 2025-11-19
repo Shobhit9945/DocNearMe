@@ -62,94 +62,58 @@ const DocDaisy = () => {
   const sendMessage = async () => {
     if (!input.trim() || isLoading) return;
 
-    const userInput = input;
-    // 1. Add user message to state
+    const userInput = input.trim();
     const newUserMessage = { sender: "user", text: userInput };
-    setMessages(prev => [...prev, newUserMessage]);
-    
-    // Clear input field immediately and reset loading states
+    const updatedConversation = [...messages, newUserMessage];
+    setMessages(updatedConversation);
+
     setInput("");
     setIsLoading(true);
-    setRecommendedSpecialization(null); // Clear previous recommendation
+    setRecommendedSpecialization(null);
 
     try {
-      // Conclusion is reached after 3 user/bot pairs (messages.length >= 6)
-      const shouldConclude = messages.length >= 6; 
-      
+      const userTurns = updatedConversation.filter(msg => msg.sender === "user").length;
+      const shouldConclude = userTurns >= 3;
+
       let finalBotReply: string;
       let specialization: string | null = null;
 
       if (shouldConclude) {
-         // --- Structured JSON Response Request for Final Assessment ---
-         const systemPrompt = `Based on the user's symptoms and the entire conversation history, provide a final, brief summary (under 30 words) and recommend the most appropriate medical specialization (Cardiologist, Dermatologist, ENT, General Physician, Pediatrician, Orthopedic Surgeon). If unsure, use 'Unsure'. ONLY respond with a JSON object conforming to the schema. Conversation History: ${messages.map(m => `${m.sender}: ${m.text}`).join(' | ')}. User's final input: ${userInput}`;
-         
-         const structuredPayload = {
-             contents: [{ parts: [{ text: systemPrompt }] }],
-             generationConfig: {
-                 responseMimeType: "application/json",
-                 responseSchema: {
-                     type: "OBJECT",
-                     properties: {
-                         "summary": { "type": "STRING", "description": "A concluding message summarizing the conversation and the recommendation (under 30 words)." },
-                         "specialization": { "type": "STRING", "description": "The specific doctor type being recommended (must be one of: Cardiologist, Dermatologist, ENT, General Physician, Pediatrician, Orthopedic Surgeon, Unsure)." }
-                     },
-                     required: ["summary", "specialization"]
-                 }
-             }
-         };
+        const structuredResponse = await fetchWithRetry("/api/docdaisy/respond", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ mode: "conclusion", messages: updatedConversation }),
+        });
 
-         const structuredResponse = await fetchWithRetry(apiUrl, {
-             method: "POST",
-             headers: { "Content-Type": "application/json" },
-             body: JSON.stringify(structuredPayload),
-         });
+        const structuredData = await structuredResponse.json();
+        if (structuredData?.error) {
+          throw new Error(structuredData.error);
+        }
 
-         const structuredData = await structuredResponse.json();
-         const jsonText = structuredData?.candidates?.[0]?.content?.parts?.[0]?.text;
-
-         if (jsonText) {
-             try {
-                 const parsedJson = JSON.parse(jsonText);
-                 finalBotReply = parsedJson.summary || "I have completed my assessment.";
-                 specialization = parsedJson.specialization || null;
-             } catch (e) {
-                 console.error("Failed to parse JSON response:", e);
-                 finalBotReply = "I completed the assessment, but there was an error processing the recommendation. Please try rephrasing your final question.";
-             }
-         } else {
-             finalBotReply = "I couldn't generate a definitive recommendation. Please ensure your query is complete.";
-         }
-
+        finalBotReply = structuredData?.reply || "I completed the assessment, but there was an issue generating the recommendation.";
+        specialization = structuredData?.specialization || null;
       } else {
-        // --- Standard Text Response for Continuing Conversation (Asking follow-up questions) ---
-        let payload = {
-            contents: [{ parts: [{ text: userInput }] }],
-            systemInstruction: {
-                parts: [{ text: "You are DocDaisy, a friendly and professional AI assistant for a medical app. Your primary role in this phase is to gather details about the user's symptoms, such as duration, location, and severity, to refine the specialization recommendation. Ask a clear, concise, single follow-up question to guide the user. Do NOT provide a final recommendation yet. Do NOT use markdown formatting like **bold** in your text response, only output plain text." }]
-            },
-        };
-        
-        const response = await fetchWithRetry(apiUrl, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
+        const response = await fetchWithRetry("/api/docdaisy/respond", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ mode: "followup", messages: updatedConversation }),
         });
 
         const data = await response.json();
-        finalBotReply = data?.candidates?.[0]?.content?.parts?.[0]?.text ||
-            "I couldn't generate a response. Please try again.";
-      }
-      
-      // 5. Add bot message to state and update recommendation state
-      setMessages(prev => [...prev, { sender: "bot", text: finalBotReply }]);
-      
-      if (specialization && specialization !== 'Unsure') {
-          setRecommendedSpecialization(specialization);
-      }
-      
+        if (data?.error) {
+          throw new Error(data.error);
+        }
 
+        finalBotReply = data?.reply || "I couldn't generate a response. Please try again.";
+      }
+
+      setMessages(prev => [...prev, { sender: "bot", text: finalBotReply }]);
+
+      if (specialization && specialization !== "Unsure") {
+        setRecommendedSpecialization(specialization);
+      }
     } catch (err) {
-      console.error("Gemini API Error:", err);
+      console.error("DocDaisy API Error:", err);
       setMessages(prev => [
         ...prev,
         { sender: "bot", text: "⚠️ Error connecting to the AI. Please check your network." },
@@ -206,6 +170,10 @@ const DocDaisy = () => {
                   </div>
                 </div>
               )}
+
+              <div ref={messagesEndRef} />
+            </div>
+
 
               <div ref={messagesEndRef} />
             </div>
