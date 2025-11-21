@@ -1,0 +1,147 @@
+{
+  "navigation": {
+    "about": "概要",
+    "services": "サービス",
+    "contact": "お問い合わせ",
+    "accessPortal": "ポータルアクセス",
+    "backToHome": "← ホームに戻る"
+  },
+  "hero": {
+    "badge": "全国の医療専門家に信頼されています",
+    "title": "公式医療",
+    "titleHighlight": "プロバイダーディレクトリ",
+    "description": "コミュニティの認証された医療専門家にアクセス。政府認定のディレクトリにより、必要な時にライセンスを持つ開業医から質の高い医療を受けることが保証されます。",
+    "primaryButton": "医療ポータルにアクセス",
+    "secondaryButton": "ディレクトリを見る"
+  },
+  "features": {
+    "title": "政府認定医療サービス",
+    "description": "当プラットフォームは、完全な政府監視とコンプライアンスにより、ライセンスを持つ医療専門家への安全で認証されたアクセスを提供します。",
+    "verified": {
+      "title": "認証済み・ライセンス取得済み",
+      "description": "すべての医療プロバイダーは政府認証済みで、現在のライセンスを保持しています。定期的なコンプライアンスチェックにより、継続的な認証が保証されます。"
+    },
+    "secure": {
+      "title": "セキュアアクセス",
+      "description": "エンタープライズグレードのセキュリティが個人の健康情報を保護します。HIPAA準拠のデータ処理と暗号化された通信。"
+    },
+    "rapid": {
+      "title": "迅速な対応",
+      "description": "最も必要な時に医療専門家に迅速にアクセス。緊急プロトコルと優先スケジューリングが利用可能。"
+    }
+  },
+  "testimonials": {
+    "title": "ユーザーの声",
+    "subtitle": "当プラットフォームを信頼する患者の実際の体験",
+    "testimonial1": {
+      "text": "DocNearMeは、緊急治療が必要だった時に24時間以内に専門医を見つけるのに役立ちました。プラットフォームは非常に使いやすく、医師はすべて認証された専門家です。",
+      "author": "サラ・ジョンソン",
+      "role": "患者"
+    },
+    "testimonial2": {
+      "text": "医療提供者として、DocNearMeが私の特定の専門知識を必要とする患者と私を結びつけてくれることに感謝しています。認証プロセスにより、患者に信頼を与えています。",
+      "author": "マイケル・チェン医師",
+      "role": "心臓専門医"
+    },
+    "testimonial3": {
+      "text": "政府認定とセキュリティ機能により、このプラットフォームを使用する際に安心感を感じました。健康情報が保護されていることを信頼できます。",
+      "author": "エミリー・ロドリゲス",
+      "role": "患者"
+    },
+    "testimonial4": {
+      "text": "質の高い医療を見つけることがこれほど簡単になったことはありません。プラットフォームのプロフェッショナルなデザインと包括的なディレクトリにより、何時間もの調査時間を節約できました。",
+      "author": "デビッド・キム",
+      "role": "患者"
+    }
+  },
+  "cta": {
+    "title": "今日から医療ポータルにアクセス",
+    "description": "安全で信頼できる医療アクセスのために政府認定プラットフォームを信頼する何千もの市民に参加してください。",
+    "button": "今すぐポータルにアクセス"
+  },
+  "footer": {
+    "description": "政府認定の医療プロバイダーディレクトリにより、ライセンスを持つ医療専門家への安全で認証されたアクセスを保証します。",
+    "services": "サービス",
+    "findDoctors": "医師を探す",
+    "bookAppointments": "予約を取る",
+    "emergencyCare": "緊急医療",
+    "healthRecords": "健康記録",
+    "support": "サポート",
+    "helpCenter": "ヘルプセンター",
+    "contactUs": "お問い合わせ",
+    "privacyPolicy": "プライバシーポリシー",
+    "termsOfService": "利用規約",
+    "copyright": "© 2025 DocNearMe - 公式政府医療ディレクトリ。全著作権所有。",
+    "compliance": "HIPAA準拠 • 政府認定 • セキュア＆プライベート"
+  },
+  "auth": {
+    "title": "医療ポータルにアクセス",
+    "createTitle": "アカウント作成",
+    "description": "医療サービスにアクセスするためにサインイン",
+    "createDescription": "安全な医療プラットフォームに参加",
+    "googleSignIn": "Googleで続行",
+    "orContinue": "またはメールで続行",
+    "fullName": "フルネーム",
+    "email": "メールアドレス",
+    "password": "パスワード",
+    "confirmPassword": "パスワード確認",
+    "signIn": "サインイン",
+    "createAccount": "アカウント作成",
+    "noAccount": "アカウントをお持ちでない場合",
+    "hasAccount": "すでにアカウントをお持ちの場合",
+    "signUp": "サインアップ",
+    "signInLink": "サインイン",
+    "loading": "読み込み中...",
+    "errors": {
+      "emailRequired": "メールアドレスは必須です",
+      "passwordRequired": "パスワードは必須です",
+      "nameRequired": "名前は必須です",
+      "invalidEmail": "有効なメールアドレスを入力してください",
+      "passwordTooShort": "パスワードは8文字以上である必要があります",
+      "passwordMismatch": "パスワードが一致しません",
+      "accountExists": "このメールアドレスのアカウントは既に存在します",
+      "invalidCredentials": "メールアドレスまたはパスワードが正しくありません",
+      "googleNotConfigured": "Google サインインが設定されていません",
+      "internalError": "内部サーバーエラー"
+    }
+  },
+  "dashboard": {
+    "welcome": "お帰りなさい",
+    "welcomeMessage": "医療情報と予約をすべて一箇所で管理",
+    "loading": "読み込み中...",
+    "signOut": "サインアウト",
+    "quickActions": "クイックアクション",
+    "bookAppointment": "新しい予約",
+    "uploadRecords": "医療記録のアップロード",
+    "upcomingAppointments": "今後の予約",
+    "upcomingAppointmentsDescription": "Google カレンダーからのライブビュー",
+    "noAppointments": "今後の予約はありません",
+    "refresh": "更新",
+    "refreshing": "更新中...",
+    "openCalendar": "カレンダーを開く",
+    "recentActivity": "最近のアクティビティ",
+    "noActivity": "最近のアクティビティはありません",
+    "googleConnection": {
+      "title": "Google アカウントを接続して予約を同期",
+      "description": "リンク後、予約がダッシュボードに自動的に表示されます",
+      "connectButton": "Google カレンダーを接続",
+      "connecting": "接続中...",
+      "connectToBook": "Google を接続して予約",
+      "needsConnection": "Google アカウントをリンクして予約と予約同期を有効にしてください",
+      "errors": {
+        "notConfigured": "Google OAuth が設定されていません。環境変数に GOOGLE_CLIENT_ID と GOOGLE_CLIENT_SECRET を追加してください",
+        "connectionFailed": "Google への接続に失敗しました。もう一度お試しください",
+        "configurationError": "Google OAuth が利用できません。設定ドキュメントを確認してください"
+      }
+    },
+    "calendar": {
+      "loadingEvents": "予約を読み込み中...",
+      "errorLoading": "カレンダーデータの読み込みに失敗しました",
+      "timeToBeSet": "時間未定",
+      "unknownTime": "不明"
+    },
+    "success": {
+      "appointmentBooked": "予約が正常に完了しました！今後の予約が更新されました"
+    }
+  }
+}

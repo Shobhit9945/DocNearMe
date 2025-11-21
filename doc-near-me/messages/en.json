@@ -1,0 +1,102 @@
+{
+  "navigation": {
+    "about": "About",
+    "services": "Services",
+    "contact": "Contact",
+    "accessPortal": "Access Portal",
+    "backToHome": "← Back to Home"
+  },
+  "hero": {
+    "badge": "Trusted by Healthcare Professionals Nationwide",
+    "title": "Official Healthcare",
+    "titleHighlight": "Provider Directory",
+    "description": "Access verified healthcare professionals in your community. Our government-certified directory ensures you receive quality care from licensed practitioners when you need it most.",
+    "primaryButton": "Access Healthcare Portal",
+    "secondaryButton": "View Directory"
+  },
+  "features": {
+    "title": "Government-Certified Healthcare Services",
+    "description": "Our platform provides secure, verified access to licensed healthcare professionals with full government oversight and compliance.",
+    "verified": {
+      "title": "Verified & Licensed",
+      "description": "All healthcare providers are government-verified and hold current licenses. Regular compliance checks ensure ongoing certification."
+    },
+    "secure": {
+      "title": "Secure Access",
+      "description": "Enterprise-grade security protects your personal health information. HIPAA-compliant data handling and encrypted communications."
+    },
+    "rapid": {
+      "title": "Rapid Response",
+      "description": "Quick access to healthcare professionals when you need them most. Emergency protocols and priority scheduling available."
+    }
+  },
+  "testimonials": {
+    "title": "What Our Users Say",
+    "subtitle": "Real experiences from patients who trust our platform",
+    "testimonial1": {
+      "text": "DocNearMe helped me find a specialist within 24 hours when I needed urgent care. The platform is incredibly user-friendly and the doctors are all verified professionals.",
+      "author": "Sarah Johnson",
+      "role": "Patient"
+    },
+    "testimonial2": {
+      "text": "As a healthcare provider, I appreciate how DocNearMe connects me with patients who need my specific expertise. The verification process gives patients confidence.",
+      "author": "Dr. Michael Chen",
+      "role": "Cardiologist"
+    },
+    "testimonial3": {
+      "text": "The government certification and security features made me feel safe using this platform. I can trust that my health information is protected.",
+      "author": "Emily Rodriguez",
+      "role": "Patient"
+    },
+    "testimonial4": {
+      "text": "Finding quality healthcare has never been easier. The platform's professional design and comprehensive directory saved me hours of research.",
+      "author": "David Kim",
+      "role": "Patient"
+    }
+  },
+  "cta": {
+    "title": "Access Your Healthcare Portal Today",
+    "description": "Join thousands of citizens who trust our government-certified platform for secure, reliable healthcare access.",
+    "button": "Access Portal Now"
+  },
+  "footer": {
+    "description": "Government-certified healthcare provider directory ensuring secure, verified access to licensed medical professionals.",
+    "services": "Services",
+    "findDoctors": "Find Doctors",
+    "bookAppointments": "Book Appointments",
+    "emergencyCare": "Emergency Care",
+    "healthRecords": "Health Records",
+    "support": "Support",
+    "helpCenter": "Help Center",
+    "contactUs": "Contact Us",
+    "privacyPolicy": "Privacy Policy",
+    "termsOfService": "Terms of Service",
+    "copyright": "© 2025 DocNearMe - Official Government Healthcare Directory. All rights reserved.",
+    "compliance": "HIPAA Compliant • Government Certified • Secure & Private"
+  },
+  "auth": {
+    "title": "Access Healthcare Portal",
+    "createTitle": "Create Account",
+    "description": "Sign in to access your healthcare services",
+    "createDescription": "Join our secure healthcare platform",
+    "googleSignIn": "Continue with Google",
+    "orContinue": "Or continue with email",
+    "fullName": "Full Name",
+    "email": "Email Address",
+    "password": "Password",
+    "confirmPassword": "Confirm Password",
+    "signIn": "Sign In",
+    "createAccount": "Create Account",
+    "noAccount": "Don't have an account?",
+    "hasAccount": "Already have an account?",
+    "signUp": "Sign up",
+    "signInLink": "Sign in"
+  },
+  "dashboard": {
+    "welcome": "Welcome to Your Dashboard!",
+    "description": "You have successfully logged in. This is where you would find your appointments, doctor recommendations, and other healthcare services.",
+    "findDoctors": "Find Doctors",
+    "viewAppointments": "View Appointments",
+    "logout": "Logout"
+  }
+}

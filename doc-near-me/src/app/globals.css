@@ -1,0 +1,5 @@
+html {
+  font-family: system-ui, sans-serif;
+}
+
+/* Tailwind utility classes must be used directly in JSX/HTML. Remove custom classes. */

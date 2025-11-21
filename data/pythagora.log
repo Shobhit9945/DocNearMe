@@ -1,0 +1,1166 @@
+2025-09-23T16:01:55.984Z INFO SharedStateManager initialized
+2025-09-23T16:01:55.984Z INFO [Migration] Checking for database migration...
+2025-09-23T16:01:55.985Z INFO [Migration] No migration needed
+2025-09-23T16:01:55.985Z INFO [MainProvider] Creating new MainProvider instance...
+2025-09-23T16:01:55.986Z ERROR Database initialization error:
+Error: ENOENT: no such file or directory, mkdir '/pythagora/pythagora-core/data/database'
+Stack: Error: ENOENT: no such file or directory, mkdir '/pythagora/pythagora-core/data/database'
+    at Object.mkdirSync (node:fs:1374:26)
+    at PrismaSession.ensureDatabaseSync (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.4/out/core/CustomPrismaSession.js:61:20)
+    at new PrismaSession (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.4/out/core/CustomPrismaSession.js:17:18)
+    at Function.getInstance (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.4/out/core/CustomPrismaSession.js:28:38)
+    at new MainProvider (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.4/out/providers/MainProvider.js:73:45)
+    at Function.getInstance (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.4/out/providers/MainProvider.js:129:37)
+    at activate (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.4/out/extension.js:39:37)
+    at m.n (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/AE4E9F0C-B3EC-4801-9990-94288F0D0C4E/d/Visual Studio Code 2.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:144:6409)
+    at m (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/AE4E9F0C-B3EC-4801-9990-94288F0D0C4E/d/Visual Studio Code 2.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:144:6372)
+    at m.l (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/AE4E9F0C-B3EC-4801-9990-94288F0D0C4E/d/Visual Studio Code 2.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:144:5829)
+2025-09-23T16:01:55.990Z ERROR Error stdout:
+2025-09-23T16:01:55.990Z ERROR Error stderr:
+2025-09-23T16:01:55.990Z ERROR Failed to ensure database
+Error: Failed to initialize database: ENOENT: no such file or directory, mkdir '/pythagora/pythagora-core/data/database'
+stdout: undefined
+stderr: undefined
+Stack: Error: Failed to initialize database: ENOENT: no such file or directory, mkdir '/pythagora/pythagora-core/data/database'
+stdout: undefined
+stderr: undefined
+    at PrismaSession.ensureDatabaseSync (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.4/out/core/CustomPrismaSession.js:102:19)
+    at new PrismaSession (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.4/out/core/CustomPrismaSession.js:17:18)
+    at Function.getInstance (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.4/out/core/CustomPrismaSession.js:28:38)
+    at new MainProvider (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.4/out/providers/MainProvider.js:73:45)
+    at Function.getInstance (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.4/out/providers/MainProvider.js:129:37)
+    at activate (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.4/out/extension.js:39:37)
+    at m.n (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/AE4E9F0C-B3EC-4801-9990-94288F0D0C4E/d/Visual Studio Code 2.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:144:6409)
+    at m (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/AE4E9F0C-B3EC-4801-9990-94288F0D0C4E/d/Visual Studio Code 2.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:144:6372)
+    at m.l (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/AE4E9F0C-B3EC-4801-9990-94288F0D0C4E/d/Visual Studio Code 2.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:144:5829)
+2025-09-23T16:01:55.991Z INFO Is remote: false
+2025-09-23T16:01:55.992Z INFO Starting Local. Installation path: undefined
+2025-09-25T03:41:58.437Z INFO Closing entire Pythagora extension...
+2025-09-25T03:41:58.450Z ERROR Error closing extension
+Error: Canceled
+Stack: Canceled: Canceled
+    at new C (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/AE4E9F0C-B3EC-4801-9990-94288F0D0C4E/d/Visual Studio Code 2.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:144:35204)
+    at E.U (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/AE4E9F0C-B3EC-4801-9990-94288F0D0C4E/d/Visual Studio Code 2.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:151:6017)
+    at Proxy.B.<computed>.j.charCodeAt.R.CharCode.DollarSign.B.<computed> (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/AE4E9F0C-B3EC-4801-9990-94288F0D0C4E/d/Visual Studio Code 2.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:151:3107)
+    at d.g (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/AE4E9F0C-B3EC-4801-9990-94288F0D0C4E/d/Visual Studio Code 2.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:154:205942)
+    at d.executeCommand (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/AE4E9F0C-B3EC-4801-9990-94288F0D0C4E/d/Visual Studio Code 2.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:154:205380)
+    at Object.executeCommand (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/AE4E9F0C-B3EC-4801-9990-94288F0D0C4E/d/Visual Studio Code 2.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:164:23060)
+    at closeEntirePythagoraExtension (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.4/out/extension.js:302:31)
+    at Object.deactivate (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.4/out/extension.js:212:15)
+    at m.eb (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/AE4E9F0C-B3EC-4801-9990-94288F0D0C4E/d/Visual Studio Code 2.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:160:9856)
+    at /private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/AE4E9F0C-B3EC-4801-9990-94288F0D0C4E/d/Visual Studio Code 2.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:160:7927
+    at Array.map (<anonymous>)
+    at m.$ (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/AE4E9F0C-B3EC-4801-9990-94288F0D0C4E/d/Visual Studio Code 2.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:160:7914)
+    at m.terminate (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/AE4E9F0C-B3EC-4801-9990-94288F0D0C4E/d/Visual Studio Code 2.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:160:8187)
+    at $.terminate (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/AE4E9F0C-B3EC-4801-9990-94288F0D0C4E/d/Visual Studio Code 2.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:164:1513)
+    at o (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/AE4E9F0C-B3EC-4801-9990-94288F0D0C4E/d/Visual Studio Code 2.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:177:10633)
+    at MessagePortMain.<anonymous> (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/AE4E9F0C-B3EC-4801-9990-94288F0D0C4E/d/Visual Studio Code 2.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:177:6825)
+    at MessagePortMain.emit (node:events:519:28)
+    at Object.MessagePortMain._internalPort.emit (node:electron/js2c/utility_init:2:2285)
+    at Object.callbackTrampoline (node:internal/async_hooks:130:17)
+2025-09-25T03:42:29.650Z INFO SharedStateManager initialized
+2025-09-25T03:42:29.651Z INFO [Migration] Checking for database migration...
+2025-09-25T03:42:29.651Z INFO [Migration] No migration needed
+2025-09-25T03:42:29.651Z INFO [MainProvider] Creating new MainProvider instance...
+2025-09-25T03:42:29.652Z ERROR Database initialization error:
+Error: ENOENT: no such file or directory, mkdir '/pythagora/pythagora-core/data/database'
+Stack: Error: ENOENT: no such file or directory, mkdir '/pythagora/pythagora-core/data/database'
+    at Object.mkdirSync (node:fs:1365:26)
+    at PrismaSession.ensureDatabaseSync (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.6/out/core/CustomPrismaSession.js:61:20)
+    at new PrismaSession (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.6/out/core/CustomPrismaSession.js:17:18)
+    at PrismaSession.getInstance (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.6/out/core/CustomPrismaSession.js:28:38)
+    at new MainProvider (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.6/out/providers/MainProvider.js:73:45)
+    at MainProvider.getInstance (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.6/out/providers/MainProvider.js:129:37)
+    at activate (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.6/out/extension.js:39:37)
+    at db.n (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:112:13386)
+    at db.m (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:112:13349)
+    at db.l (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:112:12805)
+2025-09-25T03:42:29.657Z ERROR Error stdout:
+2025-09-25T03:42:29.657Z ERROR Error stderr:
+2025-09-25T03:42:29.657Z ERROR Failed to ensure database
+Error: Failed to initialize database: ENOENT: no such file or directory, mkdir '/pythagora/pythagora-core/data/database'
+stdout: undefined
+stderr: undefined
+Stack: Error: Failed to initialize database: ENOENT: no such file or directory, mkdir '/pythagora/pythagora-core/data/database'
+stdout: undefined
+stderr: undefined
+    at PrismaSession.ensureDatabaseSync (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.6/out/core/CustomPrismaSession.js:102:19)
+    at new PrismaSession (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.6/out/core/CustomPrismaSession.js:17:18)
+    at PrismaSession.getInstance (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.6/out/core/CustomPrismaSession.js:28:38)
+    at new MainProvider (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.6/out/providers/MainProvider.js:73:45)
+    at MainProvider.getInstance (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.6/out/providers/MainProvider.js:129:37)
+    at activate (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.6/out/extension.js:39:37)
+    at db.n (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:112:13386)
+    at db.m (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:112:13349)
+    at db.l (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:112:12805)
+2025-09-25T03:42:29.658Z INFO Is remote: false
+2025-09-25T03:42:29.659Z INFO Starting Local. Installation path: undefined
+2025-09-25T04:18:40.255Z INFO MainProvider handleMessage {"type":"codeScreenActivated","activeScreen":"code","reason":"file_opened","route":"forwardToLeft","source":"tabsManager"}
+2025-09-25T04:18:40.780Z INFO MainProvider handleMessage {"command":"centerBarReady","data":{},"source":"center"}
+2025-09-25T04:18:40.780Z INFO Center panel message: {"command":"centerBarReady","data":{},"source":"center"}
+2025-09-25T04:18:40.781Z INFO MainProvider handleMessage {"command":"ready","data":"ready","source":"center"}
+2025-09-25T04:18:40.781Z INFO Center panel message: {"command":"ready","data":"ready","source":"center"}
+2025-09-25T04:18:40.781Z INFO [MainProvider] Center panel ready - processing ready handler
+2025-09-25T04:18:40.781Z INFO [MainProvider] Center panel ready - flushing 0 buffered messages
+2025-09-25T04:18:40.781Z INFO [Message Router] Routing getProjectInfo through unified router
+2025-09-25T07:12:08.256Z INFO Closing entire Pythagora extension...
+2025-09-25T07:12:08.285Z ERROR Error closing extension
+Error: Canceled
+Stack: Canceled: Canceled
+    at new OL (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:29:113290)
+    at a4.U (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:29:117901)
+    at Proxy.s.<computed>.n.charCodeAt.s.<computed> (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:29:115395)
+    at Ab.g (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:112:41052)
+    at Ab.executeCommand (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:112:40556)
+    at Object.executeCommand (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:164:105653)
+    at closeEntirePythagoraExtension (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.6/out/extension.js:302:31)
+    at Object.deactivate (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.6/out/extension.js:212:15)
+    at QG.eb (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:117:11726)
+    at file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:117:9876
+    at Array.map (<anonymous>)
+    at QG.$ (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:117:9864)
+    at QG.terminate (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:117:10107)
+    at Y3.terminate (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:119:914)
+    at us (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:356:9945)
+    at MessagePortMain.<anonymous> (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:356:6484)
+    at MessagePortMain.emit (node:events:518:28)
+    at Object.MessagePortMain._internalPort.emit (node:electron/js2c/utility_init:2:3073)
+    at Object.callbackTrampoline (node:internal/async_hooks:130:17)
+2025-09-25T07:12:31.676Z INFO SharedStateManager initialized
+2025-09-25T07:12:31.677Z INFO [Migration] Checking for database migration...
+2025-09-25T07:12:31.677Z INFO [Migration] No migration needed
+2025-09-25T07:12:31.678Z INFO [MainProvider] Creating new MainProvider instance...
+2025-09-25T07:12:31.679Z ERROR Database initialization error:
+Error: ENOENT: no such file or directory, mkdir '/pythagora/pythagora-core/data/database'
+Stack: Error: ENOENT: no such file or directory, mkdir '/pythagora/pythagora-core/data/database'
+	at Object.mkdirSync (node:fs:1374:26)
+	at PrismaSession.ensureDatabaseSync (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.6/out/core/CustomPrismaSession.js:61:20)
+	at new PrismaSession (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.6/out/core/CustomPrismaSession.js:17:18)
+	at PrismaSession.getInstance (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.6/out/core/CustomPrismaSession.js:28:38)
+	at new MainProvider (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.6/out/providers/MainProvider.js:73:45)
+	at MainProvider.getInstance (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.6/out/providers/MainProvider.js:129:37)
+	at activate (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.6/out/extension.js:39:37)
+	at async m.n (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/AE4E9F0C-B3EC-4801-9990-94288F0D0C4E/d/Visual Studio Code 2.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:144:6409)
+	at async m (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/AE4E9F0C-B3EC-4801-9990-94288F0D0C4E/d/Visual Studio Code 2.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:144:6372)
+	at async m.l (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/AE4E9F0C-B3EC-4801-9990-94288F0D0C4E/d/Visual Studio Code 2.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:144:5829)
+2025-09-25T07:12:31.681Z ERROR Error stdout:
+2025-09-25T07:12:31.681Z ERROR Error stderr:
+2025-09-25T07:12:31.681Z ERROR Failed to ensure database
+Error: Failed to initialize database: ENOENT: no such file or directory, mkdir '/pythagora/pythagora-core/data/database'
+stdout: undefined
+stderr: undefined
+Stack: Error: Failed to initialize database: ENOENT: no such file or directory, mkdir '/pythagora/pythagora-core/data/database'
+stdout: undefined
+stderr: undefined
+	at PrismaSession.ensureDatabaseSync (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.6/out/core/CustomPrismaSession.js:102:19)
+	at new PrismaSession (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.6/out/core/CustomPrismaSession.js:17:18)
+	at PrismaSession.getInstance (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.6/out/core/CustomPrismaSession.js:28:38)
+	at new MainProvider (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.6/out/providers/MainProvider.js:73:45)
+	at MainProvider.getInstance (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.6/out/providers/MainProvider.js:129:37)
+	at activate (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.6/out/extension.js:39:37)
+	at async m.n (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/AE4E9F0C-B3EC-4801-9990-94288F0D0C4E/d/Visual Studio Code 2.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:144:6409)
+	at async m (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/AE4E9F0C-B3EC-4801-9990-94288F0D0C4E/d/Visual Studio Code 2.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:144:6372)
+	at async m.l (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/AE4E9F0C-B3EC-4801-9990-94288F0D0C4E/d/Visual Studio Code 2.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:144:5829)
+2025-09-25T07:12:31.682Z INFO Is remote: false
+2025-09-25T07:12:31.682Z INFO Starting Local. Installation path: undefined
+2025-09-25T07:12:41.491Z INFO Closing entire Pythagora extension...
+2025-09-25T07:12:41.494Z ERROR Error closing extension
+Error: Canceled
+Stack: Canceled: Canceled
+	at new C (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/AE4E9F0C-B3EC-4801-9990-94288F0D0C4E/d/Visual Studio Code 2.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:144:35204)
+	at E.U (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/AE4E9F0C-B3EC-4801-9990-94288F0D0C4E/d/Visual Studio Code 2.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:151:6017)
+	at B.<computed>.j.charCodeAt.R.CharCode.DollarSign.B.<computed> (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/AE4E9F0C-B3EC-4801-9990-94288F0D0C4E/d/Visual Studio Code 2.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:151:3107)
+	at d.g (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/AE4E9F0C-B3EC-4801-9990-94288F0D0C4E/d/Visual Studio Code 2.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:154:205942)
+	at d.executeCommand (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/AE4E9F0C-B3EC-4801-9990-94288F0D0C4E/d/Visual Studio Code 2.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:154:205380)
+	at Object.executeCommand (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/AE4E9F0C-B3EC-4801-9990-94288F0D0C4E/d/Visual Studio Code 2.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:164:23060)
+	at closeEntirePythagoraExtension (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.6/out/extension.js:302:31)
+	at Object.deactivate (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.6/out/extension.js:212:15)
+	at m.eb (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/AE4E9F0C-B3EC-4801-9990-94288F0D0C4E/d/Visual Studio Code 2.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:160:9856)
+	at /private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/AE4E9F0C-B3EC-4801-9990-94288F0D0C4E/d/Visual Studio Code 2.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:160:7927
+	at Array.map (<anonymous>)
+	at m.$ (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/AE4E9F0C-B3EC-4801-9990-94288F0D0C4E/d/Visual Studio Code 2.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:160:7914)
+	at m.terminate (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/AE4E9F0C-B3EC-4801-9990-94288F0D0C4E/d/Visual Studio Code 2.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:160:8187)
+	at $.terminate (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/AE4E9F0C-B3EC-4801-9990-94288F0D0C4E/d/Visual Studio Code 2.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:164:1513)
+	at o (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/AE4E9F0C-B3EC-4801-9990-94288F0D0C4E/d/Visual Studio Code 2.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:177:10633)
+	at MessagePortMain.<anonymous> (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/AE4E9F0C-B3EC-4801-9990-94288F0D0C4E/d/Visual Studio Code 2.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:177:6825)
+	at MessagePortMain.emit (node:events:519:28)
+	at MessagePortMain._internalPort.emit (node:electron/js2c/utility_init:2:2285)
+	at Object.callbackTrampoline (node:internal/async_hooks:130:17)
+2025-09-25T07:15:30.812Z INFO SharedStateManager initialized
+2025-09-25T07:15:30.813Z INFO [Migration] Checking for database migration...
+2025-09-25T07:15:30.813Z INFO [Migration] No migration needed
+2025-09-25T07:15:30.813Z INFO [MainProvider] Creating new MainProvider instance...
+2025-09-25T07:15:30.814Z ERROR Database initialization error:
+Error: ENOENT: no such file or directory, mkdir '/pythagora/pythagora-core/data/database'
+Stack: Error: ENOENT: no such file or directory, mkdir '/pythagora/pythagora-core/data/database'
+    at Object.mkdirSync (node:fs:1364:26)
+    at PrismaSession.ensureDatabaseSync (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.6/out/core/CustomPrismaSession.js:61:20)
+    at new PrismaSession (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.6/out/core/CustomPrismaSession.js:17:18)
+    at PrismaSession.getInstance (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.6/out/core/CustomPrismaSession.js:28:38)
+    at new MainProvider (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.6/out/providers/MainProvider.js:73:45)
+    at MainProvider.getInstance (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.6/out/providers/MainProvider.js:129:37)
+    at activate (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.6/out/extension.js:39:37)
+    at _b.n (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:112:13382)
+    at _b.m (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:112:13345)
+    at _b.l (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:112:12801)
+2025-09-25T07:15:30.822Z ERROR Error stdout:
+2025-09-25T07:15:30.823Z ERROR Error stderr:
+2025-09-25T07:15:30.823Z ERROR Failed to ensure database
+Error: Failed to initialize database: ENOENT: no such file or directory, mkdir '/pythagora/pythagora-core/data/database'
+stdout: undefined
+stderr: undefined
+Stack: Error: Failed to initialize database: ENOENT: no such file or directory, mkdir '/pythagora/pythagora-core/data/database'
+stdout: undefined
+stderr: undefined
+    at PrismaSession.ensureDatabaseSync (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.6/out/core/CustomPrismaSession.js:102:19)
+    at new PrismaSession (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.6/out/core/CustomPrismaSession.js:17:18)
+    at PrismaSession.getInstance (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.6/out/core/CustomPrismaSession.js:28:38)
+    at new MainProvider (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.6/out/providers/MainProvider.js:73:45)
+    at MainProvider.getInstance (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.6/out/providers/MainProvider.js:129:37)
+    at activate (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.6/out/extension.js:39:37)
+    at _b.n (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:112:13382)
+    at _b.m (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:112:13345)
+    at _b.l (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:112:12801)
+2025-09-25T07:15:30.824Z INFO Is remote: false
+2025-09-25T07:15:30.824Z INFO Starting Local. Installation path: undefined
+2025-09-25T07:15:33.103Z INFO MainProvider handleMessage {"type":"codeScreenActivated","activeScreen":"code","reason":"file_opened","route":"forwardToLeft","source":"tabsManager"}
+2025-09-25T07:15:34.345Z INFO MainProvider handleMessage {"command":"centerBarReady","data":{},"source":"center"}
+2025-09-25T07:15:34.346Z INFO Center panel message: {"command":"centerBarReady","data":{},"source":"center"}
+2025-09-25T07:15:34.346Z INFO MainProvider handleMessage {"command":"ready","data":"ready","source":"center"}
+2025-09-25T07:15:34.346Z INFO Center panel message: {"command":"ready","data":"ready","source":"center"}
+2025-09-25T07:15:34.346Z INFO [MainProvider] Center panel ready - processing ready handler
+2025-09-25T07:15:34.346Z INFO [MainProvider] Center panel ready - flushing 0 buffered messages
+2025-09-25T07:15:34.346Z INFO [Message Router] Routing getProjectInfo through unified router
+2025-09-25T08:26:30.418Z INFO MainProvider: Center panel disposed
+2025-09-26T03:13:57.259Z INFO Closing entire Pythagora extension...
+2025-09-26T03:13:57.283Z ERROR Error closing extension
+Error: Canceled
+Stack: Canceled: Canceled
+    at new CR (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:29:115607)
+    at j4.U (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:29:120217)
+    at Proxy.s.<computed>.n.charCodeAt.s.<computed> (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:29:117711)
+    at Kb.g (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:112:41045)
+    at Kb.executeCommand (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:112:40549)
+    at Object.executeCommand (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:199:103656)
+    at closeEntirePythagoraExtension (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.6/out/extension.js:302:31)
+    at Object.deactivate (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.6/out/extension.js:212:15)
+    at aJ.eb (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:116:11836)
+    at file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:116:9986
+    at Array.map (<anonymous>)
+    at aJ.$ (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:116:9974)
+    at aJ.terminate (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:116:10217)
+    at RP.terminate (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:118:914)
+    at bs (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:391:10410)
+    at MessagePortMain.<anonymous> (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:391:6949)
+    at MessagePortMain.emit (node:events:518:28)
+    at Object.MessagePortMain._internalPort.emit (node:electron/js2c/utility_init:2:2949)
+    at Object.callbackTrampoline (node:internal/async_hooks:130:17)
+2025-09-26T05:27:00.444Z INFO SharedStateManager initialized
+2025-09-26T05:27:00.444Z INFO [Migration] Checking for database migration...
+2025-09-26T05:27:00.444Z INFO [Migration] No migration needed
+2025-09-26T05:27:00.445Z INFO [MainProvider] Creating new MainProvider instance...
+2025-09-26T05:27:00.446Z INFO [/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8] Project root:
+2025-09-26T05:27:00.446Z INFO [/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/prisma/schema.prisma] Schema path:
+2025-09-26T05:27:00.446Z INFO [file:/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/pythagora-temp/pythagora.db] Database URL:
+2025-09-26T05:27:00.446Z INFO [true] Schema exists:
+2025-09-26T05:27:00.446Z INFO Running prisma generate first...
+2025-09-26T05:27:01.605Z INFO [Prisma schema loaded from prisma/schema.prisma
+
+✔ Generated Prisma Client (6.16.2) to ./src/generated/prisma in 205ms
+
+] Prisma generate result:
+2025-09-26T05:27:01.605Z INFO Running prisma db push to sync schema...
+2025-09-26T05:27:02.812Z INFO [Prisma schema loaded from prisma/schema.prisma
+Datasource "db": SQLite database "pythagora.db" at "file:/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/pythagora-temp/pythagora.db"
+
+SQLite database pythagora.db created at file:/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/pythagora-temp/pythagora.db
+
+🚀  Your database is now in sync with your Prisma schema. Done in 20ms
+
+Running generate... (Use --skip-generate to skip the generators)
+[2K[1A[2K[GRunning generate... - Prisma Client
+[2K[1A[2K[G✔ Generated Prisma Client (6.16.2) to ./src/generated/prisma in 133ms
+
+] Prisma db push result:
+2025-09-26T05:27:02.812Z INFO Is remote: false
+2025-09-26T05:27:02.813Z INFO Starting Local. Installation path: undefined
+2025-09-26T05:27:02.813Z INFO Installation path exists: /Users/krishnadevan/DocNearMe/doc-near-me
+2025-09-26T05:27:18.460Z INFO MainProvider handleMessage {"type":"codeScreenActivated","activeScreen":"code","reason":"file_opened","route":"forwardToLeft","source":"tabsManager"}
+2025-09-26T05:27:19.034Z INFO MainProvider handleMessage {"command":"centerBarReady","data":{},"source":"center"}
+2025-09-26T05:27:19.034Z INFO Center panel message: {"command":"centerBarReady","data":{},"source":"center"}
+2025-09-26T05:27:19.034Z INFO MainProvider handleMessage {"command":"ready","data":"ready","source":"center"}
+2025-09-26T05:27:19.034Z INFO Center panel message: {"command":"ready","data":"ready","source":"center"}
+2025-09-26T05:27:19.035Z INFO [MainProvider] Center panel ready - processing ready handler
+2025-09-26T05:27:19.035Z INFO [MainProvider] Center panel ready - flushing 0 buffered messages
+2025-09-26T05:27:19.035Z INFO [Message Router] Routing getProjectInfo through unified router
+2025-09-26T05:27:35.602Z INFO Closing entire Pythagora extension...
+2025-09-26T05:27:35.605Z ERROR Error closing extension
+Error: Canceled
+Stack: Canceled: Canceled
+	at new C (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/E562754F-BD79-463C-AD6C-ADD3520E43C0/d/Visual Studio Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:144:35204)
+	at E.U (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/E562754F-BD79-463C-AD6C-ADD3520E43C0/d/Visual Studio Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:151:6017)
+	at B.<computed>.j.charCodeAt.R.CharCode.DollarSign.B.<computed> (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/E562754F-BD79-463C-AD6C-ADD3520E43C0/d/Visual Studio Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:151:3107)
+	at d.g (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/E562754F-BD79-463C-AD6C-ADD3520E43C0/d/Visual Studio Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:154:205942)
+	at d.executeCommand (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/E562754F-BD79-463C-AD6C-ADD3520E43C0/d/Visual Studio Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:154:205380)
+	at Object.executeCommand (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/E562754F-BD79-463C-AD6C-ADD3520E43C0/d/Visual Studio Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:164:23060)
+	at closeEntirePythagoraExtension (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/out/extension.js:380:31)
+	at Object.deactivate (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/out/extension.js:290:15)
+	at m.eb (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/E562754F-BD79-463C-AD6C-ADD3520E43C0/d/Visual Studio Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:160:9856)
+	at /private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/E562754F-BD79-463C-AD6C-ADD3520E43C0/d/Visual Studio Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:160:7927
+	at Array.map (<anonymous>)
+	at m.$ (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/E562754F-BD79-463C-AD6C-ADD3520E43C0/d/Visual Studio Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:160:7914)
+	at m.terminate (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/E562754F-BD79-463C-AD6C-ADD3520E43C0/d/Visual Studio Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:160:8187)
+	at $.terminate (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/E562754F-BD79-463C-AD6C-ADD3520E43C0/d/Visual Studio Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:164:1513)
+	at o (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/E562754F-BD79-463C-AD6C-ADD3520E43C0/d/Visual Studio Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:177:10633)
+	at MessagePortMain.<anonymous> (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/E562754F-BD79-463C-AD6C-ADD3520E43C0/d/Visual Studio Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:177:6825)
+	at MessagePortMain.emit (node:events:519:28)
+	at MessagePortMain._internalPort.emit (node:electron/js2c/utility_init:2:2285)
+	at Object.callbackTrampoline (node:internal/async_hooks:130:17)
+2025-09-26T05:27:54.865Z INFO SharedStateManager initialized
+2025-09-26T05:27:54.866Z INFO [Migration] Checking for database migration...
+2025-09-26T05:27:54.896Z INFO [Migration] No migration needed
+2025-09-26T05:27:54.896Z INFO [MainProvider] Creating new MainProvider instance...
+2025-09-26T05:27:54.900Z INFO [/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8] Project root:
+2025-09-26T05:27:54.900Z INFO [/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/prisma/schema.prisma] Schema path:
+2025-09-26T05:27:54.900Z INFO [file:/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/pythagora-temp/pythagora.db] Database URL:
+2025-09-26T05:27:54.900Z INFO [true] Schema exists:
+2025-09-26T05:27:54.900Z INFO Running prisma generate first...
+2025-09-26T05:27:55.573Z INFO [Prisma schema loaded from prisma/schema.prisma
+
+✔ Generated Prisma Client (6.16.2) to ./src/generated/prisma in 100ms
+
+] Prisma generate result:
+2025-09-26T05:27:55.573Z INFO Running prisma db push to sync schema...
+2025-09-26T05:27:56.249Z INFO [Prisma schema loaded from prisma/schema.prisma
+Datasource "db": SQLite database "pythagora.db" at "file:/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/pythagora-temp/pythagora.db"
+
+The database is already in sync with the Prisma schema.
+
+Running generate... (Use --skip-generate to skip the generators)
+[2K[1A[2K[GRunning generate... - Prisma Client
+[2K[1A[2K[G✔ Generated Prisma Client (6.16.2) to ./src/generated/prisma in 113ms
+
+] Prisma db push result:
+2025-09-26T05:27:56.249Z INFO Is remote: false
+2025-09-26T05:27:56.249Z INFO Starting Local. Installation path: undefined
+2025-09-26T05:27:56.250Z INFO Installation path exists: /Users/krishnadevan/DocNearMe/doc-near-me
+2025-09-26T05:27:59.927Z INFO MainProvider handleMessage {"type":"codeScreenActivated","activeScreen":"code","reason":"file_opened","route":"forwardToLeft","source":"tabsManager"}
+2025-09-26T05:28:00.439Z INFO MainProvider handleMessage {"command":"centerBarReady","data":{},"source":"center"}
+2025-09-26T05:28:00.439Z INFO Center panel message: {"command":"centerBarReady","data":{},"source":"center"}
+2025-09-26T05:28:00.440Z INFO MainProvider handleMessage {"command":"ready","data":"ready","source":"center"}
+2025-09-26T05:28:00.440Z INFO Center panel message: {"command":"ready","data":"ready","source":"center"}
+2025-09-26T05:28:00.440Z INFO [MainProvider] Center panel ready - processing ready handler
+2025-09-26T05:28:00.440Z INFO [MainProvider] Center panel ready - flushing 0 buffered messages
+2025-09-26T05:28:00.440Z INFO [Message Router] Routing getProjectInfo through unified router
+2025-09-26T05:28:46.829Z INFO Closing entire Pythagora extension...
+2025-09-26T05:28:46.832Z ERROR Error closing extension
+Error: Canceled
+Stack: Canceled: Canceled
+    at new C (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/E562754F-BD79-463C-AD6C-ADD3520E43C0/d/Visual Studio Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:144:35204)
+    at E.U (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/E562754F-BD79-463C-AD6C-ADD3520E43C0/d/Visual Studio Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:151:6017)
+    at Proxy.B.<computed>.j.charCodeAt.R.CharCode.DollarSign.B.<computed> (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/E562754F-BD79-463C-AD6C-ADD3520E43C0/d/Visual Studio Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:151:3107)
+    at d.g (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/E562754F-BD79-463C-AD6C-ADD3520E43C0/d/Visual Studio Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:154:205942)
+    at d.executeCommand (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/E562754F-BD79-463C-AD6C-ADD3520E43C0/d/Visual Studio Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:154:205380)
+    at Object.executeCommand (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/E562754F-BD79-463C-AD6C-ADD3520E43C0/d/Visual Studio Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:164:23060)
+    at closeEntirePythagoraExtension (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/out/extension.js:380:31)
+    at Object.deactivate (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/out/extension.js:290:15)
+    at m.eb (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/E562754F-BD79-463C-AD6C-ADD3520E43C0/d/Visual Studio Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:160:9856)
+    at /private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/E562754F-BD79-463C-AD6C-ADD3520E43C0/d/Visual Studio Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:160:7927
+    at Array.map (<anonymous>)
+    at m.$ (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/E562754F-BD79-463C-AD6C-ADD3520E43C0/d/Visual Studio Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:160:7914)
+    at m.terminate (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/E562754F-BD79-463C-AD6C-ADD3520E43C0/d/Visual Studio Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:160:8187)
+    at $.terminate (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/E562754F-BD79-463C-AD6C-ADD3520E43C0/d/Visual Studio Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:164:1513)
+    at o (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/E562754F-BD79-463C-AD6C-ADD3520E43C0/d/Visual Studio Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:177:10633)
+    at MessagePortMain.<anonymous> (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/E562754F-BD79-463C-AD6C-ADD3520E43C0/d/Visual Studio Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:177:6825)
+    at MessagePortMain.emit (node:events:519:28)
+    at Object.MessagePortMain._internalPort.emit (node:electron/js2c/utility_init:2:2285)
+    at Object.callbackTrampoline (node:internal/async_hooks:130:17)
+2025-09-26T05:29:06.926Z INFO SharedStateManager initialized
+2025-09-26T05:29:06.926Z INFO [Migration] Checking for database migration...
+2025-09-26T05:29:07.083Z INFO [Migration] No migration needed
+2025-09-26T05:29:07.083Z INFO [MainProvider] Creating new MainProvider instance...
+2025-09-26T05:29:07.084Z INFO [/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8] Project root:
+2025-09-26T05:29:07.085Z INFO [/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/prisma/schema.prisma] Schema path:
+2025-09-26T05:29:07.085Z INFO [file:/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/pythagora-temp/pythagora.db] Database URL:
+2025-09-26T05:29:07.085Z INFO [true] Schema exists:
+2025-09-26T05:29:07.085Z INFO Running prisma generate first...
+2025-09-26T05:29:08.003Z INFO [Prisma schema loaded from prisma/schema.prisma
+
+✔ Generated Prisma Client (6.16.2) to ./src/generated/prisma in 245ms
+
+] Prisma generate result:
+2025-09-26T05:29:08.003Z INFO Running prisma db push to sync schema...
+2025-09-26T05:29:08.738Z INFO [Prisma schema loaded from prisma/schema.prisma
+Datasource "db": SQLite database "pythagora.db" at "file:/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/pythagora-temp/pythagora.db"
+
+The database is already in sync with the Prisma schema.
+
+Running generate... (Use --skip-generate to skip the generators)
+[2K[1A[2K[GRunning generate... - Prisma Client
+[2K[1A[2K[G✔ Generated Prisma Client (6.16.2) to ./src/generated/prisma in 174ms
+
+] Prisma db push result:
+2025-09-26T05:29:08.738Z INFO Is remote: false
+2025-09-26T05:29:08.739Z INFO Starting Local. Installation path: undefined
+2025-09-26T05:29:08.739Z INFO Installation path exists: /Users/krishnadevan/DocNearMe/doc-near-me
+2025-09-26T05:29:34.375Z INFO MainProvider handleMessage {"type":"codeScreenActivated","activeScreen":"code","reason":"file_opened","route":"forwardToLeft","source":"tabsManager"}
+2025-09-26T05:29:35.811Z INFO MainProvider handleMessage {"command":"centerBarReady","data":{},"source":"center"}
+2025-09-26T05:29:35.811Z INFO Center panel message: {"command":"centerBarReady","data":{},"source":"center"}
+2025-09-26T05:29:35.811Z INFO MainProvider handleMessage {"command":"ready","data":"ready","source":"center"}
+2025-09-26T05:29:35.812Z INFO Center panel message: {"command":"ready","data":"ready","source":"center"}
+2025-09-26T05:29:35.812Z INFO [MainProvider] Center panel ready - processing ready handler
+2025-09-26T05:29:35.812Z INFO [MainProvider] Center panel ready - flushing 0 buffered messages
+2025-09-26T05:29:35.812Z INFO [Message Router] Routing getProjectInfo through unified router
+2025-09-26T15:34:43.918Z INFO Closing entire Pythagora extension...
+2025-09-26T15:34:43.939Z ERROR Error closing extension
+Error: Canceled
+Stack: Canceled: Canceled
+    at new CR (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:29:115607)
+    at j4.U (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:29:120217)
+    at Proxy.s.<computed>.n.charCodeAt.s.<computed> (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:29:117711)
+    at Kb.g (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:112:41045)
+    at Kb.executeCommand (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:112:40549)
+    at Object.executeCommand (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:199:103656)
+    at closeEntirePythagoraExtension (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/out/extension.js:380:31)
+    at Object.deactivate (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/out/extension.js:290:15)
+    at aJ.eb (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:116:11836)
+    at file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:116:9986
+    at Array.map (<anonymous>)
+    at aJ.$ (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:116:9974)
+    at aJ.terminate (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:116:10217)
+    at RP.terminate (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:118:914)
+    at bs (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:391:10410)
+    at MessagePortMain.<anonymous> (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:391:6949)
+    at MessagePortMain.emit (node:events:518:28)
+    at Object.MessagePortMain._internalPort.emit (node:electron/js2c/utility_init:2:2949)
+    at Object.callbackTrampoline (node:internal/async_hooks:130:17)
+2025-09-26T15:34:58.541Z INFO SharedStateManager initialized
+2025-09-26T15:34:58.541Z INFO [Migration] Checking for database migration...
+2025-09-26T15:34:58.583Z INFO [Migration] No migration needed
+2025-09-26T15:34:58.583Z INFO [MainProvider] Creating new MainProvider instance...
+2025-09-26T15:34:58.584Z INFO [/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8] Project root:
+2025-09-26T15:34:58.584Z INFO [/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/prisma/schema.prisma] Schema path:
+2025-09-26T15:34:58.584Z INFO [file:/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/pythagora-temp/pythagora.db] Database URL:
+2025-09-26T15:34:58.584Z INFO [true] Schema exists:
+2025-09-26T15:34:58.584Z INFO Running prisma generate first...
+2025-09-26T15:34:59.637Z ERROR Database initialization error:
+Error: Command failed: node "/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/node_modules/prisma/build/index.js" generate --schema="/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/prisma/schema.prisma"
+Error: 
+ENOTEMPTY: directory not empty, rmdir '/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/src/generated/prisma/models'
+
+
+
+Stack: Error: Command failed: node "/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/node_modules/prisma/build/index.js" generate --schema="/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/prisma/schema.prisma"
+Error: 
+ENOTEMPTY: directory not empty, rmdir '/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/src/generated/prisma/models'
+
+
+
+	at genericNodeError (node:internal/errors:984:15)
+	at wrappedFn (node:internal/errors:538:14)
+	at checkExecSyncError (node:child_process:928:11)
+	at execSync (node:child_process:1000:15)
+	at node:electron/js2c/node_init:2:13164
+	at PrismaSession.ensureDatabaseSync (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/out/core/CustomPrismaSession.js:83:65)
+	at new PrismaSession (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/out/core/CustomPrismaSession.js:17:18)
+	at PrismaSession.getInstance (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/out/core/CustomPrismaSession.js:28:38)
+	at new MainProvider (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/out/providers/MainProvider.js:73:45)
+	at MainProvider.getInstance (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/out/providers/MainProvider.js:129:37)
+	at activate (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/out/extension.js:94:37)
+	at async m.n (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/334008DC-9B29-4224-889E-09E2182CECF3/d/Visual Studio Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:144:6409)
+	at async m (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/334008DC-9B29-4224-889E-09E2182CECF3/d/Visual Studio Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:144:6372)
+	at async m.l (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/334008DC-9B29-4224-889E-09E2182CECF3/d/Visual Studio Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:144:5829)
+2025-09-26T15:34:59.641Z ERROR Error stdout:
+Error: Prisma schema loaded from prisma/schema.prisma
+
+2025-09-26T15:34:59.641Z ERROR Error stderr:
+Error: Error: 
+ENOTEMPTY: directory not empty, rmdir '/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/src/generated/prisma/models'
+
+
+
+2025-09-26T15:34:59.641Z ERROR Failed to ensure database
+Error: Failed to initialize database: Command failed: node "/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/node_modules/prisma/build/index.js" generate --schema="/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/prisma/schema.prisma"
+Error: 
+ENOTEMPTY: directory not empty, rmdir '/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/src/generated/prisma/models'
+
+
+
+stdout: Prisma schema loaded from prisma/schema.prisma
+
+stderr: Error: 
+ENOTEMPTY: directory not empty, rmdir '/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/src/generated/prisma/models'
+
+
+
+Stack: Error: Failed to initialize database: Command failed: node "/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/node_modules/prisma/build/index.js" generate --schema="/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/prisma/schema.prisma"
+Error: 
+ENOTEMPTY: directory not empty, rmdir '/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/src/generated/prisma/models'
+
+
+
+stdout: Prisma schema loaded from prisma/schema.prisma
+
+stderr: Error: 
+ENOTEMPTY: directory not empty, rmdir '/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/src/generated/prisma/models'
+
+
+
+	at PrismaSession.ensureDatabaseSync (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/out/core/CustomPrismaSession.js:102:19)
+	at new PrismaSession (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/out/core/CustomPrismaSession.js:17:18)
+	at PrismaSession.getInstance (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/out/core/CustomPrismaSession.js:28:38)
+	at new MainProvider (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/out/providers/MainProvider.js:73:45)
+	at MainProvider.getInstance (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/out/providers/MainProvider.js:129:37)
+	at activate (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/out/extension.js:94:37)
+	at async m.n (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/334008DC-9B29-4224-889E-09E2182CECF3/d/Visual Studio Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:144:6409)
+	at async m (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/334008DC-9B29-4224-889E-09E2182CECF3/d/Visual Studio Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:144:6372)
+	at async m.l (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/334008DC-9B29-4224-889E-09E2182CECF3/d/Visual Studio Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:144:5829)
+2025-09-26T15:34:59.642Z INFO Is remote: false
+2025-09-26T15:34:59.643Z INFO Starting Local. Installation path: undefined
+2025-09-26T15:34:59.644Z INFO Installation path exists: /Users/krishnadevan/DocNearMe/doc-near-me
+2025-09-26T15:37:19.816Z INFO Closing entire Pythagora extension...
+2025-09-26T15:37:20.433Z ERROR Error closing extension
+Error: Canceled
+Stack: Canceled: Canceled
+    at new C (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/334008DC-9B29-4224-889E-09E2182CECF3/d/Visual Studio Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:144:35204)
+    at E.U (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/334008DC-9B29-4224-889E-09E2182CECF3/d/Visual Studio Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:151:6017)
+    at Proxy.B.<computed>.j.charCodeAt.R.CharCode.DollarSign.B.<computed> (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/334008DC-9B29-4224-889E-09E2182CECF3/d/Visual Studio Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:151:3107)
+    at d.g (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/334008DC-9B29-4224-889E-09E2182CECF3/d/Visual Studio Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:154:205942)
+    at d.executeCommand (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/334008DC-9B29-4224-889E-09E2182CECF3/d/Visual Studio Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:154:205380)
+    at Object.executeCommand (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/334008DC-9B29-4224-889E-09E2182CECF3/d/Visual Studio Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:164:23060)
+    at closeEntirePythagoraExtension (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/out/extension.js:380:31)
+    at Object.deactivate (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/out/extension.js:290:15)
+    at m.eb (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/334008DC-9B29-4224-889E-09E2182CECF3/d/Visual Studio Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:160:9856)
+    at /private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/334008DC-9B29-4224-889E-09E2182CECF3/d/Visual Studio Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:160:7927
+    at Array.map (<anonymous>)
+    at m.$ (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/334008DC-9B29-4224-889E-09E2182CECF3/d/Visual Studio Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:160:7914)
+    at m.terminate (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/334008DC-9B29-4224-889E-09E2182CECF3/d/Visual Studio Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:160:8187)
+    at $.terminate (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/334008DC-9B29-4224-889E-09E2182CECF3/d/Visual Studio Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:164:1513)
+    at o (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/334008DC-9B29-4224-889E-09E2182CECF3/d/Visual Studio Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:177:10633)
+    at MessagePortMain.<anonymous> (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/334008DC-9B29-4224-889E-09E2182CECF3/d/Visual Studio Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:177:6825)
+    at MessagePortMain.emit (node:events:519:28)
+    at Object.MessagePortMain._internalPort.emit (node:electron/js2c/utility_init:2:2285)
+    at Object.callbackTrampoline (node:internal/async_hooks:130:17)
+2025-09-26T15:37:21.852Z INFO SharedStateManager initialized
+2025-09-26T15:37:21.852Z INFO [Migration] Checking for database migration...
+2025-09-26T15:37:21.885Z INFO [Migration] No migration needed
+2025-09-26T15:37:21.885Z INFO [MainProvider] Creating new MainProvider instance...
+2025-09-26T15:37:21.886Z INFO [/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8] Project root:
+2025-09-26T15:37:21.886Z INFO [/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/prisma/schema.prisma] Schema path:
+2025-09-26T15:37:21.886Z INFO [file:/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/pythagora-temp/pythagora.db] Database URL:
+2025-09-26T15:37:21.886Z INFO [true] Schema exists:
+2025-09-26T15:37:21.886Z INFO Running prisma generate first...
+2025-09-26T15:37:22.546Z INFO [Prisma schema loaded from prisma/schema.prisma
+
+✔ Generated Prisma Client (6.16.2) to ./src/generated/prisma in 103ms
+
+] Prisma generate result:
+2025-09-26T15:37:22.546Z INFO Running prisma db push to sync schema...
+2025-09-26T15:37:23.234Z INFO [Prisma schema loaded from prisma/schema.prisma
+Datasource "db": SQLite database "pythagora.db" at "file:/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/pythagora-temp/pythagora.db"
+
+The database is already in sync with the Prisma schema.
+
+Running generate... (Use --skip-generate to skip the generators)
+[2K[1A[2K[GRunning generate... - Prisma Client
+[2K[1A[2K[G✔ Generated Prisma Client (6.16.2) to ./src/generated/prisma in 111ms
+
+] Prisma db push result:
+2025-09-26T15:37:23.234Z INFO Is remote: false
+2025-09-26T15:37:23.235Z INFO Starting Local. Installation path: undefined
+2025-09-26T15:37:23.235Z INFO Installation path exists: /Users/krishnadevan/DocNearMe/doc-near-me
+2025-09-26T15:37:25.406Z INFO MainProvider handleMessage {"type":"codeScreenActivated","activeScreen":"code","reason":"file_opened","route":"forwardToLeft","source":"tabsManager"}
+2025-09-26T15:37:25.725Z INFO MainProvider handleMessage {"command":"centerBarReady","data":{},"source":"center"}
+2025-09-26T15:37:25.726Z INFO Center panel message: {"command":"centerBarReady","data":{},"source":"center"}
+2025-09-26T15:37:25.726Z INFO MainProvider handleMessage {"command":"ready","data":"ready","source":"center"}
+2025-09-26T15:37:25.726Z INFO Center panel message: {"command":"ready","data":"ready","source":"center"}
+2025-09-26T15:37:25.726Z INFO [MainProvider] Center panel ready - processing ready handler
+2025-09-26T15:37:25.726Z INFO [MainProvider] Center panel ready - flushing 0 buffered messages
+2025-09-26T15:37:25.726Z INFO [Message Router] Routing getProjectInfo through unified router
+2025-09-26T15:37:59.639Z INFO Closing entire Pythagora extension...
+2025-09-26T15:37:59.643Z ERROR Error closing extension
+Error: Canceled
+Stack: Canceled: Canceled
+    at new C (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/334008DC-9B29-4224-889E-09E2182CECF3/d/Visual Studio Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:144:35204)
+    at E.U (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/334008DC-9B29-4224-889E-09E2182CECF3/d/Visual Studio Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:151:6017)
+    at Proxy.B.<computed>.j.charCodeAt.R.CharCode.DollarSign.B.<computed> (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/334008DC-9B29-4224-889E-09E2182CECF3/d/Visual Studio Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:151:3107)
+    at d.g (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/334008DC-9B29-4224-889E-09E2182CECF3/d/Visual Studio Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:154:205942)
+    at d.executeCommand (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/334008DC-9B29-4224-889E-09E2182CECF3/d/Visual Studio Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:154:205380)
+    at Object.executeCommand (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/334008DC-9B29-4224-889E-09E2182CECF3/d/Visual Studio Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:164:23060)
+    at closeEntirePythagoraExtension (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/out/extension.js:380:31)
+    at Object.deactivate (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/out/extension.js:290:15)
+    at m.eb (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/334008DC-9B29-4224-889E-09E2182CECF3/d/Visual Studio Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:160:9856)
+    at /private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/334008DC-9B29-4224-889E-09E2182CECF3/d/Visual Studio Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:160:7927
+    at Array.map (<anonymous>)
+    at m.$ (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/334008DC-9B29-4224-889E-09E2182CECF3/d/Visual Studio Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:160:7914)
+    at m.terminate (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/334008DC-9B29-4224-889E-09E2182CECF3/d/Visual Studio Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:160:8187)
+    at $.terminate (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/334008DC-9B29-4224-889E-09E2182CECF3/d/Visual Studio Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:164:1513)
+    at o (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/334008DC-9B29-4224-889E-09E2182CECF3/d/Visual Studio Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:177:10633)
+    at MessagePortMain.<anonymous> (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/334008DC-9B29-4224-889E-09E2182CECF3/d/Visual Studio Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:177:6825)
+    at MessagePortMain.emit (node:events:519:28)
+    at Object.MessagePortMain._internalPort.emit (node:electron/js2c/utility_init:2:2285)
+    at Object.callbackTrampoline (node:internal/async_hooks:130:17)
+2025-09-26T15:38:01.637Z INFO SharedStateManager initialized
+2025-09-26T15:38:01.638Z INFO [Migration] Checking for database migration...
+2025-09-26T15:38:01.669Z INFO [Migration] No migration needed
+2025-09-26T15:38:01.669Z INFO [MainProvider] Creating new MainProvider instance...
+2025-09-26T15:38:01.670Z INFO [/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8] Project root:
+2025-09-26T15:38:01.670Z INFO [/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/prisma/schema.prisma] Schema path:
+2025-09-26T15:38:01.670Z INFO [file:/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/pythagora-temp/pythagora.db] Database URL:
+2025-09-26T15:38:01.670Z INFO [true] Schema exists:
+2025-09-26T15:38:01.670Z INFO Running prisma generate first...
+2025-09-26T15:38:02.598Z INFO [Prisma schema loaded from prisma/schema.prisma
+
+✔ Generated Prisma Client (6.16.2) to ./src/generated/prisma in 193ms
+
+] Prisma generate result:
+2025-09-26T15:38:02.599Z INFO Running prisma db push to sync schema...
+2025-09-26T15:38:03.368Z INFO [Prisma schema loaded from prisma/schema.prisma
+Datasource "db": SQLite database "pythagora.db" at "file:/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/pythagora-temp/pythagora.db"
+
+The database is already in sync with the Prisma schema.
+
+Running generate... (Use --skip-generate to skip the generators)
+[2K[1A[2K[GRunning generate... - Prisma Client
+[2K[1A[2K[G✔ Generated Prisma Client (6.16.2) to ./src/generated/prisma in 124ms
+
+] Prisma db push result:
+2025-09-26T15:38:03.368Z INFO Is remote: false
+2025-09-26T15:38:03.368Z INFO Starting Local. Installation path: undefined
+2025-09-26T15:38:03.369Z INFO Installation path exists: /Users/krishnadevan/DocNearMe/doc-near-me
+2025-09-26T15:38:11.866Z INFO MainProvider handleMessage {"type":"codeScreenActivated","activeScreen":"code","reason":"file_opened","route":"forwardToLeft","source":"tabsManager"}
+2025-09-26T15:38:12.129Z INFO MainProvider handleMessage {"command":"centerBarReady","data":{},"source":"center"}
+2025-09-26T15:38:12.130Z INFO Center panel message: {"command":"centerBarReady","data":{},"source":"center"}
+2025-09-26T15:38:12.137Z INFO MainProvider handleMessage {"command":"ready","data":"ready","source":"center"}
+2025-09-26T15:38:12.137Z INFO Center panel message: {"command":"ready","data":"ready","source":"center"}
+2025-09-26T15:38:12.137Z INFO [MainProvider] Center panel ready - processing ready handler
+2025-09-26T15:38:12.137Z INFO [MainProvider] Center panel ready - flushing 0 buffered messages
+2025-09-26T15:38:12.137Z INFO [Message Router] Routing getProjectInfo through unified router
+2025-09-26T15:39:05.072Z INFO MainProvider: Center panel disposed
+2025-09-29T04:29:54.469Z INFO Closing entire Pythagora extension...
+2025-09-29T04:29:55.927Z ERROR Error closing extension
+Error: Canceled
+Stack: Canceled: Canceled
+    at new C (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/334008DC-9B29-4224-889E-09E2182CECF3/d/Visual Studio Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:144:35204)
+    at E.U (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/334008DC-9B29-4224-889E-09E2182CECF3/d/Visual Studio Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:151:6017)
+    at Proxy.B.<computed>.j.charCodeAt.R.CharCode.DollarSign.B.<computed> (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/334008DC-9B29-4224-889E-09E2182CECF3/d/Visual Studio Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:151:3107)
+    at d.g (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/334008DC-9B29-4224-889E-09E2182CECF3/d/Visual Studio Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:154:205942)
+    at d.executeCommand (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/334008DC-9B29-4224-889E-09E2182CECF3/d/Visual Studio Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:154:205380)
+    at Object.executeCommand (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/334008DC-9B29-4224-889E-09E2182CECF3/d/Visual Studio Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:164:23060)
+    at closeEntirePythagoraExtension (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/out/extension.js:380:31)
+    at Object.deactivate (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/out/extension.js:290:15)
+    at m.eb (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/334008DC-9B29-4224-889E-09E2182CECF3/d/Visual Studio Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:160:9856)
+    at /private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/334008DC-9B29-4224-889E-09E2182CECF3/d/Visual Studio Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:160:7927
+    at Array.map (<anonymous>)
+    at m.$ (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/334008DC-9B29-4224-889E-09E2182CECF3/d/Visual Studio Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:160:7914)
+    at m.terminate (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/334008DC-9B29-4224-889E-09E2182CECF3/d/Visual Studio Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:160:8187)
+    at $.terminate (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/334008DC-9B29-4224-889E-09E2182CECF3/d/Visual Studio Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:164:1513)
+    at o (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/334008DC-9B29-4224-889E-09E2182CECF3/d/Visual Studio Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:177:10633)
+    at MessagePortMain.<anonymous> (/private/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/AppTranslocation/334008DC-9B29-4224-889E-09E2182CECF3/d/Visual Studio Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:177:6825)
+    at MessagePortMain.emit (node:events:519:28)
+    at Object.MessagePortMain._internalPort.emit (node:electron/js2c/utility_init:2:2285)
+    at Object.callbackTrampoline (node:internal/async_hooks:130:17)
+2025-09-29T04:30:17.499Z INFO SharedStateManager initialized
+2025-09-29T04:30:17.499Z INFO [Migration] Checking for database migration...
+2025-09-29T04:30:17.832Z INFO [Migration] No migration needed
+2025-09-29T04:30:17.832Z INFO [MainProvider] Creating new MainProvider instance...
+2025-09-29T04:30:17.833Z INFO [/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8] Project root:
+2025-09-29T04:30:17.833Z INFO [/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/prisma/schema.prisma] Schema path:
+2025-09-29T04:30:17.833Z INFO [file:/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/pythagora-temp/pythagora.db] Database URL:
+2025-09-29T04:30:17.833Z INFO [true] Schema exists:
+2025-09-29T04:30:17.833Z INFO Running prisma generate first...
+2025-09-29T04:30:18.915Z ERROR Database initialization error:
+Error: Command failed: node "/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/node_modules/prisma/build/index.js" generate --schema="/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/prisma/schema.prisma"
+Error: 
+/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/src/generated/prisma exists and is not empty but doesn't look like a generated Prisma Client. Please check your output path and remove the existing directory if you indeed want to generate the Prisma Client in that location.
+
+
+
+Stack: Error: Command failed: node "/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/node_modules/prisma/build/index.js" generate --schema="/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/prisma/schema.prisma"
+Error: 
+/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/src/generated/prisma exists and is not empty but doesn't look like a generated Prisma Client. Please check your output path and remove the existing directory if you indeed want to generate the Prisma Client in that location.
+
+
+
+    at genericNodeError (node:internal/errors:983:15)
+    at wrappedFn (node:internal/errors:537:14)
+    at checkExecSyncError (node:child_process:916:11)
+    at execSync (node:child_process:988:15)
+    at node:electron/js2c/node_init:2:17313
+    at PrismaSession.ensureDatabaseSync (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/out/core/CustomPrismaSession.js:83:65)
+    at new PrismaSession (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/out/core/CustomPrismaSession.js:17:18)
+    at PrismaSession.getInstance (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/out/core/CustomPrismaSession.js:28:38)
+    at new MainProvider (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/out/providers/MainProvider.js:73:45)
+    at MainProvider.getInstance (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/out/providers/MainProvider.js:129:37)
+    at activate (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/out/extension.js:94:37)
+    at db.n (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:112:13386)
+    at db.m (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:112:13349)
+    at db.l (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:112:12805)
+2025-09-29T04:30:18.920Z ERROR Error stdout:
+Error: Prisma schema loaded from prisma/schema.prisma
+
+2025-09-29T04:30:18.920Z ERROR Error stderr:
+Error: Error: 
+/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/src/generated/prisma exists and is not empty but doesn't look like a generated Prisma Client. Please check your output path and remove the existing directory if you indeed want to generate the Prisma Client in that location.
+
+
+
+2025-09-29T04:30:18.920Z ERROR Failed to ensure database
+Error: Failed to initialize database: Command failed: node "/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/node_modules/prisma/build/index.js" generate --schema="/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/prisma/schema.prisma"
+Error: 
+/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/src/generated/prisma exists and is not empty but doesn't look like a generated Prisma Client. Please check your output path and remove the existing directory if you indeed want to generate the Prisma Client in that location.
+
+
+
+stdout: Prisma schema loaded from prisma/schema.prisma
+
+stderr: Error: 
+/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/src/generated/prisma exists and is not empty but doesn't look like a generated Prisma Client. Please check your output path and remove the existing directory if you indeed want to generate the Prisma Client in that location.
+
+
+
+Stack: Error: Failed to initialize database: Command failed: node "/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/node_modules/prisma/build/index.js" generate --schema="/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/prisma/schema.prisma"
+Error: 
+/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/src/generated/prisma exists and is not empty but doesn't look like a generated Prisma Client. Please check your output path and remove the existing directory if you indeed want to generate the Prisma Client in that location.
+
+
+
+stdout: Prisma schema loaded from prisma/schema.prisma
+
+stderr: Error: 
+/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/src/generated/prisma exists and is not empty but doesn't look like a generated Prisma Client. Please check your output path and remove the existing directory if you indeed want to generate the Prisma Client in that location.
+
+
+
+    at PrismaSession.ensureDatabaseSync (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/out/core/CustomPrismaSession.js:102:19)
+    at new PrismaSession (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/out/core/CustomPrismaSession.js:17:18)
+    at PrismaSession.getInstance (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/out/core/CustomPrismaSession.js:28:38)
+    at new MainProvider (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/out/providers/MainProvider.js:73:45)
+    at MainProvider.getInstance (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/out/providers/MainProvider.js:129:37)
+    at activate (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/out/extension.js:94:37)
+    at db.n (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:112:13386)
+    at db.m (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:112:13349)
+    at db.l (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:112:12805)
+2025-09-29T04:30:18.921Z INFO Is remote: false
+2025-09-29T04:30:18.922Z INFO Starting Local. Installation path: undefined
+2025-09-29T04:30:18.922Z INFO Installation path exists: /Users/krishnadevan/DocNearMe/doc-near-me
+2025-09-29T04:30:49.925Z INFO Closing entire Pythagora extension...
+2025-09-29T04:30:49.932Z ERROR Error closing extension
+Error: Canceled
+Stack: Canceled: Canceled
+    at new OL (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:29:113290)
+    at a4.U (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:29:117901)
+    at Proxy.s.<computed>.n.charCodeAt.s.<computed> (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:29:115395)
+    at Ab.g (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:112:41052)
+    at Ab.executeCommand (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:112:40556)
+    at Object.executeCommand (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:164:105653)
+    at closeEntirePythagoraExtension (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/out/extension.js:380:31)
+    at Object.deactivate (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/out/extension.js:290:15)
+    at QG.eb (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:117:11726)
+    at file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:117:9876
+    at Array.map (<anonymous>)
+    at QG.$ (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:117:9864)
+    at QG.terminate (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:117:10107)
+    at Y3.terminate (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:119:914)
+    at us (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:356:9945)
+    at MessagePortMain.<anonymous> (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:356:6484)
+    at MessagePortMain.emit (node:events:518:28)
+    at Object.MessagePortMain._internalPort.emit (node:electron/js2c/utility_init:2:3073)
+    at Object.callbackTrampoline (node:internal/async_hooks:130:17)
+2025-09-29T04:31:13.430Z INFO SharedStateManager initialized
+2025-09-29T04:31:13.431Z INFO [Migration] Checking for database migration...
+2025-09-29T04:31:13.569Z INFO [Migration] No migration needed
+2025-09-29T04:31:13.570Z INFO [MainProvider] Creating new MainProvider instance...
+2025-09-29T04:31:13.571Z INFO [/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8] Project root:
+2025-09-29T04:31:13.571Z INFO [/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/prisma/schema.prisma] Schema path:
+2025-09-29T04:31:13.571Z INFO [file:/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/pythagora-temp/pythagora.db] Database URL:
+2025-09-29T04:31:13.571Z INFO [true] Schema exists:
+2025-09-29T04:31:13.571Z INFO Running prisma generate first...
+2025-09-29T04:31:14.420Z ERROR Database initialization error:
+Error: Command failed: node "/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/node_modules/prisma/build/index.js" generate --schema="/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/prisma/schema.prisma"
+Error: 
+EEXIST: file already exists, mkdir '/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/src/generated/prisma/internal'
+
+
+
+Stack: Error: Command failed: node "/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/node_modules/prisma/build/index.js" generate --schema="/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/prisma/schema.prisma"
+Error: 
+EEXIST: file already exists, mkdir '/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/src/generated/prisma/internal'
+
+
+
+    at genericNodeError (node:internal/errors:983:15)
+    at wrappedFn (node:internal/errors:537:14)
+    at checkExecSyncError (node:child_process:916:11)
+    at execSync (node:child_process:988:15)
+    at node:electron/js2c/node_init:2:17313
+    at PrismaSession.ensureDatabaseSync (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/out/core/CustomPrismaSession.js:83:65)
+    at new PrismaSession (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/out/core/CustomPrismaSession.js:17:18)
+    at PrismaSession.getInstance (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/out/core/CustomPrismaSession.js:28:38)
+    at new MainProvider (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/out/providers/MainProvider.js:73:45)
+    at MainProvider.getInstance (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/out/providers/MainProvider.js:129:37)
+    at activate (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/out/extension.js:94:37)
+    at db.n (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:112:13386)
+    at db.m (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:112:13349)
+    at db.l (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:112:12805)
+2025-09-29T04:31:14.425Z ERROR Error stdout:
+Error: Prisma schema loaded from prisma/schema.prisma
+
+2025-09-29T04:31:14.425Z ERROR Error stderr:
+Error: Error: 
+EEXIST: file already exists, mkdir '/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/src/generated/prisma/internal'
+
+
+
+2025-09-29T04:31:14.425Z ERROR Failed to ensure database
+Error: Failed to initialize database: Command failed: node "/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/node_modules/prisma/build/index.js" generate --schema="/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/prisma/schema.prisma"
+Error: 
+EEXIST: file already exists, mkdir '/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/src/generated/prisma/internal'
+
+
+
+stdout: Prisma schema loaded from prisma/schema.prisma
+
+stderr: Error: 
+EEXIST: file already exists, mkdir '/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/src/generated/prisma/internal'
+
+
+
+Stack: Error: Failed to initialize database: Command failed: node "/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/node_modules/prisma/build/index.js" generate --schema="/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/prisma/schema.prisma"
+Error: 
+EEXIST: file already exists, mkdir '/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/src/generated/prisma/internal'
+
+
+
+stdout: Prisma schema loaded from prisma/schema.prisma
+
+stderr: Error: 
+EEXIST: file already exists, mkdir '/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/src/generated/prisma/internal'
+
+
+
+    at PrismaSession.ensureDatabaseSync (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/out/core/CustomPrismaSession.js:102:19)
+    at new PrismaSession (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/out/core/CustomPrismaSession.js:17:18)
+    at PrismaSession.getInstance (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/out/core/CustomPrismaSession.js:28:38)
+    at new MainProvider (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/out/providers/MainProvider.js:73:45)
+    at MainProvider.getInstance (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/out/providers/MainProvider.js:129:37)
+    at activate (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/out/extension.js:94:37)
+    at db.n (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:112:13386)
+    at db.m (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:112:13349)
+    at db.l (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:112:12805)
+2025-09-29T04:31:14.426Z INFO Is remote: false
+2025-09-29T04:31:14.427Z INFO Starting Local. Installation path: undefined
+2025-09-29T04:31:14.427Z INFO Installation path exists: /Users/krishnadevan/DocNearMe/doc-near-me
+2025-09-29T05:16:09.501Z INFO Closing entire Pythagora extension...
+2025-09-29T05:16:10.152Z ERROR Error closing extension
+Error: Canceled
+Stack: Canceled: Canceled
+    at new OL (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:29:113290)
+    at a4.U (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:29:117901)
+    at Proxy.s.<computed>.n.charCodeAt.s.<computed> (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:29:115395)
+    at Ab.g (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:112:41052)
+    at Ab.executeCommand (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:112:40556)
+    at Object.executeCommand (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:164:105653)
+    at closeEntirePythagoraExtension (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/out/extension.js:380:31)
+    at Object.deactivate (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/out/extension.js:290:15)
+    at QG.eb (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:117:11726)
+    at file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:117:9876
+    at Array.map (<anonymous>)
+    at QG.$ (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:117:9864)
+    at QG.terminate (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:117:10107)
+    at Y3.terminate (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:119:914)
+    at us (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:356:9945)
+    at MessagePortMain.<anonymous> (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:356:6484)
+    at MessagePortMain.emit (node:events:518:28)
+    at Object.MessagePortMain._internalPort.emit (node:electron/js2c/utility_init:2:3073)
+2025-09-29T05:16:35.771Z INFO SharedStateManager initialized
+2025-09-29T05:16:35.771Z INFO [Migration] Checking for database migration...
+2025-09-29T05:16:35.900Z INFO [Migration] No migration needed
+2025-09-29T05:16:35.900Z INFO [MainProvider] Creating new MainProvider instance...
+2025-09-29T05:16:35.902Z INFO [/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8] Project root:
+2025-09-29T05:16:35.902Z INFO [/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/prisma/schema.prisma] Schema path:
+2025-09-29T05:16:35.902Z INFO [file:/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/pythagora-temp/pythagora.db] Database URL:
+2025-09-29T05:16:35.902Z INFO [true] Schema exists:
+2025-09-29T05:16:35.902Z INFO Running prisma generate first...
+2025-09-29T05:16:37.192Z INFO [Prisma schema loaded from prisma/schema.prisma
+
+✔ Generated Prisma Client (6.16.2) to ./src/generated/prisma in 613ms
+
+] Prisma generate result:
+2025-09-29T05:16:37.192Z INFO Running prisma db push to sync schema...
+2025-09-29T05:16:37.980Z INFO [Prisma schema loaded from prisma/schema.prisma
+Datasource "db": SQLite database "pythagora.db" at "file:/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/pythagora-temp/pythagora.db"
+
+The database is already in sync with the Prisma schema.
+
+Running generate... (Use --skip-generate to skip the generators)
+[2K[1A[2K[GRunning generate... - Prisma Client
+[2K[1A[2K[GEEXIST: file already exists, mkdir '/Users/krishnadevan/.vscode/extensions/pytha
+goratechnologies.pythagora-vs-code-2.5.8/src/generated/prisma/models'
+
+] Prisma db push result:
+2025-09-29T05:16:37.981Z INFO Is remote: false
+2025-09-29T05:16:37.982Z INFO Starting Local. Installation path: undefined
+2025-09-29T05:16:37.982Z INFO Installation path exists: /Users/krishnadevan/DocNearMe/doc-near-me
+2025-09-29T05:43:29.979Z INFO Closing entire Pythagora extension...
+2025-09-29T05:43:30.614Z ERROR Error closing extension
+Error: Canceled
+Stack: Canceled: Canceled
+    at new CR (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:29:115607)
+    at j4.U (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:29:120217)
+    at Proxy.s.<computed>.n.charCodeAt.s.<computed> (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:29:117711)
+    at Kb.g (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:112:41045)
+    at Kb.executeCommand (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:112:40549)
+    at Object.executeCommand (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:199:103656)
+    at closeEntirePythagoraExtension (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/out/extension.js:380:31)
+    at Object.deactivate (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/out/extension.js:290:15)
+    at aJ.eb (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:116:11836)
+    at file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:116:9986
+    at Array.map (<anonymous>)
+    at aJ.$ (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:116:9974)
+    at aJ.terminate (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:116:10217)
+    at RP.terminate (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:118:914)
+    at bs (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:391:10410)
+    at MessagePortMain.<anonymous> (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:391:6949)
+    at MessagePortMain.emit (node:events:518:28)
+    at Object.MessagePortMain._internalPort.emit (node:electron/js2c/utility_init:2:2949)
+    at Object.callbackTrampoline (node:internal/async_hooks:130:17)
+2025-09-29T09:48:45.641Z INFO SharedStateManager initialized
+2025-09-29T09:48:45.641Z INFO [Migration] Checking for database migration...
+2025-09-29T09:48:45.762Z INFO [Migration] No migration needed
+2025-09-29T09:48:45.762Z INFO [MainProvider] Creating new MainProvider instance...
+2025-09-29T09:48:45.764Z INFO [/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8] Project root:
+2025-09-29T09:48:45.764Z INFO [/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/prisma/schema.prisma] Schema path:
+2025-09-29T09:48:45.764Z INFO [file:/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/pythagora-temp/pythagora.db] Database URL:
+2025-09-29T09:48:45.764Z INFO [true] Schema exists:
+2025-09-29T09:48:45.764Z INFO Running prisma generate first...
+2025-09-29T09:48:46.803Z INFO [Prisma schema loaded from prisma/schema.prisma
+
+✔ Generated Prisma Client (6.16.2) to ./src/generated/prisma in 296ms
+
+] Prisma generate result:
+2025-09-29T09:48:46.804Z INFO Running prisma db push to sync schema...
+2025-09-29T09:48:47.496Z INFO [Prisma schema loaded from prisma/schema.prisma
+Datasource "db": SQLite database "pythagora.db" at "file:/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/pythagora-temp/pythagora.db"
+
+The database is already in sync with the Prisma schema.
+
+Running generate... (Use --skip-generate to skip the generators)
+[2K[1A[2K[GRunning generate... - Prisma Client
+[2K[1A[2K[G✔ Generated Prisma Client (6.16.2) to ./src/generated/prisma in 138ms
+
+] Prisma db push result:
+2025-09-29T09:48:47.497Z INFO Is remote: false
+2025-09-29T09:48:47.497Z INFO Starting Local. Installation path: undefined
+2025-09-29T09:48:47.498Z INFO Installation path exists: /Users/krishnadevan/DocNearMe/doc-near-me
+2025-09-29T09:49:16.655Z INFO MainProvider handleMessage {"type":"codeScreenActivated","activeScreen":"code","reason":"file_opened","route":"forwardToLeft","source":"tabsManager"}
+2025-09-29T09:49:17.476Z INFO MainProvider handleMessage {"command":"centerBarReady","data":{},"source":"center"}
+2025-09-29T09:49:17.477Z INFO Center panel message: {"command":"centerBarReady","data":{},"source":"center"}
+2025-09-29T09:49:17.478Z INFO MainProvider handleMessage {"command":"ready","data":"ready","source":"center"}
+2025-09-29T09:49:17.478Z INFO Center panel message: {"command":"ready","data":"ready","source":"center"}
+2025-09-29T09:49:17.478Z INFO [MainProvider] Center panel ready - processing ready handler
+2025-09-29T09:49:17.478Z INFO [MainProvider] Center panel ready - flushing 0 buffered messages
+2025-09-29T09:49:17.478Z INFO [Message Router] Routing getProjectInfo through unified router
+2025-10-01T12:11:15.651Z INFO Closing entire Pythagora extension...
+2025-10-01T12:11:15.686Z ERROR Error closing extension
+Error: Canceled
+Stack: Canceled: Canceled
+	at new CR (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:29:115607)
+	at j4.U (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:29:120217)
+	at s.<computed>.n.charCodeAt.s.<computed> (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:29:117711)
+	at Kb.g (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:112:41045)
+	at Kb.executeCommand (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:112:40549)
+	at Object.executeCommand (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:199:103656)
+	at closeEntirePythagoraExtension (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/out/extension.js:380:31)
+	at Object.deactivate (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.8/out/extension.js:290:15)
+	at aJ.eb (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:116:11836)
+	at file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:116:9986
+	at Array.map (<anonymous>)
+	at aJ.$ (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:116:9974)
+	at aJ.terminate (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:116:10217)
+	at RP.terminate (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:118:914)
+	at bs (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:391:10410)
+	at MessagePortMain.<anonymous> (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:391:6949)
+	at MessagePortMain.emit (node:events:518:28)
+	at MessagePortMain._internalPort.emit (node:electron/js2c/utility_init:2:2949)
+	at Object.callbackTrampoline (node:internal/async_hooks:130:17)
+2025-10-05T05:47:53.105Z INFO SharedStateManager initialized
+2025-10-05T05:47:53.105Z INFO [Migration] Checking for database migration...
+2025-10-05T05:47:53.254Z INFO [Migration] No migration needed
+2025-10-05T05:47:53.254Z INFO [MainProvider] Creating new MainProvider instance...
+2025-10-05T05:47:53.255Z INFO [/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.9] Project root:
+2025-10-05T05:47:53.255Z INFO [/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.9/prisma/schema.prisma] Schema path:
+2025-10-05T05:47:53.256Z INFO [file:/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/pythagora-temp/pythagora.db] Database URL:
+2025-10-05T05:47:53.256Z INFO [true] Schema exists:
+2025-10-05T05:47:53.256Z INFO Running prisma generate first...
+2025-10-05T05:47:54.750Z INFO [Prisma schema loaded from prisma/schema.prisma
+
+✔ Generated Prisma Client (6.16.2) to ./src/generated/prisma in 148ms
+
+] Prisma generate result:
+2025-10-05T05:47:54.751Z INFO Running prisma db push to sync schema...
+2025-10-05T05:47:55.927Z INFO [Prisma schema loaded from prisma/schema.prisma
+Datasource "db": SQLite database "pythagora.db" at "file:/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/pythagora-temp/pythagora.db"
+
+The database is already in sync with the Prisma schema.
+
+Running generate... (Use --skip-generate to skip the generators)
+[2K[1A[2K[GRunning generate... - Prisma Client
+[2K[1A[2K[G✔ Generated Prisma Client (6.16.2) to ./src/generated/prisma in 169ms
+
+] Prisma db push result:
+2025-10-05T05:47:55.928Z INFO Is remote: false
+2025-10-05T05:47:55.929Z INFO Starting Local. Installation path: undefined
+2025-10-05T05:47:55.930Z INFO Installation path exists: /Users/krishnadevan/DocNearMe/doc-near-me
+2025-10-05T05:54:37.259Z INFO resplitScreen: Setting up editor layout...
+2025-10-05T05:54:37.260Z INFO resplitScreen: Current tab groups: 1
+2025-10-05T05:54:37.260Z INFO resplitScreen: Splitting editor to create 2 groups
+2025-10-05T05:54:37.601Z INFO resplitScreen: Focused second editor group
+2025-10-05T05:54:37.605Z INFO MainProvider handleMessage {"type":"codeScreenActivated","activeScreen":"code","reason":"file_opened","route":"forwardToLeft","source":"tabsManager"}
+2025-10-05T05:54:38.272Z INFO MainProvider handleMessage {"command":"centerBarReady","data":{},"source":"center"}
+2025-10-05T05:54:38.272Z INFO Center panel message: {"command":"centerBarReady","data":{},"source":"center"}
+2025-10-05T05:54:38.272Z INFO MainProvider handleMessage {"command":"ready","data":"ready","source":"center"}
+2025-10-05T05:54:38.272Z INFO Center panel message: {"command":"ready","data":"ready","source":"center"}
+2025-10-05T05:54:38.272Z INFO [MainProvider] Center panel ready - processing ready handler
+2025-10-05T05:54:38.272Z INFO [MainProvider] Center panel ready - flushing 0 buffered messages
+2025-10-05T05:54:38.272Z INFO [Message Router] Routing getProjectInfo through unified router
+2025-10-06T05:04:08.487Z INFO SharedStateManager initialized
+2025-10-06T05:04:08.487Z INFO [Migration] Checking for database migration...
+2025-10-06T05:04:08.801Z INFO [Migration] No migration needed
+2025-10-06T05:04:08.801Z INFO [MainProvider] Creating new MainProvider instance...
+2025-10-06T05:04:08.803Z INFO [/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.9] Project root:
+2025-10-06T05:04:08.803Z INFO [/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.9/prisma/schema.prisma] Schema path:
+2025-10-06T05:04:08.803Z INFO [file:/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/pythagora-temp/pythagora.db] Database URL:
+2025-10-06T05:04:08.803Z INFO [true] Schema exists:
+2025-10-06T05:04:08.803Z INFO Running prisma generate first...
+2025-10-06T05:04:12.888Z INFO [Prisma schema loaded from prisma/schema.prisma
+
+✔ Generated Prisma Client (6.16.2) to ./src/generated/prisma in 1.20s
+
+] Prisma generate result:
+2025-10-06T05:04:12.888Z INFO Running prisma db push to sync schema...
+2025-10-06T05:04:13.958Z INFO [Prisma schema loaded from prisma/schema.prisma
+Datasource "db": SQLite database "pythagora.db" at "file:/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/pythagora-temp/pythagora.db"
+
+The database is already in sync with the Prisma schema.
+
+Running generate... (Use --skip-generate to skip the generators)
+[2K[1A[2K[GRunning generate... - Prisma Client
+[2K[1A[2K[GEEXIST: file already exists, mkdir '/Users/krishnadevan/.vscode/extensions/pytha
+goratechnologies.pythagora-vs-code-2.5.9/src/generated/prisma/models'
+
+] Prisma db push result:
+2025-10-06T05:04:13.958Z INFO Is remote: false
+2025-10-06T05:04:13.959Z INFO Starting Local. Installation path: undefined
+2025-10-06T05:04:13.959Z INFO Installation path exists: /Users/krishnadevan/DocNearMe/doc-near-me
+2025-10-14T09:01:09.157Z INFO Closing entire Pythagora extension...
+2025-10-14T09:01:09.194Z ERROR Error closing extension
+Error: Canceled
+Stack: Canceled: Canceled
+	at new CR (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:29:115607)
+	at j4.U (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:29:120217)
+	at s.<computed>.n.charCodeAt.s.<computed> (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:29:117711)
+	at Kb.g (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:112:41045)
+	at Kb.executeCommand (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:112:40549)
+	at Object.executeCommand (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:199:103656)
+	at closeEntirePythagoraExtension (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.9/out/extension.js:380:31)
+	at Object.deactivate (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.9/out/extension.js:290:15)
+	at aJ.eb (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:116:11836)
+	at file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:116:9986
+	at Array.map (<anonymous>)
+	at aJ.$ (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:116:9974)
+	at aJ.terminate (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:116:10217)
+	at RP.terminate (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:118:914)
+	at bs (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:391:10410)
+	at MessagePortMain.<anonymous> (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:391:6949)
+	at MessagePortMain.emit (node:events:518:28)
+	at MessagePortMain._internalPort.emit (node:electron/js2c/utility_init:2:2949)
+2025-10-17T03:15:58.515Z INFO SharedStateManager initialized
+2025-10-17T03:15:58.516Z INFO Is remote: false
+2025-10-17T03:15:58.516Z INFO Starting Local. Installation path: undefined
+2025-10-17T03:15:58.516Z INFO [MainProvider] Creating new MainProvider instance...
+2025-10-17T03:15:58.516Z INFO Installation path exists: /Users/krishnadevan/DocNearMe/doc-near-me
+2025-10-17T03:15:58.517Z INFO Initializing database with URL: file:/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/pythagora-temp/pythagora.db
+2025-10-17T03:15:58.518Z INFO [/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.18] Project root:
+2025-10-17T03:15:58.518Z INFO [/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.18/prisma/schema.prisma] Schema path:
+2025-10-17T03:15:58.518Z INFO [file:/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/pythagora-temp/pythagora.db] Database URL:
+2025-10-17T03:15:58.518Z INFO [true] Schema exists:
+2025-10-17T03:15:58.518Z INFO Running prisma generate first...
+2025-10-17T03:16:06.028Z INFO [Prisma schema loaded from prisma/schema.prisma
+
+✔ Generated Prisma Client (6.17.1) to ./src/generated/prisma in 620ms
+
+] Prisma generate result:
+2025-10-17T03:16:06.028Z INFO Running prisma db push to sync schema...
+2025-10-17T03:16:07.507Z INFO [Prisma schema loaded from prisma/schema.prisma
+Datasource "db": SQLite database "pythagora.db" at "file:/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/pythagora-temp/pythagora.db"
+
+SQLite database pythagora.db created at file:/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/pythagora-temp/pythagora.db
+
+🚀  Your database is now in sync with your Prisma schema. Done in 20ms
+
+Running generate... (Use --skip-generate to skip the generators)
+[2K[1A[2K[GRunning generate... - Prisma Client
+[2K[1A[2K[G✔ Generated Prisma Client (6.17.1) to ./src/generated/prisma in 234ms
+
+] Prisma db push result:
+2025-10-17T03:16:07.507Z INFO Database initialized successfully
+2025-10-17T03:16:07.824Z INFO [Migration] Checking for database migration...
+2025-10-17T03:16:08.653Z INFO [Migration] No migration needed
+2025-11-01T06:49:15.643Z INFO SharedStateManager initialized
+2025-11-01T06:49:15.644Z INFO Is remote: false
+2025-11-01T06:49:15.644Z INFO Starting Local. Installation path: undefined
+2025-11-01T06:49:15.645Z INFO [MainProvider] Creating new MainProvider instance...
+2025-11-01T06:49:15.650Z INFO Installation path exists: /Users/krishnadevan/DocNearMe/doc-near-me
+2025-11-01T06:49:15.651Z INFO Initializing database with URL: file:/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/pythagora-temp/pythagora.db
+2025-11-01T06:49:15.652Z INFO [/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.19] Project root:
+2025-11-01T06:49:15.652Z INFO [/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.19/prisma/schema.prisma] Schema path:
+2025-11-01T06:49:15.652Z INFO [file:/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/pythagora-temp/pythagora.db] Database URL:
+2025-11-01T06:49:15.652Z INFO [true] Schema exists:
+2025-11-01T06:49:15.653Z INFO Running prisma generate first...
+2025-11-01T06:49:21.098Z INFO [Prisma schema loaded from prisma/schema.prisma
+
+✔ Generated Prisma Client (6.17.1) to ./src/generated/prisma in 518ms
+
+] Prisma generate result:
+2025-11-01T06:49:21.099Z INFO Running prisma db push to sync schema...
+2025-11-01T06:49:23.703Z INFO [Prisma schema loaded from prisma/schema.prisma
+Datasource "db": SQLite database "pythagora.db" at "file:/var/folders/9t/bpzw4p1154d9m6xxwv2b5s5r0000gn/T/pythagora-temp/pythagora.db"
+
+The database is already in sync with the Prisma schema.
+
+Running generate... (Use --skip-generate to skip the generators)
+[2K[1A[2K[GRunning generate... - Prisma Client
+[2K[1A[2K[GEEXIST: file already exists, mkdir '/Users/krishnadevan/.vscode/extensions/pytha
+goratechnologies.pythagora-vs-code-2.5.19/src/generated/prisma/internal'
+
+] Prisma db push result:
+2025-11-01T06:49:23.703Z INFO Database initialized successfully
+2025-11-01T06:49:23.704Z INFO [Migration] Checking for database migration...
+2025-11-01T06:49:24.119Z INFO [Migration] No migration needed
+2025-11-01T13:52:28.466Z INFO Closing entire Pythagora extension...
+2025-11-01T13:52:28.495Z ERROR Error closing extension
+Error: Canceled
+Stack: Canceled: Canceled
+	at new MR (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:29:116391)
+	at U4.U (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:29:121001)
+	at s.<computed>.n.charCodeAt.s.<computed> (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:29:118495)
+	at iy.g (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:114:41101)
+	at iy.executeCommand (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:114:40605)
+	at Object.executeCommand (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:201:105071)
+	at closeEntirePythagoraExtension (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.19/out/extension.js:381:31)
+	at Object.deactivate (/Users/krishnadevan/.vscode/extensions/pythagoratechnologies.pythagora-vs-code-2.5.19/out/extension.js:291:15)
+	at SZ.eb (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:118:11797)
+	at file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:118:9947
+	at Array.map (<anonymous>)
+	at SZ.$ (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:118:9935)
+	at SZ.terminate (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:118:10178)
+	at H3.terminate (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:120:914)
+	at Ss (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:393:10409)
+	at MessagePortMain.<anonymous> (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:393:6948)
+	at MessagePortMain.emit (node:events:519:28)
+	at MessagePortMain._internalPort.emit (node:electron/js2c/utility_init:2:2949)
+	at Object.callbackTrampoline (node:internal/async_hooks:130:17)
+Extra context: {
+  "message": "Canceled"
+}
