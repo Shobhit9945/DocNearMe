@@ -1,7 +1,7 @@
 [build]
-  # Run the same pnpm build used locally; Netlify performs the install step
-  # automatically when NETLIFY_USE_PNPM is enabled.
-  command = "pnpm run build"
+  # Align Netlify's build with the full production pipeline we run locally
+  # so both the SPA bundle and SSR/server bundle stay in sync.
+  command = "npm run build"
   functions = "netlify/functions"
   publish = "dist/spa"
 
