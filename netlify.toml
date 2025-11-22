@@ -1,5 +1,7 @@
 [build]
-  command = "npm run build:client"
+  # Align Netlify's build with the full production pipeline we run locally
+  # so both the SPA bundle and SSR/server bundle stay in sync.
+  command = "npm run build"
   functions = "netlify/functions"
   publish = "dist/spa"
 

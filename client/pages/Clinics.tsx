@@ -412,7 +412,7 @@ export default function Clinics() {
                         onClick={() => setFacilityType(type as typeof facilityType)}
                         className={`rounded-full border px-4 py-2 text-sm font-semibold transition-all ${
                           facilityType === type
-                            ? "border-[#3A12DB] bg-[#E5DEFF] text-[#3A12DB] shadow-sm"
+                            ? "border-[#3A12DB] bg-[#E5DEFF] text-[#3A12DB] shadow-sm shadow-[#3A12DB]/20"
                             : "border-slate-200 bg-slate-50 text-slate-600 hover:border-[#D4EBFF]"
                         }`}
                       >
@@ -437,7 +437,7 @@ export default function Clinics() {
                       onChange={(e) => setMinRating(Number(e.target.value))}
                       className="flex-1 accent-[#3A12DB]"
                     />
-                    <span className="flex items-center gap-1 rounded-full bg-[#F1EDFF] px-3 py-1 text-xs font-semibold text-[#3A12DB]">
+                    <span className="flex items-center gap-1 rounded-full bg-[#F1EDFF] px-3 py-1 text-xs font-semibold text-[#3A12DB] shadow-sm">
                       <Star className="w-4 h-4" /> {minRating.toFixed(1)}+
                     </span>
                   </div>
