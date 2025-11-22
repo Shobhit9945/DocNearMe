@@ -6,10 +6,12 @@ import { PageScaffold } from "@/components/PageScaffold";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useLiveLocation } from "@/hooks/useLiveLocation";
+import { useTranslation } from "@/lib/i18n";
 
 export default function Index() {
   const navigate = useNavigate();
   const { currentLocation, locationError, isFetchingLocation } = useLiveLocation();
+  const { t } = useTranslation();
 
   const locationStatus = useMemo(() => {
     if (isFetchingLocation) return "Fetching your location...";
@@ -26,12 +28,12 @@ export default function Index() {
               <Navigation className="w-7 h-7 text-[#0089FF]" />
             </div>
             <div>
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Live location</p>
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{t("Live location")}</p>
               <p className={`text-base font-bold leading-snug ${locationError ? "text-red-500" : "text-slate-900"}`}>
                 {currentLocation}
               </p>
               <p className={`text-xs mt-1 ${locationError ? "text-red-500" : "text-slate-500"}`}>
-                {locationStatus}
+                {t(locationStatus)}
               </p>
             </div>
           </div>
@@ -45,13 +47,13 @@ export default function Index() {
             <div className="relative overflow-hidden rounded-[20px] border border-[#D4EBFF] bg-gradient-to-br from-[#FAFAFE] to-[#E1F6FF] p-5 shadow-[0_1px_14px_0_#DFE8EC] lg:p-8">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
                 <div className="flex-1 z-10">
-                  <p className="text-sm font-bold text-[#002D55]">APPOINTMENT BOOKING NOW AT YOUR FINGERTIPS</p>
-                  <h1 className="text-2xl font-extrabold text-[#002D55] mt-2 mb-4">WITH DOCNEARME</h1>
+                  <p className="text-sm font-bold text-[#002D55]">{t("APPOINTMENT BOOKING NOW AT YOUR FINGERTIPS")}</p>
+                  <h1 className="text-2xl font-extrabold text-[#002D55] mt-2 mb-4">{t("WITH DOCNEARME")}</h1>
                   <div className="flex flex-wrap items-center gap-3">
                     <button className="bg-[#002D55] text-white text-sm font-semibold px-6 py-3 rounded-[12px] shadow-[0_3px_16px_0_rgba(15,39,74,0.10)] hover:bg-[#003366] transition-colors">
-                      Learn more
+                      {t("Learn more")}
                     </button>
-                    <p className="text-xs text-slate-500">Plan, book and manage visits in seconds.</p>
+                    <p className="text-xs text-slate-500">{t("Plan, book and manage visits in seconds.")}</p>
                   </div>
                 </div>
                 <img
@@ -68,7 +70,7 @@ export default function Index() {
                 onClick={() => navigate("/appointment")}
               >
                 <ClipboardList className="w-8 h-8" />
-                <span className="text-sm font-medium text-center">Book Appointment</span>
+                <span className="text-sm font-medium text-center">{t("Book Appointment")}</span>
               </button>
 
               <button className="bg-[#0089FF] rounded-[20px] shadow-[2px_0_20px_0_rgba(24,57,107,0.05)] p-4 min-h-[120px] flex flex-col items-center justify-center gap-2 text-white/90 hover:bg-[#0077E6] transition-colors">
@@ -80,23 +82,23 @@ export default function Index() {
                   <path d="M16 20C18.2091 20 20 18.2091 20 16C20 13.7909 18.2091 12 16 12C13.7909 12 12 13.7909 12 16C12 18.2091 13.7909 20 16 20Z" stroke="white" strokeWidth="2.66667" strokeLinecap="round" strokeLinejoin="round" />
                   <path d="M21.3333 21.3334L18.7999 18.8" stroke="white" strokeWidth="2.66667" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
-                <span className="text-sm font-medium text-center">View Appointments</span>
+                <span className="text-sm font-medium text-center">{t("View Appointments")}</span>
               </button>
 
               <button className="bg-[#0089FF] rounded-[20px] shadow-[2px_0_20px_0_rgba(24,57,107,0.05)] p-4 min-h-[120px] flex flex-col items-center justify-center gap-2 text-white/90 hover:bg-[#0077E6] transition-colors">
                 <Activity className="w-8 h-8" />
-                <span className="text-sm font-medium text-center">Medical Records</span>
+                <span className="text-sm font-medium text-center">{t("Medical Records")}</span>
               </button>
 
               <button className="bg-[#FB4F4F] rounded-[20px] shadow-[2px_0_20px_0_rgba(24,57,107,0.05)] p-4 min-h-[120px] flex flex-col items-center justify-center gap-2 text-white hover:bg-[#E94444] transition-colors">
                 <Ambulance className="w-[42px] h-[30px]" />
-                <span className="text-sm font-medium text-center">Emergency SOS</span>
+                <span className="text-sm font-medium text-center">{t("Emergency SOS")}</span>
               </button>
             </div>
 
             <div className="rounded-[20px] bg-gradient-to-b from-[#FAFAFE] to-[#D4F5FF] px-4 py-6 text-center lg:px-10">
-              <h3 className="text-base font-bold text-black">SAVE TIME BY AVOIDING LONG QUEUES</h3>
-              <p className="text-sm text-black mt-2">BOOK YOUR APPOINTMENT WITH THE DOCTOR YOU NEED</p>
+              <h3 className="text-base font-bold text-black">{t("SAVE TIME BY AVOIDING LONG QUEUES")}</h3>
+              <p className="text-sm text-black mt-2">{t("BOOK YOUR APPOINTMENT WITH THE DOCTOR YOU NEED")}</p>
               <div className="mt-4 flex justify-center">
                 <img
                   src="https://api.builder.io/api/v1/image/assets/TEMP/efd1a0a0a615de8dfe2ff92c5e5efa34e4764d7a?width=584"

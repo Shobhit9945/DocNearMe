@@ -10,6 +10,7 @@ import { BottomNav } from "@/components/BottomNav";
 import { DocDaisyBanner } from "@/components/DocDaisyBanner";
 import { PageScaffold } from "@/components/PageScaffold";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { useTranslation } from "@/lib/i18n";
 
 const SPECIALIZATIONS = [
   "General Physician",
@@ -42,6 +43,7 @@ const TIME_SLOTS = [
 export default function Appointment() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { t } = useTranslation();
 
   const specializationParam = searchParams.get("specialization") ?? "";
   const clinicId = searchParams.get("clinic");
@@ -86,9 +88,9 @@ export default function Appointment() {
         </button>
         <div className="flex-1 text-center lg:text-left">
           <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold">
-            Plan your visit
+            {t("Plan your visit")}
           </p>
-          <h1 className="text-xl font-bold text-black">Book your appointment</h1>
+          <h1 className="text-xl font-bold text-black">{t("Book your appointment")}</h1>
         </div>
         <img src="/dnm.png" alt="DocNearMe Logo" className="w-14 h-14 object-contain hidden lg:block" />
       </header>
@@ -103,14 +105,14 @@ export default function Appointment() {
                     <Stethoscope className="w-4 h-4" /> {selectedSpecialization}
                   </div>
                   <h2 className="text-2xl font-extrabold text-[#002D55]">
-                    Lock in the right specialist without the wait
+                    {t("Lock in the right specialist without the wait")}
                   </h2>
                   <p className="text-sm text-slate-600">
-                    Secure a slot before you arrive. DocDaisy will share your summary with the clinic so they’re ready for you.
+                    {t("Secure a slot before you arrive. DocDaisy will share your summary with the clinic so they’re ready for you.")}
                   </p>
                   <div className="flex flex-wrap gap-3 text-xs text-slate-500">
                     <span className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 shadow-sm">
-                      <CalendarClock className="w-4 h-4 text-[#0089FF]" /> Real-time availability
+                      <CalendarClock className="w-4 h-4 text-[#0089FF]" /> {t("Real-time availability")}
                     </span>
                     <span className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 shadow-sm">
                       <MapPin className="w-4 h-4 text-[#0089FF]" /> {clinicLabel}
@@ -126,22 +128,22 @@ export default function Appointment() {
             </div>
 
             <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-4 lg:p-6 space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold">Specialist selection</p>
-                  <p className="text-sm text-slate-600">Choose who you want to see before picking a slot.</p>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold">{t("Specialist selection")}</p>
+                    <p className="text-sm text-slate-600">{t("Choose who you want to see before picking a slot.")}</p>
+                  </div>
+                  {specializationParam && (
+                    <span className="rounded-full bg-[#E5DEFF] px-3 py-1 text-xs font-semibold text-[#3A12DB]">
+                      {t("Suggested by DocDaisy")}
+                    </span>
+                  )}
                 </div>
-                {specializationParam && (
-                  <span className="rounded-full bg-[#E5DEFF] px-3 py-1 text-xs font-semibold text-[#3A12DB]">
-                    Suggested by DocDaisy
-                  </span>
-                )}
-              </div>
 
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-slate-700" htmlFor="specialization">
-                    Specialization
+                    {t("Specialization")}
                   </label>
                   <select
                     id="specialization"
@@ -158,7 +160,7 @@ export default function Appointment() {
                 </div>
 
                 <div className="space-y-2">
-                  <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold">Quick picks</p>
+                  <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold">{t("Quick picks")}</p>
                   <div className="flex flex-wrap gap-2">
                     {quickPicks.map((spec) => (
                       <button
@@ -178,18 +180,18 @@ export default function Appointment() {
               </div>
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-4 lg:p-6 space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold">Appointment details</p>
-                  <p className="text-sm text-slate-600">Confirm how and when you want to meet the doctor.</p>
+              <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-4 lg:p-6 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold">{t("Appointment details")}</p>
+                    <p className="text-sm text-slate-600">{t("Confirm how and when you want to meet the doctor.")}</p>
+                  </div>
                 </div>
-              </div>
 
-              <div className="grid gap-4 lg:grid-cols-2">
-                <div className="space-y-3">
-                  <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold">Visit type</p>
-                  <div className="flex flex-wrap gap-2">
+                <div className="grid gap-4 lg:grid-cols-2">
+                  <div className="space-y-3">
+                  <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold">{t("Visit type")}</p>
+                    <div className="flex flex-wrap gap-2">
                     {["In-person", "Online"].map((type) => (
                       <button
                         key={type}
@@ -198,18 +200,18 @@ export default function Appointment() {
                           visitType === type
                             ? "border-[#0089FF] bg-[#E1F4FF] text-[#002D55] shadow-sm"
                             : "border-slate-200 bg-slate-50 text-slate-600 hover:border-[#D4EBFF]"
-                        }`}
+                          }`}
                       >
-                        {type}
+                        {t(type)}
                       </button>
                     ))}
                   </div>
                 </div>
 
-                <div className="space-y-3">
-                  <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold">Available slots</p>
-                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-2">
-                    {TIME_SLOTS.map((slot) => (
+                  <div className="space-y-3">
+                  <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold">{t("Available slots")}</p>
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-2">
+                      {TIME_SLOTS.map((slot) => (
                       <button
                         key={slot}
                         onClick={() => setSelectedSlot(slot)}
@@ -228,14 +230,14 @@ export default function Appointment() {
 
               <div className="space-y-2">
                 <label className="text-xs uppercase tracking-wide text-slate-500 font-semibold" htmlFor="notes">
-                  Share additional notes (optional)
+                  {t("Share additional notes (optional)")}
                 </label>
                 <textarea
                   id="notes"
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   rows={3}
-                  placeholder="Symptoms, allergies, accessibility needs..."
+                  placeholder={t("Symptoms, allergies, accessibility needs...")}
                   className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm focus:border-[#0089FF] focus:outline-none"
                 />
               </div>
@@ -244,7 +246,7 @@ export default function Appointment() {
                 onClick={() => console.log("Proceeding to next booking step...")}
                 className="w-full bg-[#0089FF] text-white text-base font-bold px-6 py-3 rounded-[14px] shadow-[0_4px_10px_0_rgba(0,137,255,0.3)] hover:bg-[#0077E6] transition-colors"
               >
-                Confirm request
+                {t("Confirm appointment")}
               </button>
             </div>
 

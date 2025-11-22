@@ -1,9 +1,11 @@
 import { Link, useLocation } from "react-router-dom";
 import { Home, Search, Calendar, User, Building2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/lib/i18n";
 
 export function BottomNav() {
   const location = useLocation();
+  const { t } = useTranslation();
 
   const navItems = [
     { path: "/", label: "Home", icon: Home },
@@ -42,7 +44,7 @@ export function BottomNav() {
                   "text-[10px] font-normal transition-colors",
                   isActive ? "text-[#1648CE] font-medium" : "text-[#929CAD]"
                 )}>
-                  {item.label}
+                  {t(item.label)}
                 </span>
               </Link>
             );

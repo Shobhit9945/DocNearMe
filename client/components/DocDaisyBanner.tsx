@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/lib/i18n";
 
 interface DocDaisyBannerProps {
   className?: string;
@@ -7,6 +8,8 @@ interface DocDaisyBannerProps {
 }
 
 export function DocDaisyBanner({ className, onClick, variant = "button" }: DocDaisyBannerProps) {
+  const { t } = useTranslation();
+
   return (
     <button
       type="button"
@@ -19,12 +22,12 @@ export function DocDaisyBanner({ className, onClick, variant = "button" }: DocDa
     >
       <div className="flex items-center justify-between gap-4">
         <div className="flex-1 text-left min-w-0">
-          <h4 className="text-sm font-bold text-black leading-tight mb-1">Have any queries?</h4>
+          <h4 className="text-sm font-bold text-black leading-tight mb-1">{t("Have any queries?")}</h4>
           <p className="text-lg font-bold bg-gradient-to-r from-[#3A12DB] to-[#7C53FF] bg-clip-text text-transparent leading-tight mb-1">
             DOCDAISY
           </p>
-          <p className="text-sm font-semibold text-black leading-tight mb-1">is here for you!</p>
-          <p className="text-xs text-black leading-tight">Click on the banner to ask</p>
+          <p className="text-sm font-semibold text-black leading-tight mb-1">{t("is here for you!")}</p>
+          <p className="text-xs text-black leading-tight">{t("Click on the banner to ask")}</p>
         </div>
         <img
           src="https://api.builder.io/api/v1/image/assets/TEMP/df6e44a93787679647c1cbdaa440c62c2e37e816?width=110"
