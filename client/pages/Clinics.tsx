@@ -11,6 +11,7 @@ import {
   Users,
 } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { useLiveLocation } from "@/hooks/useLiveLocation";
 
 const BASE_SPECIALIZATIONS = [
   { id: "Cardiologist", label: "Cardiology" },
@@ -291,15 +292,7 @@ export default function Clinics() {
     "all"
   );
   const [minRating, setMinRating] = useState(0);
-
-  const specializationParam = searchParams.get("specialization")?.trim();
-
-  const availableSpecializations = useMemo(() => {
-    if (!specializationParam) return BASE_SPECIALIZATIONS;
-
-    const exists = BASE_SPECIALIZATIONS.some(
-      (spec) => spec.id.toLowerCase() === specializationParam.toLowerCase()
-    );
+  const { currentLocation, locationError, isFetchingLocation } = useLiveLocation();
 
     return exists
       ? BASE_SPECIALIZATIONS
@@ -324,6 +317,12 @@ export default function Clinics() {
   const selectedLabel =
     availableSpecializations.find((spec) => spec.id === selectedSpecialization)?.label ?? selectedSpecialization;
 
+  const locationStatus = useMemo(() => {
+    if (isFetchingLocation) return "Fetching your location...";
+    if (locationError) return locationError;
+    return "Updated a moment ago";
+  }, [isFetchingLocation, locationError]);
+
   const handleSpecializationChange = (specialization: string) => {
     setSearchParams({ specialization });
     setShowFilters(false);
@@ -332,12 +331,24 @@ export default function Clinics() {
   return (
     <PageScaffold contentClassName="pb-28 lg:pb-12">
       <header className="bg-white px-4 pt-10 pb-4 border-b border-gray-100 shadow-sm lg:px-10 lg:rounded-t-3xl lg:border-none lg:shadow-none">
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-3">
           <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Clinics & Hospitals</p>
           <h1 className="text-3xl font-bold text-[#002D55] flex items-center gap-3">
             <Building2 className="w-8 h-8 text-[#0089FF]" /> Discover care for {selectedLabel}
           </h1>
           <p className="text-sm text-slate-500">{clinics.length} options in Beppu updated just now based on your specialty.</p>
+          <div className="mt-1 flex items-start gap-3 rounded-2xl bg-[#E8F3FF] p-4 shadow-sm w-full lg:max-w-xl">
+            <div className="rounded-xl bg-white p-2 shadow-sm">
+              <MapPin className="w-5 h-5 text-[#0089FF]" />
+            </div>
+            <div className="space-y-0.5">
+              <p className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide">Live location</p>
+              <p className={`text-sm font-semibold leading-tight ${locationError ? "text-red-500" : "text-[#002D55]"}`}>
+                {currentLocation}
+              </p>
+              <p className={`text-xs ${locationError ? "text-red-500" : "text-slate-600"}`}>{locationStatus}</p>
+            </div>
+          </div>
         </div>
       </header>
 
@@ -353,10 +364,11 @@ export default function Clinics() {
                   </h2>
                   <p className="text-sm text-slate-600">Refined by DocDaisy and your latest filters.</p>
                 </div>
-                <div className="rounded-2xl bg-white/80 p-4 text-sm text-slate-600 shadow-sm">
-                  <p className="font-semibold text-[#002D55]">Live location</p>
-                  <p>AP House 5, Ritsumeikan APU</p>
-                  <p className="text-xs text-slate-500 mt-2">Updated a moment ago</p>
+                <div className="rounded-2xl bg-white/80 p-4 text-sm text-slate-700 shadow-sm max-w-sm">
+                  <p className="font-semibold text-[#002D55]">DocDaisy insights</p>
+                  <p className="mt-1 text-sm text-slate-600">
+                    Use the filters below to refine specialists around your live location before starting a search.
+                  </p>
                 </div>
               </div>
             </div>
