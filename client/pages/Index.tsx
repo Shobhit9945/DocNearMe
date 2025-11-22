@@ -1,77 +1,21 @@
-import React, { useState, useEffect } from "react";
+import React, { useMemo } from "react";
 import { Navigation, ClipboardList, Activity, Ambulance } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
 import { DocDaisyBanner } from "@/components/DocDaisyBanner";
 import { PageScaffold } from "@/components/PageScaffold";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-
-const DEFAULT_ADDRESS = "AP House 5, Ritsumeikan APU, Jumonjibaru 1-5, Beppu City, Oita 874-0011";
-const GEOCODING_PROXY_BASE = "/api/google-maps/geocode";
-
-const getGoogleMapsAddress = async (lat: number, lon: number) => {
-  const url = `${GEOCODING_PROXY_BASE}?latlng=${lat},${lon}`;
-
-  for (let i = 0; i < 3; i++) {
-    try {
-      const response = await fetch(url);
-      if (!response.ok) {
-        if (i === 2) throw new Error(`Geocoding failed with status: ${response.status}`);
-        continue;
-      }
-
-      const data = await response.json();
-
-      if (data.results && data.results.length > 0) {
-        return data.results[0].formatted_address;
-      } else {
-        throw new Error("Geocoding: No address results found.");
-      }
-    } catch (error) {
-      console.error(`Geocoding Attempt ${i + 1} failed:`, error);
-      if (i === 2) throw error;
-      await new Promise((res) => setTimeout(res, 1000 * Math.pow(2, i)));
-    }
-  }
-};
+import { useLiveLocation } from "@/hooks/useLiveLocation";
 
 export default function Index() {
   const navigate = useNavigate();
-  const [currentLocation, setCurrentLocation] = useState("Fetching real-time location...");
-  const [locationError, setLocationError] = useState("");
+  const { currentLocation, locationError, isFetchingLocation } = useLiveLocation();
 
-  useEffect(() => {
-    if ("geolocation" in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        async (position) => {
-          const { latitude, longitude } = position.coords;
-
-          try {
-            const address = await getGoogleMapsAddress(latitude, longitude);
-            setCurrentLocation(address);
-            setLocationError("");
-          } catch (e) {
-            console.error("Reverse Geocoding Error:", e);
-            setLocationError("Geocoding service failed. Showing default address.");
-            setCurrentLocation(DEFAULT_ADDRESS);
-          }
-        },
-        (error) => {
-          console.error("Geolocation Error:", error);
-          let errorMessage = "Could not retrieve location. Showing default address.";
-          if (error.code === error.PERMISSION_DENIED) {
-            errorMessage = "Location access denied. Please check browser settings.";
-          }
-          setLocationError(errorMessage);
-          setCurrentLocation(DEFAULT_ADDRESS);
-        },
-        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
-      );
-    } else {
-      setLocationError("Geolocation not supported by this browser.");
-      setCurrentLocation(DEFAULT_ADDRESS);
-    }
-  }, []);
+  const locationStatus = useMemo(() => {
+    if (isFetchingLocation) return "Fetching your location...";
+    if (locationError) return locationError;
+    return "Updated a moment ago";
+  }, [isFetchingLocation, locationError]);
 
   return (
     <PageScaffold contentClassName="pb-28 lg:pb-12">
@@ -86,7 +30,9 @@ export default function Index() {
               <p className={`text-base font-bold leading-snug ${locationError ? "text-red-500" : "text-slate-900"}`}>
                 {currentLocation}
               </p>
-              {locationError && <p className="text-xs text-red-500 mt-1">{locationError}</p>}
+              <p className={`text-xs mt-1 ${locationError ? "text-red-500" : "text-slate-500"}`}>
+                {locationStatus}
+              </p>
             </div>
           </div>
           <img src="/dnm.png" alt="DocNearMe Logo" className="w-14 h-14 object-contain self-start" />
