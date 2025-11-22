@@ -1,7 +1,16 @@
 [build]
-  command = "npm run build:client"
+  # Run the exact same pnpm-driven pipeline that succeeds locally so the SPA bundle
+  # and server bundle stay in sync during Netlify deploys.
+  command = "corepack enable && pnpm install --frozen-lockfile && pnpm build"
   functions = "netlify/functions"
   publish = "dist/spa"
+
+[build.environment]
+  # Ensure Netlify installs the expected pnpm + Node versions instead of
+  # falling back to npm defaults, which previously caused failed deploys.
+  NODE_VERSION = "22"
+  PNPM_VERSION = "10.14.0"
+  NETLIFY_USE_PNPM = "true"
 
 
 [functions]

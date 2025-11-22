@@ -11,6 +11,7 @@ import {
   Users,
 } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { useLiveLocation } from "@/hooks/useLiveLocation";
 
 const BASE_SPECIALIZATIONS = [
   { id: "Cardiologist", label: "Cardiology" },
@@ -291,15 +292,7 @@ export default function Clinics() {
     "all"
   );
   const [minRating, setMinRating] = useState(0);
-
-  const specializationParam = searchParams.get("specialization")?.trim();
-
-  const availableSpecializations = useMemo(() => {
-    if (!specializationParam) return BASE_SPECIALIZATIONS;
-
-    const exists = BASE_SPECIALIZATIONS.some(
-      (spec) => spec.id.toLowerCase() === specializationParam.toLowerCase()
-    );
+  const { currentLocation, locationError, isFetchingLocation } = useLiveLocation();
 
   const specializationParam = searchParams.get("specialization")?.trim();
 
@@ -333,27 +326,45 @@ export default function Clinics() {
   const selectedLabel =
     availableSpecializations.find((spec) => spec.id === selectedSpecialization)?.label ?? selectedSpecialization;
 
+  const locationStatus = useMemo(() => {
+    if (isFetchingLocation) return "Fetching your location...";
+    if (locationError) return locationError;
+    return "Updated a moment ago";
+  }, [isFetchingLocation, locationError]);
+
   const handleSpecializationChange = (specialization: string) => {
     setSearchParams({ specialization });
     setShowFilters(false);
   };
 
   return (
-    <PageScaffold contentClassName="pb-28 lg:pb-12">
-      <header className="bg-white px-4 pt-10 pb-4 border-b border-gray-100 shadow-sm lg:px-10 lg:rounded-t-3xl lg:border-none lg:shadow-none">
-        <div className="flex flex-col gap-2">
+    <PageScaffold contentClassName="pb-28 lg:pb-14">
+      <header className="bg-white px-4 pt-10 pb-4 border-b border-gray-100 shadow-sm lg:px-12 lg:rounded-t-3xl lg:border-none lg:shadow-none">
+        <div className="flex flex-col gap-4">
           <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Clinics & Hospitals</p>
           <h1 className="text-3xl font-bold text-[#002D55] flex items-center gap-3">
             <Building2 className="w-8 h-8 text-[#0089FF]" /> Discover care for {selectedLabel}
           </h1>
           <p className="text-sm text-slate-500">{clinics.length} options in Beppu updated just now based on your specialty.</p>
+          <div className="mt-1 flex items-start gap-3 rounded-2xl bg-[#E8F3FF] p-4 shadow-sm w-full lg:max-w-2xl">
+            <div className="rounded-xl bg-white p-2 shadow-sm">
+              <MapPin className="w-5 h-5 text-[#0089FF]" />
+            </div>
+            <div className="space-y-0.5">
+              <p className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide">Live location</p>
+              <p className={`text-sm font-semibold leading-tight ${locationError ? "text-red-500" : "text-[#002D55]"}`}>
+                {currentLocation}
+              </p>
+              <p className={`text-xs ${locationError ? "text-red-500" : "text-slate-600"}`}>{locationStatus}</p>
+            </div>
+          </div>
         </div>
       </header>
 
-      <main className="flex-1 px-4 pt-6 lg:px-10 lg:pt-10">
-        <div className="lg:grid lg:grid-cols-[2fr_1fr] lg:gap-8">
-          <section className="space-y-6">
-            <div className="rounded-3xl border border-[#D4EBFF] bg-gradient-to-br from-white to-[#E4F2FF] p-6 shadow-sm lg:p-8">
+      <main className="flex-1 px-4 pt-6 lg:px-12 lg:pt-14">
+        <div className="lg:grid lg:grid-cols-[3.3fr_1fr] lg:gap-14">
+          <section className="space-y-8">
+            <div className="rounded-3xl border border-[#D4EBFF] bg-gradient-to-br from-white to-[#E4F2FF] p-6 shadow-sm lg:p-10">
               <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
                 <div className="space-y-2">
                   <p className="text-sm font-semibold text-[#002D55]">{selectedLabel} specialists near you</p>
@@ -362,27 +373,34 @@ export default function Clinics() {
                   </h2>
                   <p className="text-sm text-slate-600">Refined by DocDaisy and your latest filters.</p>
                 </div>
-                <div className="rounded-2xl bg-white/80 p-4 text-sm text-slate-600 shadow-sm">
-                  <p className="font-semibold text-[#002D55]">Live location</p>
-                  <p>AP House 5, Ritsumeikan APU</p>
-                  <p className="text-xs text-slate-500 mt-2">Updated a moment ago</p>
+                <div className="rounded-2xl bg-white/85 p-4 text-sm text-slate-700 shadow-sm max-w-sm lg:max-w-md">
+                  <p className="font-semibold text-[#002D55]">DocDaisy insights</p>
+                  <p className="mt-1 text-sm text-slate-600">
+                    Use the filters below to refine specialists around your live location before starting a search.
+                  </p>
                 </div>
               </div>
             </div>
 
             <div className="flex flex-wrap gap-2">
-              {availableSpecializations.map((spec) => (
-                <button
-                  onClick={() => setShowFilters((prev) => !prev)}
-                  className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-3 py-2 text-sm font-semibold text-[#002D55] hover:border-[#3A12DB] hover:text-[#3A12DB] lg:hidden"
-                >
-                  <Filter className="w-4 h-4" /> {showFilters ? "Hide" : "Show"} filters
-                </button>
-              </div>
-
-              <div
-                className={`${showFilters ? "grid" : "hidden lg:grid"} grid-cols-1 gap-4 border-t border-slate-100 px-4 py-4 sm:grid-cols-2 lg:grid-cols-3 lg:px-6 lg:py-6`}
+              <button
+                onClick={() => setShowFilters((prev) => !prev)}
+                className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-3 py-2 text-sm font-semibold text-[#002D55] hover:border-[#3A12DB] hover:text-[#3A12DB] lg:hidden"
               >
+                <Filter className="w-4 h-4" /> {showFilters ? "Hide" : "Show"} filters
+              </button>
+            </div>
+
+            <div
+              className={`relative overflow-hidden rounded-[28px] border border-[#E0EBFF] bg-white/75 shadow-[0_12px_55px_rgba(17,52,152,0.08)] backdrop-blur-xl transition-all duration-300 ${
+                showFilters
+                  ? "grid max-h-[600px]"
+                  : "max-h-0 opacity-0 pointer-events-none lg:max-h-none lg:opacity-100 lg:pointer-events-auto lg:grid"
+              }`}
+            >
+              <div className="pointer-events-none absolute left-0 top-0 hidden h-full w-16 bg-gradient-to-r from-white via-white/80 to-transparent lg:block" />
+              <div className="pointer-events-none absolute right-0 top-0 hidden h-full w-16 bg-gradient-to-l from-white via-white/80 to-transparent lg:block" />
+              <div className="grid grid-cols-1 gap-6 overflow-x-auto px-4 py-5 sm:grid-cols-[repeat(auto-fit,minmax(260px,1fr))] lg:grid-cols-3 lg:overflow-visible lg:px-10 lg:py-9">
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-slate-700" htmlFor="specialization">
                     Specialization
@@ -410,7 +428,7 @@ export default function Clinics() {
                         onClick={() => setFacilityType(type as typeof facilityType)}
                         className={`rounded-full border px-4 py-2 text-sm font-semibold transition-all ${
                           facilityType === type
-                            ? "border-[#3A12DB] bg-[#E5DEFF] text-[#3A12DB] shadow-sm"
+                            ? "border-[#3A12DB] bg-[#E5DEFF] text-[#3A12DB] shadow-sm shadow-[#3A12DB]/20"
                             : "border-slate-200 bg-slate-50 text-slate-600 hover:border-[#D4EBFF]"
                         }`}
                       >
@@ -435,7 +453,7 @@ export default function Clinics() {
                       onChange={(e) => setMinRating(Number(e.target.value))}
                       className="flex-1 accent-[#3A12DB]"
                     />
-                    <span className="flex items-center gap-1 rounded-full bg-[#F1EDFF] px-3 py-1 text-xs font-semibold text-[#3A12DB]">
+                    <span className="flex items-center gap-1 rounded-full bg-[#F1EDFF] px-3 py-1 text-xs font-semibold text-[#3A12DB] shadow-sm">
                       <Star className="w-4 h-4" /> {minRating.toFixed(1)}+
                     </span>
                   </div>
@@ -444,7 +462,7 @@ export default function Clinics() {
               </div>
             </div>
 
-            <div className="grid gap-5 md:grid-cols-2">
+            <div className="grid gap-7 md:grid-cols-2 xl:grid-cols-3">
               {clinics.map((clinic) => {
                 const visibleSpecializations = clinic.specializations.slice(0, 4);
                 const remaining = clinic.specializations.length - visibleSpecializations.length;
