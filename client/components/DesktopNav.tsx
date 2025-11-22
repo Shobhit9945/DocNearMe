@@ -1,7 +1,7 @@
 import { Link, useLocation } from "react-router-dom";
 import { Home, Search, Calendar, User, MessageSquare, Building2 } from "lucide-react";
-import { Home, Search, Calendar, User, MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/lib/i18n";
 
 const navItems = [
   { path: "/", label: "Home", icon: Home },
@@ -13,6 +13,7 @@ const navItems = [
 
 export function DesktopNav() {
   const location = useLocation();
+  const { t } = useTranslation();
 
   return (
     <div className="sticky top-10 hidden lg:flex">
@@ -20,8 +21,8 @@ export function DesktopNav() {
         <div className="flex items-center gap-3 mb-8">
           <img src="/dnm.png" alt="DocNearMe" className="w-12 h-12 object-contain" />
           <div>
-            <p className="text-xs uppercase tracking-wide text-slate-400">DocNearMe</p>
-            <p className="text-lg font-semibold text-slate-900">Care Hub</p>
+            <p className="text-xs uppercase tracking-wide text-slate-400">{t("DocNearMe")}</p>
+            <p className="text-lg font-semibold text-slate-900">{t("Care Hub")}</p>
           </div>
         </div>
         <nav className="space-y-2">
@@ -40,7 +41,7 @@ export function DesktopNav() {
                 )}
               >
                 <Icon className="w-5 h-5" />
-                {item.label}
+                {t(item.label)}
               </Link>
             );
           })}
@@ -49,8 +50,8 @@ export function DesktopNav() {
           <div className="flex items-center gap-3">
             <MessageSquare className="w-6 h-6" />
             <div>
-              <p className="text-xs text-white/80">Need help?</p>
-              <p className="text-base font-semibold">DocDaisy is online</p>
+              <p className="text-xs text-white/80">{t("Need help?")}</p>
+              <p className="text-base font-semibold">{t("DocDaisy is online")}</p>
             </div>
           </div>
         </div>

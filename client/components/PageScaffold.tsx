@@ -1,6 +1,7 @@
 import { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { DesktopNav } from "./DesktopNav";
+import { LanguageSwitcher } from "./LanguageSwitcher";
 
 interface PageScaffoldProps {
   children: ReactNode;
@@ -19,6 +20,9 @@ export function PageScaffold({ children, contentClassName }: PageScaffoldProps) 
               contentClassName
             )}
           >
+            <div className="absolute right-4 top-4 z-20">
+              <LanguageSwitcher />
+            </div>
             {children}
           </div>
         </div>

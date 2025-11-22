@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useLiveLocation } from "@/hooks/useLiveLocation";
+import { useTranslation } from "@/lib/i18n";
 
 const BASE_SPECIALIZATIONS = [
   { id: "Cardiologist", label: "Cardiology" },
@@ -293,6 +294,7 @@ export default function Clinics() {
   );
   const [minRating, setMinRating] = useState(0);
   const { currentLocation, locationError, isFetchingLocation } = useLiveLocation();
+  const { t } = useTranslation();
 
   const specializationParam = searchParams.get("specialization");
 
@@ -345,21 +347,23 @@ export default function Clinics() {
     <PageScaffold contentClassName="pb-28 lg:pb-12">
       <header className="bg-white px-4 pt-10 pb-4 border-b border-gray-100 shadow-sm lg:px-10 lg:rounded-t-3xl lg:border-none lg:shadow-none">
         <div className="flex flex-col gap-3">
-          <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Clinics & Hospitals</p>
+          <p className="text-xs uppercase tracking-[0.2em] text-slate-400">{t("Clinics & Hospitals")}</p>
           <h1 className="text-3xl font-bold text-[#002D55] flex items-center gap-3">
-            <Building2 className="w-8 h-8 text-[#0089FF]" /> Discover care for {selectedLabel}
+            <Building2 className="w-8 h-8 text-[#0089FF]" /> {t("Discover care for")} {selectedLabel}
           </h1>
-          <p className="text-sm text-slate-500">{clinics.length} options in Beppu updated just now based on your specialty.</p>
+          <p className="text-sm text-slate-500">
+            {clinics.length} {t("options in Beppu updated just now based on your specialty.")}
+          </p>
           <div className="mt-1 flex items-start gap-3 rounded-2xl bg-[#E8F3FF] p-4 shadow-sm w-full lg:max-w-xl">
             <div className="rounded-xl bg-white p-2 shadow-sm">
               <MapPin className="w-5 h-5 text-[#0089FF]" />
             </div>
             <div className="space-y-0.5">
-              <p className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide">Live location</p>
+              <p className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide">{t("Live location")}</p>
               <p className={`text-sm font-semibold leading-tight ${locationError ? "text-red-500" : "text-[#002D55]"}`}>
                 {currentLocation}
               </p>
-              <p className={`text-xs ${locationError ? "text-red-500" : "text-slate-600"}`}>{locationStatus}</p>
+              <p className={`text-xs ${locationError ? "text-red-500" : "text-slate-600"}`}>{t(locationStatus)}</p>
             </div>
           </div>
         </div>
@@ -371,11 +375,11 @@ export default function Clinics() {
             <div className="rounded-3xl border border-[#D4EBFF] bg-gradient-to-br from-white to-[#E4F2FF] p-6 shadow-sm lg:p-10">
               <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
                 <div className="space-y-2">
-                  <p className="text-sm font-semibold text-[#002D55]">{selectedLabel} specialists near you</p>
+                  <p className="text-sm font-semibold text-[#002D55]">{selectedLabel} {t("specialists near you")}</p>
                   <h2 className="text-2xl font-bold text-[#002D55]">
-                    {clinics.length} care centers available in Beppu
+                    {clinics.length} {t("care centers available in Beppu")}
                   </h2>
-                  <p className="text-sm text-slate-600">Refined by DocDaisy and your latest filters.</p>
+                  <p className="text-sm text-slate-600">{t("Refined by DocDaisy and your latest filters.")}</p>
                 </div>
                 <div className="rounded-2xl bg-white/80 p-4 text-sm text-slate-700 shadow-sm max-w-sm">
                   <p className="font-semibold text-[#002D55]">DocDaisy insights</p>
@@ -400,7 +404,7 @@ export default function Clinics() {
             >
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-slate-700" htmlFor="specialization">
-                    Specialization
+                    {t("Specialization")}
                   </label>
                   <select
                     id="specialization"
@@ -417,7 +421,7 @@ export default function Clinics() {
                 </div>
 
                 <div className="space-y-2">
-                  <p className="text-sm font-semibold text-slate-700">Facility type</p>
+                  <p className="text-sm font-semibold text-slate-700">{t("Facility type")}</p>
                   <div className="flex flex-wrap gap-2">
                     {["all", "Hospital", "Clinic"].map((type) => (
                       <button
@@ -429,7 +433,7 @@ export default function Clinics() {
                             : "border-slate-200 bg-slate-50 text-slate-600 hover:border-[#D4EBFF]"
                         }`}
                       >
-                        {type === "all" ? "All" : type}
+                        {type === "all" ? t("All") : t(type)}
                       </button>
                     ))}
                   </div>
@@ -437,7 +441,7 @@ export default function Clinics() {
 
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-slate-700" htmlFor="rating">
-                    Minimum rating
+                    {t("Minimum rating")}
                   </label>
                   <div className="flex items-center gap-3">
                     <input
@@ -454,11 +458,11 @@ export default function Clinics() {
                       <Star className="w-4 h-4" /> {minRating.toFixed(1)}+
                     </span>
                   </div>
-                  <p className="text-xs text-slate-500">Drag to prioritise higher-rated doctors.</p>
+                  <p className="text-xs text-slate-500">{t("Drag to prioritise higher-rated doctors.")}</p>
                 </div>
               </div>
 
-            <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-3">
               {clinics.map((clinic) => {
                 const visibleSpecializations = clinic.specializations.slice(0, 4);
                 const remaining = clinic.specializations.length - visibleSpecializations.length;
@@ -504,13 +508,13 @@ export default function Clinics() {
 
                       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <div className="flex items-center gap-2 text-sm text-slate-500">
-                          <CalendarClock className="w-4 h-4 text-[#0089FF]" /> Next availability: {clinic.nextAvailability}
+                          <CalendarClock className="w-4 h-4 text-[#0089FF]" /> {t("Next availability")}: {clinic.nextAvailability}
                         </div>
                         <button
                           onClick={() => navigate(`/appointment?clinic=${clinic.id}&specialization=${encodeURIComponent(selectedSpecialization)}`)}
                           className="inline-flex items-center justify-center rounded-2xl bg-[#1648CE] px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-[#1648CE]/30 transition-colors hover:bg-[#0F3499]"
                         >
-                          Book appointment
+                          {t("Book appointment")}
                         </button>
                       </div>
                     </div>
@@ -520,7 +524,9 @@ export default function Clinics() {
 
               {clinics.length === 0 && (
                 <div className="rounded-3xl border border-dashed border-slate-300 bg-white/70 p-8 text-center text-sm text-slate-500 md:col-span-2">
-                  No clinics match this specialty yet. Try another selection or chat with DocDaisy.
+                  {t(
+                    "No clinics match this specialty yet. Try another selection or chat with DocDaisy."
+                  )}
                 </div>
               )}
             </div>
@@ -528,17 +534,17 @@ export default function Clinics() {
 
           <aside className="hidden lg:flex flex-col gap-5">
             <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
-              <p className="text-xs uppercase tracking-wide text-slate-400">Why these clinics?</p>
-              <h4 className="text-lg font-semibold text-[#002D55] mt-2">Curated with DocDaisy</h4>
+              <p className="text-xs uppercase tracking-wide text-slate-400">{t("Why these clinics?")}</p>
+              <h4 className="text-lg font-semibold text-[#002D55] mt-2">{t("Curated with DocDaisy")}</h4>
               <p className="text-sm text-slate-600 mt-2">
-                Your symptoms led to a recommendation for {selectedLabel}. We prioritise availability, distance and patient reviews.
+                {t("We prioritise availability, distance and patient reviews.")}
               </p>
             </div>
             <DocDaisyBanner variant="card" onClick={() => navigate("/docdaisy")} />
             <div className="rounded-3xl border border-[#D4EBFF] bg-[#F5FAFF] p-6 text-sm text-slate-600">
-              <p className="font-semibold text-[#002D55]">Need directions?</p>
+              <p className="font-semibold text-[#002D55]">{t("Need directions?")}</p>
               <p className="mt-2 flex items-center gap-2">
-                <MapPin className="w-4 h-4 text-[#0089FF]" /> Use in-app navigation once you confirm a slot.
+                <MapPin className="w-4 h-4 text-[#0089FF]" /> {t("Open in Maps")}
               </p>
             </div>
           </aside>

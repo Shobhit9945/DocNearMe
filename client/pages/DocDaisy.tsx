@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { Send, Loader2, ChevronLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { PageScaffold } from "@/components/PageScaffold";
+import { useTranslation } from "@/lib/i18n";
 
 // ---------- Types ----------
 type ChatMessage = {
@@ -123,11 +124,12 @@ async function askZAIWithRetry(
 // ---------- Component ----------
 const DocDaisy: React.FC = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       sender: "bot",
-      text: "Hello! I'm DocDaisy, your AI Assistant. Please describe your main symptom so I can ask a few follow-up questions.",
+      text: t("Hello! I'm DocDaisy, your AI Assistant. Please describe your main symptom so I can ask a few follow-up questions."),
     },
   ]);
   const [input, setInput] = useState("");
@@ -139,6 +141,19 @@ const DocDaisy: React.FC = () => {
   >(null);
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    setMessages((prev) => {
+      if (prev.length === 0) return prev;
+      const [first, ...rest] = prev;
+      if (first.sender !== "bot") return prev;
+      const updatedText = t(
+        "Hello! I'm DocDaisy, your AI Assistant. Please describe your main symptom so I can ask a few follow-up questions."
+      );
+      if (first.text === updatedText) return prev;
+      return [{ ...first, text: updatedText }, ...rest];
+    });
+  }, [t]);
 
   // Scroll to the latest message whenever messages update
   useEffect(() => {
