@@ -352,10 +352,10 @@ export default function Clinics() {
         </div>
       </header>
 
-      <main className="flex-1 px-4 pt-6 lg:px-10 lg:pt-10">
-        <div className="lg:grid lg:grid-cols-[2fr_1fr] lg:gap-8">
+      <main className="flex-1 px-4 pt-6 lg:px-12 lg:pt-12">
+        <div className="lg:grid lg:grid-cols-[3fr_1.05fr] lg:gap-12">
           <section className="space-y-6">
-            <div className="rounded-3xl border border-[#D4EBFF] bg-gradient-to-br from-white to-[#E4F2FF] p-6 shadow-sm lg:p-8">
+            <div className="rounded-3xl border border-[#D4EBFF] bg-gradient-to-br from-white to-[#E4F2FF] p-6 shadow-sm lg:p-10">
               <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
                 <div className="space-y-2">
                   <p className="text-sm font-semibold text-[#002D55]">{selectedLabel} specialists near you</p>
@@ -445,7 +445,7 @@ export default function Clinics() {
                 </div>
               </div>
 
-            <div className="grid gap-5 md:grid-cols-2">
+            <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
               {clinics.map((clinic) => {
                 const visibleSpecializations = clinic.specializations.slice(0, 4);
                 const remaining = clinic.specializations.length - visibleSpecializations.length;
