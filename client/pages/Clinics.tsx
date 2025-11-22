@@ -294,15 +294,6 @@ export default function Clinics() {
   const [minRating, setMinRating] = useState(0);
   const { currentLocation, locationError, isFetchingLocation } = useLiveLocation();
 
-  const specializationParam = searchParams.get("specialization")?.trim();
-
-  const availableSpecializations = useMemo(() => {
-    if (!specializationParam) return BASE_SPECIALIZATIONS;
-
-    const exists = BASE_SPECIALIZATIONS.some(
-      (spec) => spec.id.toLowerCase() === specializationParam.toLowerCase()
-    );
-
     return exists
       ? BASE_SPECIALIZATIONS
       : [...BASE_SPECIALIZATIONS, { id: specializationParam, label: specializationParam }];
@@ -338,15 +329,15 @@ export default function Clinics() {
   };
 
   return (
-    <PageScaffold contentClassName="pb-28 lg:pb-14">
-      <header className="bg-white px-4 pt-10 pb-4 border-b border-gray-100 shadow-sm lg:px-12 lg:rounded-t-3xl lg:border-none lg:shadow-none">
-        <div className="flex flex-col gap-4">
+    <PageScaffold contentClassName="pb-28 lg:pb-12">
+      <header className="bg-white px-4 pt-10 pb-4 border-b border-gray-100 shadow-sm lg:px-10 lg:rounded-t-3xl lg:border-none lg:shadow-none">
+        <div className="flex flex-col gap-3">
           <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Clinics & Hospitals</p>
           <h1 className="text-3xl font-bold text-[#002D55] flex items-center gap-3">
             <Building2 className="w-8 h-8 text-[#0089FF]" /> Discover care for {selectedLabel}
           </h1>
           <p className="text-sm text-slate-500">{clinics.length} options in Beppu updated just now based on your specialty.</p>
-          <div className="mt-1 flex items-start gap-3 rounded-2xl bg-[#E8F3FF] p-4 shadow-sm w-full lg:max-w-2xl">
+          <div className="mt-1 flex items-start gap-3 rounded-2xl bg-[#E8F3FF] p-4 shadow-sm w-full lg:max-w-xl">
             <div className="rounded-xl bg-white p-2 shadow-sm">
               <MapPin className="w-5 h-5 text-[#0089FF]" />
             </div>
@@ -361,9 +352,9 @@ export default function Clinics() {
         </div>
       </header>
 
-      <main className="flex-1 px-4 pt-6 lg:px-12 lg:pt-14">
-        <div className="lg:grid lg:grid-cols-[3.3fr_1fr] lg:gap-14">
-          <section className="space-y-8">
+      <main className="flex-1 px-4 pt-6 lg:px-12 lg:pt-12">
+        <div className="lg:grid lg:grid-cols-[3fr_1.05fr] lg:gap-12">
+          <section className="space-y-6">
             <div className="rounded-3xl border border-[#D4EBFF] bg-gradient-to-br from-white to-[#E4F2FF] p-6 shadow-sm lg:p-10">
               <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
                 <div className="space-y-2">
@@ -373,7 +364,7 @@ export default function Clinics() {
                   </h2>
                   <p className="text-sm text-slate-600">Refined by DocDaisy and your latest filters.</p>
                 </div>
-                <div className="rounded-2xl bg-white/85 p-4 text-sm text-slate-700 shadow-sm max-w-sm lg:max-w-md">
+                <div className="rounded-2xl bg-white/80 p-4 text-sm text-slate-700 shadow-sm max-w-sm">
                   <p className="font-semibold text-[#002D55]">DocDaisy insights</p>
                   <p className="mt-1 text-sm text-slate-600">
                     Use the filters below to refine specialists around your live location before starting a search.
@@ -392,15 +383,8 @@ export default function Clinics() {
             </div>
 
             <div
-              className={`relative overflow-hidden rounded-[28px] border border-[#E0EBFF] bg-white/75 shadow-[0_12px_55px_rgba(17,52,152,0.08)] backdrop-blur-xl transition-all duration-300 ${
-                showFilters
-                  ? "grid max-h-[600px]"
-                  : "max-h-0 opacity-0 pointer-events-none lg:max-h-none lg:opacity-100 lg:pointer-events-auto lg:grid"
-              }`}
+              className={`${showFilters ? "grid" : "hidden lg:grid"} grid-cols-1 gap-4 border-t border-slate-100 px-4 py-4 sm:grid-cols-2 lg:grid-cols-3 lg:px-6 lg:py-6`}
             >
-              <div className="pointer-events-none absolute left-0 top-0 hidden h-full w-16 bg-gradient-to-r from-white via-white/80 to-transparent lg:block" />
-              <div className="pointer-events-none absolute right-0 top-0 hidden h-full w-16 bg-gradient-to-l from-white via-white/80 to-transparent lg:block" />
-              <div className="grid grid-cols-1 gap-6 overflow-x-auto px-4 py-5 sm:grid-cols-[repeat(auto-fit,minmax(260px,1fr))] lg:grid-cols-3 lg:overflow-visible lg:px-10 lg:py-9">
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-slate-700" htmlFor="specialization">
                     Specialization
@@ -460,9 +444,8 @@ export default function Clinics() {
                   <p className="text-xs text-slate-500">Drag to prioritise higher-rated doctors.</p>
                 </div>
               </div>
-            </div>
 
-            <div className="grid gap-7 md:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
               {clinics.map((clinic) => {
                 const visibleSpecializations = clinic.specializations.slice(0, 4);
                 const remaining = clinic.specializations.length - visibleSpecializations.length;
