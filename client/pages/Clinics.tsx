@@ -294,15 +294,6 @@ export default function Clinics() {
   const [minRating, setMinRating] = useState(0);
   const { currentLocation, locationError, isFetchingLocation } = useLiveLocation();
 
-  const specializationParam = searchParams.get("specialization")?.trim();
-
-  const availableSpecializations = useMemo(() => {
-    if (!specializationParam) return BASE_SPECIALIZATIONS;
-
-    const exists = BASE_SPECIALIZATIONS.some(
-      (spec) => spec.id.toLowerCase() === specializationParam.toLowerCase()
-    );
-
     return exists
       ? BASE_SPECIALIZATIONS
       : [...BASE_SPECIALIZATIONS, { id: specializationParam, label: specializationParam }];
@@ -392,13 +383,8 @@ export default function Clinics() {
             </div>
 
             <div
-              className={`relative overflow-hidden rounded-[28px] border border-[#E0EBFF] bg-white/70 shadow-[0_12px_55px_rgba(17,52,152,0.08)] backdrop-blur-lg ${
-                showFilters ? "grid" : "hidden lg:grid"
-              }`}
+              className={`${showFilters ? "grid" : "hidden lg:grid"} grid-cols-1 gap-4 border-t border-slate-100 px-4 py-4 sm:grid-cols-2 lg:grid-cols-3 lg:px-6 lg:py-6`}
             >
-              <div className="pointer-events-none absolute left-0 top-0 hidden h-full w-12 bg-gradient-to-r from-white via-white/80 to-transparent lg:block" />
-              <div className="pointer-events-none absolute right-0 top-0 hidden h-full w-12 bg-gradient-to-l from-white via-white/80 to-transparent lg:block" />
-              <div className="grid grid-cols-1 gap-5 overflow-x-auto px-4 py-4 sm:grid-cols-[repeat(auto-fit,minmax(260px,1fr))] lg:grid-cols-3 lg:overflow-visible lg:px-8 lg:py-8">
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-slate-700" htmlFor="specialization">
                     Specialization
@@ -458,7 +444,6 @@ export default function Clinics() {
                   <p className="text-xs text-slate-500">Drag to prioritise higher-rated doctors.</p>
                 </div>
               </div>
-            </div>
 
             <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
               {clinics.map((clinic) => {
