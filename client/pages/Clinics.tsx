@@ -294,6 +294,15 @@ export default function Clinics() {
   const [minRating, setMinRating] = useState(0);
   const { currentLocation, locationError, isFetchingLocation } = useLiveLocation();
 
+  const specializationParam = searchParams.get("specialization");
+
+  const availableSpecializations = useMemo(() => {
+    if (!specializationParam) return BASE_SPECIALIZATIONS;
+
+    const exists = BASE_SPECIALIZATIONS.some(
+      (spec) => spec.id.toLowerCase() === specializationParam.toLowerCase()
+    );
+
     return exists
       ? BASE_SPECIALIZATIONS
       : [...BASE_SPECIALIZATIONS, { id: specializationParam, label: specializationParam }];
@@ -306,12 +315,16 @@ export default function Clinics() {
 
   const clinics = useMemo(
     () =>
-      CLINICS.filter((clinic) =>
-        clinic.specializations.some(
+      CLINICS.filter((clinic) => {
+        const specializationMatch = clinic.specializations.some(
           (spec) => spec.toLowerCase() === selectedSpecialization.toLowerCase()
-        )
-      ),
-    [selectedSpecialization]
+        );
+        const facilityMatch = facilityType === "all" || clinic.type === facilityType;
+        const ratingMatch = clinic.rating >= minRating;
+
+        return specializationMatch && facilityMatch && ratingMatch;
+      }),
+    [selectedSpecialization, facilityType, minRating]
   );
 
   const selectedLabel =
