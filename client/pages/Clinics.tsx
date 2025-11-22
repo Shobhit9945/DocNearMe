@@ -301,15 +301,6 @@ export default function Clinics() {
       (spec) => spec.id.toLowerCase() === specializationParam.toLowerCase()
     );
 
-  const specializationParam = searchParams.get("specialization")?.trim();
-
-  const availableSpecializations = useMemo(() => {
-    if (!specializationParam) return BASE_SPECIALIZATIONS;
-
-    const exists = BASE_SPECIALIZATIONS.some(
-      (spec) => spec.id.toLowerCase() === specializationParam.toLowerCase()
-    );
-
     return exists
       ? BASE_SPECIALIZATIONS
       : [...BASE_SPECIALIZATIONS, { id: specializationParam, label: specializationParam }];
@@ -371,18 +362,17 @@ export default function Clinics() {
             </div>
 
             <div className="flex flex-wrap gap-2">
-              {availableSpecializations.map((spec) => (
-                <button
-                  onClick={() => setShowFilters((prev) => !prev)}
-                  className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-3 py-2 text-sm font-semibold text-[#002D55] hover:border-[#3A12DB] hover:text-[#3A12DB] lg:hidden"
-                >
-                  <Filter className="w-4 h-4" /> {showFilters ? "Hide" : "Show"} filters
-                </button>
-              </div>
-
-              <div
-                className={`${showFilters ? "grid" : "hidden lg:grid"} grid-cols-1 gap-4 border-t border-slate-100 px-4 py-4 sm:grid-cols-2 lg:grid-cols-3 lg:px-6 lg:py-6`}
+              <button
+                onClick={() => setShowFilters((prev) => !prev)}
+                className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-3 py-2 text-sm font-semibold text-[#002D55] hover:border-[#3A12DB] hover:text-[#3A12DB] lg:hidden"
               >
+                <Filter className="w-4 h-4" /> {showFilters ? "Hide" : "Show"} filters
+              </button>
+            </div>
+
+            <div
+              className={`${showFilters ? "grid" : "hidden lg:grid"} grid-cols-1 gap-4 border-t border-slate-100 px-4 py-4 sm:grid-cols-2 lg:grid-cols-3 lg:px-6 lg:py-6`}
+            >
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-slate-700" htmlFor="specialization">
                     Specialization
@@ -442,7 +432,6 @@ export default function Clinics() {
                   <p className="text-xs text-slate-500">Drag to prioritise higher-rated doctors.</p>
                 </div>
               </div>
-            </div>
 
             <div className="grid gap-5 md:grid-cols-2">
               {clinics.map((clinic) => {
