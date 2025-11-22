@@ -145,13 +145,17 @@ const DocDaisy: React.FC = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  useEffect(() => {
-    if (recommendedSpecialization) {
-      navigate(
-        `/clinics?specialization=${encodeURIComponent(recommendedSpecialization)}`
-      );
-    }
-  }, [navigate, recommendedSpecialization]);
+  const handleReevaluation = () => {
+    setRecommendedSpecialization(null);
+    setMessages((prev) => [
+      ...prev,
+      {
+        sender: "bot",
+        text:
+          "Okay, let's reassess together. Share any changes or add more details so I can refine the recommendation.",
+      },
+    ]);
+  };
 
   const sendMessage = async () => {
     if (!input.trim() || isLoading) return;
@@ -278,13 +282,21 @@ const DocDaisy: React.FC = () => {
                     .
                   </p>
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                    <button
-                      onClick={handleSearchClick}
-                      className="flex-1 bg-[#3A12DB] text-white text-base font-bold py-3 rounded-lg shadow-[0_4px_10px_0_rgba(58,18,219,0.3)] hover:bg-[#2A0F9D] transition-colors flex items-center justify-center"
-                    >
-                      <Send className="w-5 h-5 mr-2" />
-                      Search clinics for {recommendedSpecialization}
-                    </button>
+                    <div className="flex flex-col sm:flex-row gap-2 flex-1">
+                      <button
+                        onClick={handleSearchClick}
+                        className="flex-1 bg-[#3A12DB] text-white text-base font-bold py-3 rounded-lg shadow-[0_4px_10px_0_rgba(58,18,219,0.3)] hover:bg-[#2A0F9D] transition-colors flex items-center justify-center"
+                      >
+                        <Send className="w-5 h-5 mr-2" />
+                        Search clinics for {recommendedSpecialization}
+                      </button>
+                      <button
+                        onClick={handleReevaluation}
+                        className="flex-1 border border-[#3A12DB] text-[#3A12DB] text-base font-semibold py-3 rounded-lg hover:bg-[#F2EEFF] transition-colors"
+                      >
+                        Re-evaluate with DocDaisy
+                      </button>
+                    </div>
                     <span className="text-xs text-slate-500 text-center">
                       You can continue chatting for clarifications.
                     </span>
@@ -328,12 +340,20 @@ const DocDaisy: React.FC = () => {
                     </span>{" "}
                     based on your inputs.
                   </p>
-                  <button
-                    onClick={handleSearchClick}
-                    className="mt-4 w-full rounded-xl bg-[#3A12DB] py-3 text-sm font-semibold text-white shadow-md hover:bg-[#2A0F9D]"
-                  >
-                    Open search
-                  </button>
+                  <div className="mt-4 grid grid-cols-1 gap-2">
+                    <button
+                      onClick={handleSearchClick}
+                      className="w-full rounded-xl bg-[#3A12DB] py-3 text-sm font-semibold text-white shadow-md hover:bg-[#2A0F9D]"
+                    >
+                      Open search
+                    </button>
+                    <button
+                      onClick={handleReevaluation}
+                      className="w-full rounded-xl border border-[#3A12DB] py-3 text-sm font-semibold text-[#3A12DB] hover:bg-[#F2EEFF]"
+                    >
+                      Request re-evaluation
+                    </button>
+                  </div>
                 </>
               ) : (
                 <p className="text-sm text-slate-600 mt-3">

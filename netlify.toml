@@ -1,7 +1,16 @@
 [build]
-  command = "npm run build:client"
+  # Run the same pnpm build used locally; Netlify performs the install step
+  # automatically when NETLIFY_USE_PNPM is enabled.
+  command = "pnpm run build"
   functions = "netlify/functions"
   publish = "dist/spa"
+
+[build.environment]
+  # Ensure Netlify installs the expected pnpm + Node versions instead of
+  # falling back to npm defaults, which previously caused failed deploys.
+  NODE_VERSION = "22"
+  PNPM_VERSION = "10.14.0"
+  NETLIFY_USE_PNPM = "true"
 
 
 [functions]
