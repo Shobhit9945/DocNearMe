@@ -2,6 +2,8 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import { handleDemo } from "./routes/demo";
+import { handleAvailability } from "./routes/availability";
+import { handleCreateAppointment } from "./routes/appointment";
 import docDaisyRouter from "./routes/docdaisy";
 
 export function createServer() {
@@ -19,6 +21,8 @@ export function createServer() {
   });
 
   app.get("/api/demo", handleDemo);
+  app.get("/api/availability", handleAvailability);
+  app.post("/api/appointments", handleCreateAppointment);
 
   app.use("/api/docdaisy", docDaisyRouter);
 
