@@ -17,7 +17,9 @@
 
 
 [functions]
-  external_node_modules = ["express"]
+  # Bundle dependencies (including Express) directly into the function so they
+  # are available at runtime. Leaving Express as an external module resulted in
+  # Netlify not packaging it, causing "Cannot find module 'express'" errors.
   node_bundler = "esbuild"
   
 [[redirects]]
