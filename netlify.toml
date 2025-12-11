@@ -11,6 +11,9 @@
   NODE_VERSION = "22"
   PNPM_VERSION = "10.14.0"
   NETLIFY_USE_PNPM = "true"
+  # Allow Netlify to refresh the lockfile when dependencies change so installs
+  # don't fail if package.json and pnpm-lock.yaml drift locally.
+  PNPM_FLAGS = "--no-frozen-lockfile"
 
 
 [functions]
