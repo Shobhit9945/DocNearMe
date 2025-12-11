@@ -1,12 +1,17 @@
 import "dotenv/config";
-import express from "express";
+import express, { Express } from "express";
 import cors from "cors";
+import { connectToDatabase } from "./db";
 import { handleDemo } from "./routes/demo";
 import { handleAvailability } from "./routes/availability";
-import { handleCreateAppointment } from "./routes/appointment";
+import { handleCreateAppointment, handleListAppointments } from "./routes/appointment";
 import docDaisyRouter from "./routes/docdaisy";
+import authRouter from "./routes/auth";
+import { authenticate, requireRole } from "./middleware/auth";
 
-export function createServer() {
+export async function createServer(): Promise<Express> {
+  await connectToDatabase();
+
   const app = express();
 
   // Middleware
@@ -22,8 +27,10 @@ export function createServer() {
 
   app.get("/api/demo", handleDemo);
   app.get("/api/availability", handleAvailability);
-  app.post("/api/appointments", handleCreateAppointment);
+  app.post("/api/appointments", authenticate, requireRole(["patient"]), handleCreateAppointment);
+  app.get("/api/appointments", authenticate, ...handleListAppointments);
 
+  app.use("/api/auth", authRouter);
   app.use("/api/docdaisy", docDaisyRouter);
 
   return app;

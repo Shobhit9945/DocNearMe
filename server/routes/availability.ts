@@ -1,57 +1,54 @@
 import { Request, Response } from "express";
-import { db } from "../db";
+import { getAppointmentsCollection } from "../db";
 
-export const handleAvailability = (req: Request, res: Response) => {
-    const { date, clinicId } = req.query;
+const ALL_SLOTS = [
+  "09:00 AM",
+  "09:30 AM",
+  "10:00 AM",
+  "10:30 AM",
+  "11:00 AM",
+  "11:30 AM",
+  "02:00 PM",
+  "02:30 PM",
+  "03:00 PM",
+  "03:30 PM",
+  "04:00 PM",
+  "04:30 PM",
+];
 
-    if (!date) {
-        return res.status(400).json({ error: "Date parameter is required" });
-    }
+const WEEKEND_SLOTS = ["10:00 AM", "10:30 AM", "11:00 AM", "02:00 PM", "02:30 PM", "03:00 PM"];
 
-    const selectedDate = new Date(date as string);
-    const dayOfWeek = selectedDate.getDay(); // 0 = Sunday, 6 = Saturday
+export const handleAvailability = async (req: Request, res: Response) => {
+  const { date, clinicId } = req.query;
 
-    // Fetch all slots from DB
-    const allSlots = db.prepare("SELECT time FROM slots").all() as { time: string }[];
-    let availableSlots = allSlots.map(s => s.time);
+  if (!date) {
+    return res.status(400).json({ error: "Date parameter is required" });
+  }
 
-    // Weekends have limited availability (Business Logic)
-    if (dayOfWeek === 0 || dayOfWeek === 6) {
-        const weekendSlots = [
-            "10:00 AM", "10:30 AM", "11:00 AM",
-            "02:00 PM", "02:30 PM", "03:00 PM"
-        ];
-        availableSlots = availableSlots.filter(slot => weekendSlots.includes(slot));
-    }
+  const selectedDate = new Date(date as string);
+  const dayOfWeek = selectedDate.getDay();
+  const dateKey = selectedDate.toISOString().split("T")[0];
+  const clinicKey = (clinicId as string) || "global";
 
-    // Fetch booked slots for this date
-    // We store date as ISO string in DB usually, but let's normalize.
-    // The frontend sends ISO string. Let's assume we store just the date part or full ISO.
-    // The frontend sends `selectedDate.toISOString()`.
-    // Let's match based on the date part to be safe, or exact string if we are consistent.
-    // `selectedDate` is a Date object. `date` is the query param string.
-    // Let's use the query param string directly if it's just YYYY-MM-DD or similar,
-    // but `toISOString` includes time.
-    // Let's extract YYYY-MM-DD from the input date string to be robust.
+  let availableSlots = [...ALL_SLOTS];
 
-    const dateObj = new Date(date as string);
-    const dateStr = dateObj.toISOString().split('T')[0]; // YYYY-MM-DD
+  if (dayOfWeek === 0 || dayOfWeek === 6) {
+    availableSlots = availableSlots.filter((slot) => WEEKEND_SLOTS.includes(slot));
+  }
 
-    const bookedAppointments = db.prepare(
-        "SELECT slot FROM appointments WHERE substr(date, 1, 10) = ?"
-    ).all(dateStr) as { slot: string }[];
+  try {
+    const appointments = await getAppointmentsCollection();
+    const bookedAppointments = await appointments
+      .find({ dateKey, clinicId: clinicKey })
+      .project({ slot: 1, _id: 0 })
+      .toArray();
 
-    const bookedSlots = new Set(bookedAppointments.map(a => a.slot));
+    const bookedSlots = new Set(bookedAppointments.map((appt) => appt.slot));
+    availableSlots = availableSlots.filter((slot) => !bookedSlots.has(slot));
 
-    // Filter out booked slots
-    availableSlots = availableSlots.filter(slot => !bookedSlots.has(slot));
-
-    // Simulate network delay
-    setTimeout(() => {
-        res.json({
-            date: dateStr,
-            clinicId: clinicId || "all",
-            slots: availableSlots
-        });
-    }, 500);
+    res.json({ date: dateKey, clinicId: clinicKey, slots: availableSlots });
+  } catch (error) {
+    console.error("Availability error", error);
+    res.status(500).json({ error: "Failed to load availability" });
+  }
 };

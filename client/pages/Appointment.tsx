@@ -17,6 +17,8 @@ import { generateGoogleCalendarLink, generateICSFile, CalendarEvent } from "@/li
 import { BottomNav } from "@/components/BottomNav";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/lib/auth-context";
+import { Button } from "@/components/ui/button";
 
 const SPECIALIZATIONS = [
   "General Physician",
@@ -41,6 +43,7 @@ const SPECIALIZATIONS = [
 export default function Appointment() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { user, token, loading } = useAuth();
 
   const specializationParam = searchParams.get("specialization") ?? "";
   const clinicId = searchParams.get("clinic");
@@ -110,18 +113,23 @@ export default function Appointment() {
   }, [selectedDate, selectedSlot, selectedSpecialization, clinicLabel, notes]);
 
   const handleConfirm = async () => {
+    if (!token) {
+      navigate("/auth");
+      return;
+    }
+
     if (!selectedDate || !selectedSlot) return;
 
     setIsBooking(true);
     try {
       const res = await fetch("/api/appointments", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           date: selectedDate.toISOString(),
           slot: selectedSlot,
           specialization: selectedSpecialization,
-          clinicId: clinicId || "default",
+          clinicId: clinicId || "global",
           notes
         }),
       });
@@ -158,6 +166,35 @@ export default function Appointment() {
       document.body.removeChild(link);
     }
   };
+
+  if (loading) {
+    return (
+      <PageScaffold>
+        <div className="min-h-[60vh] flex items-center justify-center text-slate-600">Loading your account…</div>
+      </PageScaffold>
+    );
+  }
+
+  if (!user || user.role !== "patient") {
+    return (
+      <PageScaffold contentClassName="pb-28 lg:pb-12">
+        <div className="max-w-2xl mx-auto py-16 px-4 text-center space-y-6">
+          <h1 className="text-3xl font-bold text-slate-900">Sign in to book</h1>
+          <p className="text-slate-600">
+            Create a patient account or sign in to reserve an appointment. This keeps every booking tied to your profile for
+            future records.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Button onClick={() => navigate("/auth")}>Go to login</Button>
+            <Button variant="outline" onClick={() => navigate("/search")}>Browse clinics</Button>
+          </div>
+        </div>
+        <div className="lg:hidden">
+          <BottomNav />
+        </div>
+      </PageScaffold>
+    );
+  }
 
   if (step === "confirmation") {
     return (
