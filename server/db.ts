@@ -1,44 +1,63 @@
-import Database from "better-sqlite3";
-import path from "path";
+import "dotenv/config";
+import bcrypt from "bcryptjs";
+import { MongoClient, Db, Collection } from "mongodb";
+import { User, Appointment } from "./types";
 
-const dbPath = path.resolve(process.cwd(), "sqlite.db");
-const db = new Database(dbPath);
+const uri = process.env.MONGODB_URI;
+const dbName = process.env.MONGODB_DB_NAME ?? "docnearme";
+const adminEmail = process.env.ADMIN_EMAIL ?? "admin@docnearme.local";
+const adminPassword = process.env.ADMIN_PASSWORD ?? "ChangeMeNow123!";
 
-// Initialize tables
-db.exec(`
-  CREATE TABLE IF NOT EXISTS slots (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    time TEXT NOT NULL UNIQUE
-  );
+let client: MongoClient | null = null;
+let database: Db | null = null;
 
-  CREATE TABLE IF NOT EXISTS appointments (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    date TEXT NOT NULL,
-    slot TEXT NOT NULL,
-    specialization TEXT NOT NULL,
-    clinicId TEXT,
-    notes TEXT,
-    createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
-  );
-`);
+export async function connectToDatabase(): Promise<Db> {
+  if (database) return database;
+  if (!uri) {
+    throw new Error("MONGODB_URI environment variable is required to start the server.");
+  }
 
-// Seed slots if empty
-const slotsCount = db.prepare("SELECT count(*) as count FROM slots").get() as { count: number };
+  client = new MongoClient(uri);
+  await client.connect();
+  database = client.db(dbName);
 
-if (slotsCount.count === 0) {
-    const initialSlots = [
-        "09:00 AM", "09:30 AM", "10:00 AM", "10:30 AM",
-        "11:00 AM", "11:30 AM", "02:00 PM", "02:30 PM",
-        "03:00 PM", "03:30 PM", "04:00 PM", "04:30 PM"
-    ];
+  await ensureIndexes(database);
+  await ensureAdminAccount(database);
 
-    const insert = db.prepare("INSERT INTO slots (time) VALUES (?)");
-    const insertMany = db.transaction((slots: string[]) => {
-        for (const slot of slots) insert.run(slot);
-    });
-
-    insertMany(initialSlots);
-    console.log("Seeded initial time slots");
+  return database;
 }
 
-export { db };
+async function ensureIndexes(db: Db) {
+  await Promise.all([
+    db.collection<User>("users").createIndex({ email: 1 }, { unique: true }),
+    db
+      .collection<Appointment>("appointments")
+      .createIndex({ dateKey: 1, slot: 1, clinicId: 1 }, { unique: true }),
+  ]);
+}
+
+async function ensureAdminAccount(db: Db) {
+  const users = db.collection<User>("users");
+  const existingAdmin = await users.findOne({ role: "admin", email: adminEmail });
+
+  if (!existingAdmin) {
+    const passwordHash = await bcrypt.hash(adminPassword, 12);
+    await users.insertOne({
+      email: adminEmail,
+      name: "DocNearMe Admin",
+      passwordHash,
+      role: "admin",
+      createdAt: new Date(),
+    });
+  }
+}
+
+export async function getUsersCollection(): Promise<Collection<User>> {
+  const db = await connectToDatabase();
+  return db.collection<User>("users");
+}
+
+export async function getAppointmentsCollection(): Promise<Collection<Appointment>> {
+  const db = await connectToDatabase();
+  return db.collection<Appointment>("appointments");
+}

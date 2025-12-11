@@ -10,6 +10,7 @@ export const translations: Record<string, TranslationEntry> = {
   Search: { ja: "検索" },
   Clinics: { ja: "クリニック" },
   Appointment: { ja: "予約" },
+  Login: { ja: "ログイン" },
   Profile: { ja: "プロフィール" },
   "DocNearMe": { ja: "DocNearMe" },
   "Care Hub": { ja: "ケアハブ" },

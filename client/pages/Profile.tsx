@@ -1,10 +1,13 @@
 import { BottomNav } from "@/components/BottomNav";
 import { PageScaffold } from "@/components/PageScaffold";
-import { User, ShieldCheck, Bell } from "lucide-react";
+import { User, ShieldCheck, Bell, LogOut } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
+import { useAuth } from "@/lib/auth-context";
+import { Button } from "@/components/ui/button";
 
 export default function Profile() {
   const { t } = useTranslation();
+  const { user, logout } = useAuth();
 
   return (
     <PageScaffold contentClassName="pb-28 lg:pb-12">
@@ -15,6 +18,37 @@ export default function Profile() {
 
       <main className="flex-1 px-4 pt-6 lg:px-10 lg:pt-10">
         <div className="flex flex-col gap-8 lg:flex-row">
+          <section className="flex-1 rounded-[24px] border border-slate-200 bg-white p-8 shadow-sm space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="h-12 w-12 rounded-full bg-[#0089FF]/10 flex items-center justify-center">
+                <User className="w-6 h-6 text-[#0089FF]" />
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold">Account</p>
+                <p className="text-lg font-bold text-[#002D55]">
+                  {user ? user.name || user.email : t("Not signed in")}
+                </p>
+                {user && <p className="text-sm text-slate-600">{user.email}</p>}
+              </div>
+            </div>
+            {user ? (
+              <div className="flex flex-wrap gap-3 items-center">
+                <span className="px-3 py-1 bg-[#F5FAFF] text-[#1648CE] rounded-full text-xs font-semibold">
+                  {user.role === "admin" ? "Admin" : "Patient"}
+                </span>
+                <Button variant="outline" size="sm" className="gap-2" onClick={logout}>
+                  <LogOut className="w-4 h-4" />
+                  {t("Sign out")}
+                </Button>
+              </div>
+            ) : (
+              <div className="flex flex-wrap gap-3 items-center">
+                <Button onClick={() => (window.location.href = "/auth")}>{t("Sign in")}</Button>
+                <p className="text-sm text-slate-600">Create or access your DocNearMe account.</p>
+              </div>
+            )}
+          </section>
+
           <section className="flex-1 rounded-[24px] border border-slate-200 bg-white p-8 text-center shadow-sm">
             <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-[#0089FF]/10">
               <User className="w-8 h-8 text-[#0089FF]" />
