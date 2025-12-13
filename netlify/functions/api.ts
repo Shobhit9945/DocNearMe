@@ -26,7 +26,17 @@ const getExpressHandler = async () => {
 
 export const handler = async (event: NetlifyEvent, context: any) => {
   // Normalize the incoming path to extract the target segment after /api/
-  const incomingPath = event.path || "";
+  const incomingPath = event.path
+    ? event.path
+    : (() => {
+        try {
+          const rawUrl = (event as any).rawUrl;
+          if (rawUrl) return new URL(rawUrl).pathname;
+        } catch (err) {
+          console.warn("Unable to parse rawUrl for event path", err);
+        }
+        return "";
+      })();
 
   // Remove potential prefixes that Netlify might include
   const normalizedPath = incomingPath
@@ -58,9 +68,16 @@ export const handler = async (event: NetlifyEvent, context: any) => {
   if (!targetApiUrl) {
     const expressHandler = await getExpressHandler();
     // Normalize the path so Express sees /api/... instead of /.netlify/functions/api/...
+    const expressPath = incomingPath.startsWith("/.netlify/functions/api")
+      ? incomingPath.replace(/^\/\.netlify\/functions\/api/, "/api")
+      : incomingPath.startsWith("/api/")
+        ? incomingPath
+        : `/api/${normalizedPath}`;
+
     const expressEvent = {
       ...event,
-      path: incomingPath.replace(/^\/\.netlify\/functions\/api/, "/api"),
+      path: expressPath,
+      httpMethod: event.httpMethod || (event as any).requestContext?.http?.method || "GET",
     };
     return expressHandler(expressEvent, context);
   }
