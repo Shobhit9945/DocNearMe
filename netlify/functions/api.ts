@@ -98,12 +98,6 @@ export const handler = async (event: NetlifyEvent, context: any) => {
         ? incomingPath
         : `/api/${normalizedPath}`;
 
-    // Ensure serverless-http receives a decoded string body; if Netlify flagged the
-    // payload as base64, decode it here and hand express the raw JSON string.
-    const normalizedBody = event.isBase64Encoded
-      ? Buffer.from(event.body ?? "", "base64").toString("utf8")
-      : event.body;
-
     const headers = { ...(event.headers ?? {}) };
     // Ensure JSON bodies are parsed even if Netlify omits the content-type header on rewrites
     if (!headers["content-type"] && !headers["Content-Type"] && event.body) {
@@ -114,9 +108,6 @@ export const handler = async (event: NetlifyEvent, context: any) => {
       ...event,
       httpMethod: resolvedMethod,
       path: expressPath,
-      headers,
-      body: normalizedBody,
-      isBase64Encoded: false,
       requestContext: {
         ...(event as any).requestContext,
         http: { ...(event as any).requestContext?.http, method: resolvedMethod },
