@@ -24,9 +24,36 @@ const getExpressHandler = async () => {
   return cachedExpressHandler;
 };
 
+const resolveHttpMethod = (event: NetlifyEvent, context: any) => {
+  // Netlify should always supply httpMethod, but production traces show it may be
+  // omitted. Try a few fallbacks before defaulting so POST bodies don't downgrade to GET.
+  const explicitMethod =
+    event.httpMethod ||
+    (event as any).requestContext?.http?.method ||
+    event.headers?.["x-nf-http-method"] ||
+    event.headers?.["x-http-method-override"] ||
+    context?.httpMethod ||
+    context?.method;
+
+  if (explicitMethod) return explicitMethod;
+
+  // As a last resort, infer POST when a body is present; otherwise default to GET.
+  return event.body ? "POST" : "GET";
+};
+
 export const handler = async (event: NetlifyEvent, context: any) => {
   // Normalize the incoming path to extract the target segment after /api/
-  const incomingPath = event.path || "";
+  const incomingPath = event.path
+    ? event.path
+    : (() => {
+        try {
+          const rawUrl = (event as any).rawUrl;
+          if (rawUrl) return new URL(rawUrl).pathname;
+        } catch (err) {
+          console.warn("Unable to parse rawUrl for event path", err);
+        }
+        return "";
+      })();
 
   // Remove potential prefixes that Netlify might include
   const normalizedPath = incomingPath
@@ -58,9 +85,16 @@ export const handler = async (event: NetlifyEvent, context: any) => {
   if (!targetApiUrl) {
     const expressHandler = await getExpressHandler();
     // Normalize the path so Express sees /api/... instead of /.netlify/functions/api/...
+    const expressPath = incomingPath.startsWith("/.netlify/functions/api")
+      ? incomingPath.replace(/^\/\.netlify\/functions\/api/, "/api")
+      : incomingPath.startsWith("/api/")
+        ? incomingPath
+        : `/api/${normalizedPath}`;
+
     const expressEvent = {
       ...event,
-      path: incomingPath.replace(/^\/\.netlify\/functions\/api/, "/api"),
+      path: expressPath,
+      httpMethod: resolveHttpMethod(event, context),
     };
     return expressHandler(expressEvent, context);
   }
