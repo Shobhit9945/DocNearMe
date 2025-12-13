@@ -58,9 +58,15 @@ export const handler = async (event: NetlifyEvent, context: any) => {
   if (!targetApiUrl) {
     const expressHandler = await getExpressHandler();
     // Normalize the path so Express sees /api/... instead of /.netlify/functions/api/...
+    const expressPath = incomingPath.startsWith("/.netlify/functions/api")
+      ? incomingPath.replace(/^\/\.netlify\/functions\/api/, "/api")
+      : incomingPath.startsWith("/api/")
+        ? incomingPath
+        : `/api/${normalizedPath}`;
+
     const expressEvent = {
       ...event,
-      path: incomingPath.replace(/^\/\.netlify\/functions\/api/, "/api"),
+      path: expressPath,
     };
     return expressHandler(expressEvent, context);
   }
