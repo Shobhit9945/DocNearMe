@@ -8,6 +8,7 @@ type NetlifyEvent = {
   httpMethod?: string;
   headers?: Record<string, string>;
   body?: string | null;
+  isBase64Encoded?: boolean;
   queryStringParameters?: Record<string, string> | null;
 };
 
@@ -96,6 +97,12 @@ export const handler = async (event: NetlifyEvent, context: any) => {
       : incomingPath.startsWith("/api/")
         ? incomingPath
         : `/api/${normalizedPath}`;
+
+    const headers = { ...(event.headers ?? {}) };
+    // Ensure JSON bodies are parsed even if Netlify omits the content-type header on rewrites
+    if (!headers["content-type"] && !headers["Content-Type"] && event.body) {
+      headers["content-type"] = "application/json";
+    }
 
     const expressEvent = {
       ...event,
