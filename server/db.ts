@@ -73,7 +73,23 @@ export async function connectToDatabase(): Promise<Db> {
   if (cache.db) return cache.db;
 
   if (!cache.connectPromise) {
-    cache.connectPromise = newClient().connect();
+    const host = (() => {
+      try {
+        const parsed = new URL(uri!);
+        return parsed.hostname;
+      } catch {
+        return "unknown-host";
+      }
+    })();
+
+    console.info(`[db] Connecting to MongoDB at ${host}...`);
+    cache.connectPromise = newClient()
+      .connect()
+      .catch((err) => {
+        console.error("[db] MongoDB connection failed", err);
+        cache.connectPromise = null;
+        throw err;
+      });
   }
 
   // Reuse the same client on warm calls
@@ -85,6 +101,8 @@ export async function connectToDatabase(): Promise<Db> {
 
   // Make sure prep work runs only once per container
   await prepareOnce(db);
+
+  console.info(`[db] Connected to ${db.databaseName}`);
 
   return db;
 }
