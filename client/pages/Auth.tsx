@@ -21,6 +21,27 @@ const loginSchema = z.object({
   password: z.string().min(8),
 });
 
+type ErrorBody = { error?: string; hint?: string; detail?: string; traceId?: string };
+
+const formatErrorMessage = (body: ErrorBody | null, fallback: string) => {
+  if (!body) return fallback;
+
+  let message = body.error || fallback;
+  if (body.hint) {
+    message += ` (${body.hint}`;
+    if (body.traceId) message += `, trace: ${body.traceId}`;
+    message += ")";
+  } else if (body.traceId) {
+    message += ` (trace: ${body.traceId})`;
+  }
+
+  if (body.detail === "body_not_parsed") {
+    message += " — the API did not receive JSON; check Netlify rewrites and Content-Type headers.";
+  }
+
+  return message;
+};
+
 export default function AuthPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -48,12 +69,13 @@ export default function AuthPage() {
         body: JSON.stringify(validated),
       });
 
+      const body = (await res.json().catch(() => null)) as ErrorBody | AuthResponse | null;
+
       if (!res.ok) {
-        const body = await res.json();
-        throw new Error(body.error || "Unable to continue");
+        throw new Error(formatErrorMessage(body as ErrorBody | null, "Unable to continue"));
       }
 
-      const data = (await res.json()) as AuthResponse;
+      const data = body as AuthResponse;
       login(data);
       navigate("/appointment");
     } catch (err) {
@@ -76,12 +98,13 @@ export default function AuthPage() {
         body: JSON.stringify(validated),
       });
 
+      const body = (await res.json().catch(() => null)) as ErrorBody | AuthResponse | null;
+
       if (!res.ok) {
-        const body = await res.json();
-        throw new Error(body.error || "Unable to login");
+        throw new Error(formatErrorMessage(body as ErrorBody | null, "Unable to login"));
       }
 
-      const data = (await res.json()) as AuthResponse;
+      const data = body as AuthResponse;
       login(data);
       navigate("/admin/bookings");
     } catch (err) {
