@@ -19,6 +19,30 @@ export async function createServer(): Promise<Express> {
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
+  // Netlify rewrites can drop the content-type header, which prevents
+  // express.json from parsing the body. Accept text payloads when no content
+  // type is present and opportunistically decode JSON strings so auth routes
+  // still receive the expected object payloads.
+  app.use(
+    express.text({
+      type: (req) => {
+        const contentType = req.headers["content-type"];
+        return !contentType || contentType.startsWith("text/");
+      },
+      limit: "1mb",
+    }),
+  );
+  app.use((req, _res, next) => {
+    if (typeof req.body === "string" && req.body.trim()) {
+      try {
+        req.body = JSON.parse(req.body);
+      } catch {
+        // Leave the original string body intact if it's not valid JSON.
+      }
+    }
+    next();
+  });
+
   // Example API routes
   app.get("/api/ping", (_req, res) => {
     const ping = process.env.PING_MESSAGE ?? "ping";
