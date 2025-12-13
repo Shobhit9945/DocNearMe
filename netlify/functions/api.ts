@@ -8,6 +8,7 @@ type NetlifyEvent = {
   httpMethod?: string;
   headers?: Record<string, string>;
   body?: string | null;
+  isBase64Encoded?: boolean;
   queryStringParameters?: Record<string, string> | null;
 };
 
@@ -42,6 +43,12 @@ const resolveHttpMethod = (event: NetlifyEvent, context: any) => {
 };
 
 export const handler = async (event: NetlifyEvent, context: any) => {
+  // Netlify occasionally omits the httpMethod on rewrites, which causes
+  // serverless-http to treat the request as a GET and drop the JSON body.
+  // Resolve it early (falling back to POST when a body is present) so POST
+  // auth routes receive the payload required by Zod validation.
+  const resolvedMethod = resolveHttpMethod(event, context);
+
   // Normalize the incoming path to extract the target segment after /api/
   const incomingPath = event.path
     ? event.path
@@ -91,9 +98,22 @@ export const handler = async (event: NetlifyEvent, context: any) => {
         ? incomingPath
         : `/api/${normalizedPath}`;
 
+    const headers = { ...(event.headers ?? {}) };
+    // Ensure JSON bodies are parsed even if Netlify omits the content-type header on rewrites
+    if (!headers["content-type"] && !headers["Content-Type"] && event.body) {
+      headers["content-type"] = "application/json";
+    }
+
     const expressEvent = {
       ...event,
+      httpMethod: resolvedMethod,
       path: expressPath,
+      headers,
+      isBase64Encoded: event.isBase64Encoded ?? false,
+      requestContext: {
+        ...(event as any).requestContext,
+        http: { ...(event as any).requestContext?.http, method: resolvedMethod },
+      },
     };
     return expressHandler(expressEvent, context);
   }
@@ -135,7 +155,7 @@ export const handler = async (event: NetlifyEvent, context: any) => {
       url.href = genUrl.href;
     }
 
-    const method = (event.httpMethod || "GET").toUpperCase();
+    const method = resolvedMethod.toUpperCase();
 
     // Build headers: for Google Geocoding we don't send Authorization header
     const headers: Record<string, string> = {
