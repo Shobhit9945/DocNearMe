@@ -1,5 +1,6 @@
 import { Router } from "express";
-import { ObjectId } from "mongodb";
+import crypto from "crypto";
+import { MongoServerSelectionError, ObjectId } from "mongodb";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { getUsersCollection } from "../db";
@@ -24,7 +25,68 @@ const adminLoginSchema = z.object({
   password: z.string().min(8),
 });
 
+type ErrorPayload = {
+  error: string;
+  detail?: string;
+  hint?: string;
+  traceId?: string;
+};
+
+const generateTraceId = () => crypto.randomUUID?.() ?? `trace-${Date.now()}`;
+
+const respondWithBodyParseHint = (res: any) =>
+  res.status(400).json({
+    error: "Request body was not parsed. Send JSON with the expected fields.",
+    detail: "body_not_parsed",
+    hint: "On Netlify, make sure your rewrite targets /.netlify/functions/api and preserves the Content-Type: application/json header.",
+  } satisfies ErrorPayload);
+
+const isPlainObject = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const mapAuthError = (error: unknown, action: "signup" | "login" | "fetch-user") => {
+  const traceId = generateTraceId();
+
+  if (error instanceof MongoServerSelectionError) {
+    return {
+      status: 503,
+      payload: {
+        error: `Unable to ${action}: database connection failed`,
+        detail: "mongo_connection",
+        hint: "Verify MONGODB_URI credentials and that the cluster allows connections from the Netlify function region.",
+        traceId,
+      } satisfies ErrorPayload,
+    } as const;
+  }
+
+  if (error instanceof Error && /ECONNREFUSED|ENOTFOUND|timed out/i.test(error.message)) {
+    return {
+      status: 503,
+      payload: {
+        error: `Unable to ${action}: upstream service unreachable`,
+        detail: "network",
+        hint: "Check network access between Netlify Functions and MongoDB.",
+        traceId,
+      } satisfies ErrorPayload,
+    } as const;
+  }
+
+  return {
+    status: 500,
+    payload: {
+      error: `Failed to ${action}`,
+      detail: "unknown",
+      hint: "Check Netlify function logs for the trace ID provided.",
+      traceId,
+    } satisfies ErrorPayload,
+  } as const;
+};
+
 router.post("/patient/signup", async (req, res) => {
+  if (!isPlainObject(req.body)) {
+    return respondWithBodyParseHint(res);
+  }
+
   const parsed = patientSignupSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: parsed.error.errors[0]?.message ?? "Invalid input" });
@@ -63,11 +125,16 @@ router.post("/patient/signup", async (req, res) => {
     });
   } catch (error) {
     console.error("Patient signup error", error);
-    return res.status(500).json({ error: "Failed to create account" });
+    const { status, payload } = mapAuthError(error, "signup");
+    return res.status(status).json(payload);
   }
 });
 
 router.post("/patient/login", async (req, res) => {
+  if (!isPlainObject(req.body)) {
+    return respondWithBodyParseHint(res);
+  }
+
   const parsed = patientLoginSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: parsed.error.errors[0]?.message ?? "Invalid input" });
@@ -102,11 +169,16 @@ router.post("/patient/login", async (req, res) => {
     });
   } catch (error) {
     console.error("Patient login error", error);
-    return res.status(500).json({ error: "Failed to login" });
+    const { status, payload } = mapAuthError(error, "login");
+    return res.status(status).json(payload);
   }
 });
 
 router.post("/admin/login", async (req, res) => {
+  if (!isPlainObject(req.body)) {
+    return respondWithBodyParseHint(res);
+  }
+
   const parsed = adminLoginSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: parsed.error.errors[0]?.message ?? "Invalid input" });
@@ -146,7 +218,8 @@ router.post("/admin/login", async (req, res) => {
     });
   } catch (error) {
     console.error("Admin login error", error);
-    return res.status(500).json({ error: "Failed to login" });
+    const { status, payload } = mapAuthError(error, "login");
+    return res.status(status).json(payload);
   }
 });
 
@@ -171,7 +244,8 @@ router.get("/me", authenticate, async (req: AuthenticatedRequest, res) => {
     });
   } catch (error) {
     console.error("Fetch current user error", error);
-    return res.status(500).json({ error: "Failed to fetch user" });
+    const { status, payload } = mapAuthError(error, "fetch-user");
+    return res.status(status).json(payload);
   }
 });
 

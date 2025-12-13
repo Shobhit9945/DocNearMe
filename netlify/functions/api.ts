@@ -68,6 +68,24 @@ export const handler = async (event: NetlifyEvent, context: any) => {
     .replace(/^\/api\//, "")
     .replace(/^\//, "");
 
+  let decodedBody: string | null | undefined = event.body;
+  if (event.isBase64Encoded && typeof event.body === "string") {
+    try {
+      decodedBody = Buffer.from(event.body, "base64").toString("utf8");
+    } catch (err) {
+      console.warn("Failed to decode base64 Netlify body", err);
+      return {
+        statusCode: 400,
+        body: JSON.stringify({
+          error: "Incoming request body could not be decoded",
+          detail: "netlify_body_decode_failed",
+          hint: "Disable base64 encoding or ensure the body is valid JSON before the Netlify rewrite.",
+        }),
+        headers: { "Content-Type": "application/json" },
+      };
+    }
+  }
+
   // e.g. path === 'gemini' or 'google-maps'
   let targetApiUrl = "";
   let apiKey = "";
@@ -112,6 +130,7 @@ export const handler = async (event: NetlifyEvent, context: any) => {
         ...(event as any).requestContext,
         http: { ...(event as any).requestContext?.http, method: resolvedMethod },
       },
+      body: decodedBody,
     };
     return expressHandler(expressEvent, context);
   }
@@ -173,9 +192,9 @@ export const handler = async (event: NetlifyEvent, context: any) => {
       headers,
     };
 
-    if (method !== "GET" && event.body) {
-      // event.body is a string in Netlify functions; forward as-is
-      fetchOptions.body = event.body;
+    if (method !== "GET" && decodedBody) {
+      // decodedBody is a string in Netlify functions; forward as-is
+      fetchOptions.body = decodedBody;
     }
 
     const resp = await fetch(url.toString(), fetchOptions);
