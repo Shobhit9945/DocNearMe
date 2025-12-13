@@ -24,6 +24,23 @@ const getExpressHandler = async () => {
   return cachedExpressHandler;
 };
 
+const resolveHttpMethod = (event: NetlifyEvent, context: any) => {
+  // Netlify should always supply httpMethod, but production traces show it may be
+  // omitted. Try a few fallbacks before defaulting so POST bodies don't downgrade to GET.
+  const explicitMethod =
+    event.httpMethod ||
+    (event as any).requestContext?.http?.method ||
+    event.headers?.["x-nf-http-method"] ||
+    event.headers?.["x-http-method-override"] ||
+    context?.httpMethod ||
+    context?.method;
+
+  if (explicitMethod) return explicitMethod;
+
+  // As a last resort, infer POST when a body is present; otherwise default to GET.
+  return event.body ? "POST" : "GET";
+};
+
 export const handler = async (event: NetlifyEvent, context: any) => {
   // Normalize the incoming path to extract the target segment after /api/
   const incomingPath = event.path
