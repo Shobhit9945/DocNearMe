@@ -57,5 +57,21 @@ export async function createServer(): Promise<Express> {
   app.use("/api/auth", authRouter);
   app.use("/api/docdaisy", docDaisyRouter);
 
+  app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+    if (err instanceof SyntaxError && "body" in err) {
+      return res.status(400).json({
+        error: "Malformed JSON in request body",
+        detail: "invalid_json",
+        hint: "Ensure the request body is valid JSON and the Content-Type header is set to application/json.",
+      });
+    }
+
+    const status = typeof err?.status === "number" ? err.status : 500;
+    return res.status(status).json({
+      error: status === 500 ? "Unexpected server error" : err?.message ?? "Request failed",
+      detail: err?.detail ?? "server_error",
+    });
+  });
+
   return app;
 }
