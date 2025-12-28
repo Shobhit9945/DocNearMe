@@ -101,7 +101,7 @@ class InMemoryCollection<T extends Record<string, unknown>> {
   }
 }
 
-type InMemoryDb = {
+export type InMemoryDb = {
   kind: "memory";
   collections: {
     users: InMemoryCollection<User>;
@@ -117,7 +117,7 @@ const inMemoryDb: InMemoryDb = {
   },
 };
 
-const isMemoryDb = (db: Db | InMemoryDb): db is InMemoryDb => (db as InMemoryDb).kind === "memory";
+export const isMemoryDb = (db: Db | InMemoryDb): db is InMemoryDb => (db as InMemoryDb).kind === "memory";
 
 const getCollection = <T>(db: Db | InMemoryDb, name: "users" | "appointments") =>
   isMemoryDb(db) ? db.collections[name] : db.collection<T>(name);

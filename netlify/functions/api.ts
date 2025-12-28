@@ -68,8 +68,9 @@ export const handler = async (event: NetlifyEvent, context: any) => {
     .replace(/^\/api\//, "")
     .replace(/^\//, "");
 
+  const bodyWasBase64 = event.isBase64Encoded && typeof event.body === "string";
   let decodedBody: string | null | undefined = event.body;
-  if (event.isBase64Encoded && typeof event.body === "string") {
+  if (bodyWasBase64) {
     try {
       decodedBody = Buffer.from(event.body, "base64").toString("utf8");
     } catch (err) {
@@ -130,6 +131,7 @@ export const handler = async (event: NetlifyEvent, context: any) => {
         ...(event as any).requestContext,
         http: { ...(event as any).requestContext?.http, method: resolvedMethod },
       },
+      isBase64Encoded: bodyWasBase64 ? false : event.isBase64Encoded,
       body: decodedBody,
     };
     return expressHandler(expressEvent, context);

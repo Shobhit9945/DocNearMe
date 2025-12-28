@@ -21,25 +21,43 @@ const loginSchema = z.object({
   password: z.string().min(8),
 });
 
-type ErrorBody = { error?: string; hint?: string; detail?: string; traceId?: string };
+type ErrorBody = { error?: string; hint?: string; detail?: string; traceId?: string; issues?: string[] };
 
-const formatErrorMessage = (body: ErrorBody | null, fallback: string) => {
-  if (!body) return fallback;
+const readResponseBody = async (res: Response): Promise<ErrorBody | AuthResponse | string | null> => {
+  const text = await res.text().catch(() => "");
+  if (!text) return null;
+  try {
+    return JSON.parse(text) as ErrorBody | AuthResponse;
+  } catch {
+    return text;
+  }
+};
+
+const formatErrorMessage = (res: Response, body: ErrorBody | string | null, fallback: string) => {
+  if (!body) return `${fallback} (status ${res.status})`;
+
+  if (typeof body === "string") {
+    return `${body} (status ${res.status})`;
+  }
 
   let message = body.error || fallback;
+  if (body.issues?.length) {
+    message += ` (${body.issues.join(", ")})`;
+  }
+
   if (body.hint) {
-    message += ` (${body.hint}`;
-    if (body.traceId) message += `, trace: ${body.traceId}`;
-    message += ")";
-  } else if (body.traceId) {
-    message += ` (trace: ${body.traceId})`;
+    message += ` — ${body.hint}`;
   }
 
   if (body.detail === "body_not_parsed") {
-    message += " — the API did not receive JSON; check Netlify rewrites and Content-Type headers.";
+    message += " The API did not receive JSON; check Netlify rewrites and Content-Type headers.";
   }
 
-  return message;
+  if (body.traceId) {
+    message += ` (trace: ${body.traceId})`;
+  }
+
+  return `${message} (status ${res.status})`;
 };
 
 export default function AuthPage() {
@@ -69,10 +87,14 @@ export default function AuthPage() {
         body: JSON.stringify(validated),
       });
 
-      const body = (await res.json().catch(() => null)) as ErrorBody | AuthResponse | null;
+      const body = await readResponseBody(res);
 
       if (!res.ok) {
-        throw new Error(formatErrorMessage(body as ErrorBody | null, "Unable to continue"));
+        throw new Error(formatErrorMessage(res, body as ErrorBody | string | null, "Unable to continue"));
+      }
+
+      if (!body || typeof body === "string" || !("token" in body)) {
+        throw new Error("Unexpected response from the server. Please try again.");
       }
 
       const data = body as AuthResponse;
@@ -98,10 +120,14 @@ export default function AuthPage() {
         body: JSON.stringify(validated),
       });
 
-      const body = (await res.json().catch(() => null)) as ErrorBody | AuthResponse | null;
+      const body = await readResponseBody(res);
 
       if (!res.ok) {
-        throw new Error(formatErrorMessage(body as ErrorBody | null, "Unable to login"));
+        throw new Error(formatErrorMessage(res, body as ErrorBody | string | null, "Unable to login"));
+      }
+
+      if (!body || typeof body === "string" || !("token" in body)) {
+        throw new Error("Unexpected response from the server. Please try again.");
       }
 
       const data = body as AuthResponse;
