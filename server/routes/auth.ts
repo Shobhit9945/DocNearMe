@@ -30,6 +30,7 @@ type ErrorPayload = {
   detail?: string;
   hint?: string;
   traceId?: string;
+  issues?: string[];
 };
 
 const generateTraceId = () => crypto.randomUUID?.() ?? `trace-${Date.now()}`;
@@ -43,6 +44,13 @@ const respondWithBodyParseHint = (res: any) =>
 
 const isPlainObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
+
+const respondWithValidationError = (res: any, issues: string[], fallback = "Invalid input") =>
+  res.status(400).json({
+    error: issues[0] ?? fallback,
+    detail: "validation",
+    issues,
+  } satisfies ErrorPayload);
 
 const mapAuthError = (error: unknown, action: "signup" | "login" | "fetch-user") => {
   const traceId = generateTraceId();
@@ -89,7 +97,10 @@ router.post("/patient/signup", async (req, res) => {
 
   const parsed = patientSignupSchema.safeParse(req.body);
   if (!parsed.success) {
-    return res.status(400).json({ error: parsed.error.errors[0]?.message ?? "Invalid input" });
+    return respondWithValidationError(
+      res,
+      parsed.error.errors.map((err) => err.message)
+    );
   }
 
   const { email, name, password } = parsed.data;
@@ -99,7 +110,11 @@ router.post("/patient/signup", async (req, res) => {
     const existing = await users.findOne({ email });
 
     if (existing) {
-      return res.status(409).json({ error: "An account already exists with this email" });
+      return res.status(409).json({
+        error: "An account already exists with this email",
+        detail: "account_exists",
+        hint: "Try logging in instead or reset your password.",
+      } satisfies ErrorPayload);
     }
 
     const passwordHash = await bcrypt.hash(password, 12);
@@ -137,7 +152,10 @@ router.post("/patient/login", async (req, res) => {
 
   const parsed = patientLoginSchema.safeParse(req.body);
   if (!parsed.success) {
-    return res.status(400).json({ error: parsed.error.errors[0]?.message ?? "Invalid input" });
+    return respondWithValidationError(
+      res,
+      parsed.error.errors.map((err) => err.message)
+    );
   }
 
   const { email, password } = parsed.data;
@@ -147,13 +165,21 @@ router.post("/patient/login", async (req, res) => {
     const user = await users.findOne<User>({ email, role: "patient" });
 
     if (!user) {
-      return res.status(401).json({ error: "Invalid credentials" });
+      return res.status(401).json({
+        error: "Invalid credentials",
+        detail: "invalid_credentials",
+        hint: "Check your email and password, or create a patient account first.",
+      } satisfies ErrorPayload);
     }
 
     const isValid = await bcrypt.compare(password, user.passwordHash);
 
     if (!isValid) {
-      return res.status(401).json({ error: "Invalid credentials" });
+      return res.status(401).json({
+        error: "Invalid credentials",
+        detail: "invalid_credentials",
+        hint: "Check your email and password, or reset your password.",
+      } satisfies ErrorPayload);
     }
 
     const token = signToken({ userId: (user._id as ObjectId).toString(), role: "patient" });
@@ -181,7 +207,10 @@ router.post("/admin/login", async (req, res) => {
 
   const parsed = adminLoginSchema.safeParse(req.body);
   if (!parsed.success) {
-    return res.status(400).json({ error: parsed.error.errors[0]?.message ?? "Invalid input" });
+    return respondWithValidationError(
+      res,
+      parsed.error.errors.map((err) => err.message)
+    );
   }
 
   const { email, password } = parsed.data;
@@ -191,13 +220,21 @@ router.post("/admin/login", async (req, res) => {
     const user = await users.findOne<User>({ email, role: "admin" });
 
     if (!user) {
-      return res.status(401).json({ error: "Invalid credentials" });
+      return res.status(401).json({
+        error: "Invalid credentials",
+        detail: "invalid_credentials",
+        hint: "Confirm the admin credentials configured in the server environment.",
+      } satisfies ErrorPayload);
     }
 
     const isValid = await bcrypt.compare(password, user.passwordHash);
 
     if (!isValid) {
-      return res.status(401).json({ error: "Invalid credentials" });
+      return res.status(401).json({
+        error: "Invalid credentials",
+        detail: "invalid_credentials",
+        hint: "Confirm the admin credentials configured in the server environment.",
+      } satisfies ErrorPayload);
     }
 
     const token = signToken({
