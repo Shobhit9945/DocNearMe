@@ -17,8 +17,7 @@ import { generateGoogleCalendarLink, generateICSFile, CalendarEvent } from "@/li
 import { BottomNav } from "@/components/BottomNav";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
-import { useAuth } from "@/lib/auth-context";
-import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 const SPECIALIZATIONS = [
   "General Physician",
@@ -43,8 +42,6 @@ const SPECIALIZATIONS = [
 export default function Appointment() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { user, token, loading } = useAuth();
-
   const specializationParam = searchParams.get("specialization") ?? "";
   const clinicId = searchParams.get("clinic");
 
@@ -57,6 +54,8 @@ export default function Appointment() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [selectedSlot, setSelectedSlot] = useState<string | undefined>();
   const [notes, setNotes] = useState("");
+  const [patientName, setPatientName] = useState("");
+  const [patientEmail, setPatientEmail] = useState("");
   const [isBooking, setIsBooking] = useState(false);
 
   const clinicLabel = clinicId ? clinicId.replace(/-/g, " ") : "Any clinic";
@@ -113,8 +112,8 @@ export default function Appointment() {
   }, [selectedDate, selectedSlot, selectedSpecialization, clinicLabel, notes]);
 
   const handleConfirm = async () => {
-    if (!token) {
-      navigate("/auth");
+    if (!patientName.trim() || !patientEmail.trim()) {
+      alert("Please enter your name and email to complete the booking.");
       return;
     }
 
@@ -124,13 +123,15 @@ export default function Appointment() {
     try {
       const res = await fetch("/api/appointments", {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           date: selectedDate.toISOString(),
           slot: selectedSlot,
           specialization: selectedSpecialization,
           clinicId: clinicId || "global",
-          notes
+          notes,
+          patientName,
+          patientEmail,
         }),
       });
 
@@ -166,35 +167,6 @@ export default function Appointment() {
       document.body.removeChild(link);
     }
   };
-
-  if (loading) {
-    return (
-      <PageScaffold>
-        <div className="min-h-[60vh] flex items-center justify-center text-slate-600">Loading your account…</div>
-      </PageScaffold>
-    );
-  }
-
-  if (!user || user.role !== "patient") {
-    return (
-      <PageScaffold contentClassName="pb-28 lg:pb-12">
-        <div className="max-w-2xl mx-auto py-16 px-4 text-center space-y-6">
-          <h1 className="text-3xl font-bold text-slate-900">Sign in to book</h1>
-          <p className="text-slate-600">
-            Create a patient account or sign in to reserve an appointment. This keeps every booking tied to your profile for
-            future records.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Button onClick={() => navigate("/auth")}>Go to login</Button>
-            <Button variant="outline" onClick={() => navigate("/search")}>Browse clinics</Button>
-          </div>
-        </div>
-        <div className="lg:hidden">
-          <BottomNav />
-        </div>
-      </PageScaffold>
-    );
-  }
 
   if (step === "confirmation") {
     return (
@@ -357,21 +329,57 @@ export default function Appointment() {
             </div>
           </div>
 
-          {/* Bottom Section - Notes and Confirmation */}
+          {/* Bottom Section - Details, Notes, and Confirmation */}
           <div className="grid lg:grid-cols-[1.2fr_1fr] gap-6">
-            {/* Notes Section */}
+            {/* Details + Notes Section */}
             <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-6">
-              <label className="text-xs uppercase tracking-wide text-slate-500 font-semibold block mb-3" htmlFor="notes">
-                Additional Notes (Optional)
-              </label>
-              <textarea
-                id="notes"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                rows={4}
-                placeholder="Symptoms, allergies, accessibility needs, or any other information..."
-                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm focus:border-[#0089FF] focus:outline-none focus:ring-2 focus:ring-[#0089FF]/20"
-              />
+              <div className="space-y-4">
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold block mb-3">
+                    Your details
+                  </p>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-slate-700" htmlFor="patient-name">
+                        Full name
+                      </label>
+                      <Input
+                        id="patient-name"
+                        value={patientName}
+                        onChange={(e) => setPatientName(e.target.value)}
+                        placeholder="Alex Patient"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-slate-700" htmlFor="patient-email">
+                        Email
+                      </label>
+                      <Input
+                        id="patient-email"
+                        type="email"
+                        value={patientEmail}
+                        onChange={(e) => setPatientEmail(e.target.value)}
+                        placeholder="you@example.com"
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-xs uppercase tracking-wide text-slate-500 font-semibold block mb-3" htmlFor="notes">
+                    Additional Notes (Optional)
+                  </label>
+                  <textarea
+                    id="notes"
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    rows={4}
+                    placeholder="Symptoms, allergies, accessibility needs, or any other information..."
+                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm focus:border-[#0089FF] focus:outline-none focus:ring-2 focus:ring-[#0089FF]/20"
+                  />
+                </div>
+              </div>
             </div>
 
             {/* Summary and Confirm Button */}

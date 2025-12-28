@@ -6,9 +6,7 @@ import { handleDemo } from "./routes/demo";
 import { handleAvailability } from "./routes/availability";
 import { handleCreateAppointment, handleListAppointments } from "./routes/appointment";
 import docDaisyRouter from "./routes/docdaisy";
-import authRouter from "./routes/auth";
 import healthRouter from "./routes/health";
-import { authenticate, requireRole } from "./middleware/auth";
 
 export async function createServer(): Promise<Express> {
   await connectToDatabase();
@@ -22,8 +20,7 @@ export async function createServer(): Promise<Express> {
 
   // Netlify rewrites can drop the content-type header, which prevents
   // express.json from parsing the body. Accept text payloads when no content
-  // type is present and opportunistically decode JSON strings so auth routes
-  // still receive the expected object payloads.
+  // type is present and opportunistically decode JSON strings.
   app.use(
     express.text({
       type: (req) => {
@@ -52,10 +49,8 @@ export async function createServer(): Promise<Express> {
 
   app.get("/api/demo", handleDemo);
   app.get("/api/availability", handleAvailability);
-  app.post("/api/appointments", authenticate, requireRole(["patient"]), handleCreateAppointment);
-  app.get("/api/appointments", authenticate, ...handleListAppointments);
-
-  app.use("/api/auth", authRouter);
+  app.post("/api/appointments", handleCreateAppointment);
+  app.get("/api/appointments", handleListAppointments);
   app.use("/api/docdaisy", docDaisyRouter);
   app.use("/api/health", healthRouter);
 

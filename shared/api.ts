@@ -4,23 +4,8 @@
  * and/or small pure JS functions that can be used on both client and server
  */
 
-export type UserRole = "patient" | "admin" | "clinic";
-
 export interface DemoResponse {
   message: string;
-}
-
-export interface AuthenticatedUser {
-  id: string;
-  email: string;
-  name?: string;
-  role: UserRole;
-  clinicId?: string;
-}
-
-export interface AuthResponse {
-  token: string;
-  user: AuthenticatedUser;
 }
 
 export interface AppointmentResponseItem {
@@ -31,7 +16,7 @@ export interface AppointmentResponseItem {
   specialization: string;
   clinicId: string;
   notes?: string;
-  patientId: string;
+  patientId?: string;
   patientName?: string;
   patientEmail?: string;
   createdAt: string;
