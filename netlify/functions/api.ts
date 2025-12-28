@@ -118,10 +118,9 @@ export const handler = async (event: NetlifyEvent, context: any) => {
         : `/api/${normalizedPath}`;
 
     const headers = { ...(event.headers ?? {}) };
-    const normalizedHeaderKeys = new Set(Object.keys(headers).map((key) => key.toLowerCase()));
     const bodyString = typeof decodedBody === "string" ? decodedBody : decodedBody == null ? "" : JSON.stringify(decodedBody);
     // Ensure JSON bodies are parsed even if Netlify omits the content-type header on rewrites
-    if (!normalizedHeaderKeys.has("content-type") && bodyString) {
+    if (!headers["content-type"] && !headers["Content-Type"] && bodyString) {
       headers["content-type"] = "application/json";
     }
     if (bodyString) {
@@ -136,9 +135,8 @@ export const handler = async (event: NetlifyEvent, context: any) => {
         ...(event as any).requestContext,
         http: { ...(event as any).requestContext?.http, method: resolvedMethod },
       },
-      headers,
-      isBase64Encoded: false,
-      body: bodyString || null,
+      isBase64Encoded: bodyWasBase64 ? false : event.isBase64Encoded,
+      body: decodedBody,
     };
     return expressHandler(expressEvent, context);
   }
