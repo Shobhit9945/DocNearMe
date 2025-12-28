@@ -135,9 +135,8 @@ export const handler = async (event: NetlifyEvent, context: any) => {
         ...(event as any).requestContext,
         http: { ...(event as any).requestContext?.http, method: resolvedMethod },
       },
-      headers,
-      isBase64Encoded: false,
-      body: bodyString || null,
+      isBase64Encoded: bodyWasBase64 ? false : event.isBase64Encoded,
+      body: decodedBody,
     };
     return expressHandler(expressEvent, context);
   }
