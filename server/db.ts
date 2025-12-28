@@ -1,13 +1,10 @@
 // server/db.ts
 import "dotenv/config";
-import bcrypt from "bcryptjs";
 import { MongoClient, Db, Collection, ObjectId } from "mongodb";
-import { User, Appointment } from "./types";
+import { Appointment } from "./types";
 
 const uri = process.env.MONGODB_URI;
 const dbName = process.env.MONGODB_DB_NAME ?? "docnearme";
-const adminEmail = process.env.ADMIN_EMAIL ?? "admin@docnearme.local";
-const adminPassword = process.env.ADMIN_PASSWORD ?? "ChangeMeNow123!";
 const preferMemory = process.env.USE_IN_MEMORY_DB === "true";
 const allowMemoryFallback = process.env.ALLOW_IN_MEMORY_DB !== "false";
 
@@ -104,7 +101,6 @@ class InMemoryCollection<T extends Record<string, unknown>> {
 export type InMemoryDb = {
   kind: "memory";
   collections: {
-    users: InMemoryCollection<User>;
     appointments: InMemoryCollection<Appointment>;
   };
 };
@@ -112,14 +108,13 @@ export type InMemoryDb = {
 const inMemoryDb: InMemoryDb = {
   kind: "memory",
   collections: {
-    users: new InMemoryCollection<User>([]),
     appointments: new InMemoryCollection<Appointment>([]),
   },
 };
 
 export const isMemoryDb = (db: Db | InMemoryDb): db is InMemoryDb => (db as InMemoryDb).kind === "memory";
 
-const getCollection = <T>(db: Db | InMemoryDb, name: "users" | "appointments") =>
+const getCollection = <T>(db: Db | InMemoryDb, name: "appointments") =>
   isMemoryDb(db) ? db.collections[name] : db.collection<T>(name);
 
 // Short, serverless-friendly timeouts. Keep pools tiny.
@@ -138,27 +133,12 @@ function newClient() {
 async function prepareOnce(db: Db | InMemoryDb) {
   if (cache.prepared) return;
 
-  const users = getCollection<User>(db, "users");
   const appointments = getCollection<Appointment>(db, "appointments");
 
   // Run in parallel, but only once per warm container
   await Promise.all([
-    users.createIndex({ email: 1 }, { unique: true }),
     appointments.createIndex({ dateKey: 1, slot: 1, clinicId: 1 }, { unique: true }),
   ]);
-
-  // Seed admin if missing
-  const existingAdmin = await users.findOne({ role: "admin", email: adminEmail });
-  if (!existingAdmin) {
-    const passwordHash = await bcrypt.hash(adminPassword, 12);
-    await users.insertOne({
-      email: adminEmail,
-      name: "DocNearMe Admin",
-      passwordHash,
-      role: "admin",
-      createdAt: new Date(),
-    } as User);
-  }
 
   cache.prepared = true;
 }
@@ -230,11 +210,6 @@ export async function connectToDatabase(): Promise<Db | InMemoryDb> {
     await prepareOnce(cache.db);
     return cache.db;
   }
-}
-
-export async function getUsersCollection(): Promise<Collection<User> | InMemoryCollection<User>> {
-  const db = await connectToDatabase();
-  return getCollection<User>(db, "users") as Collection<User> | InMemoryCollection<User>;
 }
 
 export async function getAppointmentsCollection(): Promise<Collection<Appointment> | InMemoryCollection<Appointment>> {

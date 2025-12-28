@@ -1,13 +1,10 @@
 import { BottomNav } from "@/components/BottomNav";
 import { PageScaffold } from "@/components/PageScaffold";
-import { User, ShieldCheck, Bell, LogOut } from "lucide-react";
+import { User, ShieldCheck, Bell } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
-import { useAuth } from "@/lib/auth-context";
-import { Button } from "@/components/ui/button";
 
 export default function Profile() {
   const { t } = useTranslation();
-  const { user, logout } = useAuth();
 
   return (
     <PageScaffold contentClassName="pb-28 lg:pb-12">
@@ -25,28 +22,18 @@ export default function Profile() {
               </div>
               <div>
                 <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold">Account</p>
-                <p className="text-lg font-bold text-[#002D55]">
-                  {user ? user.name || user.email : t("Not signed in")}
-                </p>
-                {user && <p className="text-sm text-slate-600">{user.email}</p>}
+                <p className="text-lg font-bold text-[#002D55]">{t("Guest profile")}</p>
+                <p className="text-sm text-slate-600">{t("Sign-in has been removed from DocNearMe.")}</p>
               </div>
             </div>
-            {user ? (
-              <div className="flex flex-wrap gap-3 items-center">
-                <span className="px-3 py-1 bg-[#F5FAFF] text-[#1648CE] rounded-full text-xs font-semibold">
-                  {user.role === "admin" ? "Admin" : "Patient"}
-                </span>
-                <Button variant="outline" size="sm" className="gap-2" onClick={logout}>
-                  <LogOut className="w-4 h-4" />
-                  {t("Sign out")}
-                </Button>
-              </div>
-            ) : (
-              <div className="flex flex-wrap gap-3 items-center">
-                <Button onClick={() => (window.location.href = "/auth")}>{t("Sign in")}</Button>
-                <p className="text-sm text-slate-600">Create or access your DocNearMe account.</p>
-              </div>
-            )}
+            <div className="flex flex-wrap gap-3 items-center">
+              <span className="px-3 py-1 bg-[#F5FAFF] text-[#1648CE] rounded-full text-xs font-semibold">
+                {t("Public access")}
+              </span>
+              <p className="text-sm text-slate-600">
+                {t("Book appointments without an account. Profile customization will return later.")}
+              </p>
+            </div>
           </section>
 
           <section className="flex-1 rounded-[24px] border border-slate-200 bg-white p-8 text-center shadow-sm">
