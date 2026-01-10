@@ -7,7 +7,8 @@ import {
   CheckCircle,
   Calendar as CalendarIcon,
   Download,
-  Loader2
+  Loader2,
+  Star
 } from "lucide-react";
 import { DocDaisyBanner } from "@/components/DocDaisyBanner";
 import { PageScaffold } from "@/components/PageScaffold";
@@ -33,6 +34,102 @@ const SAMPLE_APPOINTMENTS = [
   },
 ];
 
+type DoctorProfile = {
+  id: string;
+  name: string;
+  clinicId: string;
+  specialization: string;
+  languages: string[];
+  rating: number;
+  nextAvailable: string;
+};
+
+const DOCTORS: DoctorProfile[] = [
+  {
+    id: "dr-ayanami",
+    name: "Dr. Riko Ayanami",
+    clinicId: "noguchi",
+    specialization: "Cardiology",
+    languages: ["Japanese", "English"],
+    rating: 4.7,
+    nextAvailable: "Today, 4:30 PM",
+  },
+  {
+    id: "dr-carter",
+    name: "Dr. Lina Carter",
+    clinicId: "noguchi",
+    specialization: "Cardiology",
+    languages: ["English", "Korean"],
+    rating: 4.5,
+    nextAvailable: "Today, 6:00 PM",
+  },
+  {
+    id: "dr-watanabe",
+    name: "Dr. Taro Watanabe",
+    clinicId: "beppu-medical",
+    specialization: "Cardiology",
+    languages: ["Japanese", "English"],
+    rating: 4.8,
+    nextAvailable: "Tomorrow, 9:15 AM",
+  },
+  {
+    id: "dr-chen",
+    name: "Dr. Mei Chen",
+    clinicId: "beppu-medical",
+    specialization: "Dermatology",
+    languages: ["Mandarin", "English"],
+    rating: 4.6,
+    nextAvailable: "Today, 5:10 PM",
+  },
+  {
+    id: "dr-sato",
+    name: "Dr. Haru Sato",
+    clinicId: "harbor-derma",
+    specialization: "Dermatology",
+    languages: ["Japanese", "English"],
+    rating: 4.4,
+    nextAvailable: "Tomorrow, 1:15 PM",
+  },
+  {
+    id: "dr-park",
+    name: "Dr. Eun Park",
+    clinicId: "sakura-ortho",
+    specialization: "Orthopedics",
+    languages: ["English", "Korean"],
+    rating: 4.9,
+    nextAvailable: "Tomorrow, 9:40 AM",
+  },
+  {
+    id: "dr-harrison",
+    name: "Dr. Caleb Harrison",
+    clinicId: "sakura-ortho",
+    specialization: "Sports Medicine",
+    languages: ["English", "Spanish"],
+    rating: 4.6,
+    nextAvailable: "Tomorrow, 11:20 AM",
+  },
+  {
+    id: "dr-mori",
+    name: "Dr. Aya Mori",
+    clinicId: "ap-house-family",
+    specialization: "General Medicine",
+    languages: ["Japanese", "English"],
+    rating: 4.3,
+    nextAvailable: "Today, 5:20 PM",
+  },
+  {
+    id: "dr-alvarez",
+    name: "Dr. Sofia Alvarez",
+    clinicId: "harbor-womens",
+    specialization: "Gynecology",
+    languages: ["English", "Spanish"],
+    rating: 4.8,
+    nextAvailable: "Today, 5:50 PM",
+  },
+];
+
+const FORM_REQUIRED_CLINICS = new Set(["noguchi", "harbor-womens", "beppu-medical"]);
+
 export default function Appointment() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -55,10 +152,25 @@ export default function Appointment() {
   const [selectedClinicId, setSelectedClinicId] = useState(clinicId ?? "any");
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [selectedSlot, setSelectedSlot] = useState<string | undefined>();
+  const [selectedDoctorId, setSelectedDoctorId] = useState<string | null>(null);
   const [notes, setNotes] = useState("");
   const [patientName, setPatientName] = useState("");
   const [patientEmail, setPatientEmail] = useState("");
+  const [medicalRecord, setMedicalRecord] = useState<File | null>(null);
+  const [intakeReason, setIntakeReason] = useState("");
+  const [intakeConsent, setIntakeConsent] = useState(false);
+  const [intakeAllergies, setIntakeAllergies] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<{
+    name?: string;
+    email?: string;
+    doctor?: string;
+    intake?: string;
+  }>({});
   const [isBooking, setIsBooking] = useState(false);
+
+  const clearFieldError = (field: keyof typeof fieldErrors) => {
+    setFieldErrors((prev) => ({ ...prev, [field]: undefined }));
+  };
 
   const selectedClinic =
     selectedClinicId === "any"
@@ -78,6 +190,20 @@ export default function Appointment() {
       ),
     [selectedSpecialization]
   );
+
+  const doctorsForSelection = useMemo(() => {
+    if (selectedClinicId === "any") return [];
+
+    return DOCTORS.filter((doctor) => {
+      const normalized = matchSpecialization(doctor.specialization) ?? doctor.specialization;
+      return (
+        doctor.clinicId === selectedClinicId &&
+        normalized.toLowerCase() === selectedSpecialization.toLowerCase()
+      );
+    });
+  }, [selectedClinicId, selectedSpecialization]);
+
+  const selectedDoctor = doctorsForSelection.find((doctor) => doctor.id === selectedDoctorId) ?? null;
 
   // Fetch available slots based on selected date
   const { data: slotsData, isLoading: isLoadingSlots } = useQuery({
@@ -118,6 +244,20 @@ export default function Appointment() {
     }
   }, [clinicsForSpecialization, selectedClinicId]);
 
+  useEffect(() => {
+    if (!FORM_REQUIRED_CLINICS.has(selectedClinicId)) {
+      setIntakeReason("");
+      setIntakeAllergies("");
+      setIntakeConsent(false);
+      setFieldErrors((prev) => ({ ...prev, intake: undefined }));
+    }
+  }, [selectedClinicId]);
+
+  useEffect(() => {
+    setSelectedDoctorId(null);
+    setFieldErrors((prev) => ({ ...prev, doctor: undefined }));
+  }, [selectedClinicId, selectedSpecialization]);
+
   // Reset selected slot when date changes
   useEffect(() => {
     setSelectedSlot(undefined);
@@ -141,12 +281,12 @@ export default function Appointment() {
 
     return {
       title: `Doctor Appointment - ${selectedSpecialization}`,
-      description: `Appointment with ${selectedSpecialization} at ${clinicLabel}. Notes: ${notes}`,
+      description: `Appointment with ${selectedDoctor?.name ?? selectedSpecialization} at ${clinicLabel}. Notes: ${notes}`,
       location: clinicLabel,
       startTime,
       endTime,
     };
-  }, [selectedDate, selectedSlot, selectedSpecialization, clinicLabel, notes]);
+  }, [selectedDate, selectedSlot, selectedSpecialization, clinicLabel, notes, selectedDoctor]);
 
   const handleStartBooking = () => {
     setView("booking");
@@ -154,8 +294,30 @@ export default function Appointment() {
   };
 
   const handleConfirm = async () => {
-    if (!patientName.trim() || !patientEmail.trim()) {
-      alert("Please enter your name and email to complete the booking.");
+    const errors: typeof fieldErrors = {};
+    const trimmedName = patientName.trim();
+    const trimmedEmail = patientEmail.trim();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (trimmedName.length < 2) {
+      errors.name = "Please enter your full name.";
+    }
+
+    if (!emailRegex.test(trimmedEmail)) {
+      errors.email = "Please enter a valid email address.";
+    }
+
+    if (selectedClinicId !== "any" && doctorsForSelection.length > 0 && !selectedDoctorId) {
+      errors.doctor = "Please select a doctor for this clinic.";
+    }
+
+    if (FORM_REQUIRED_CLINICS.has(selectedClinicId) && !intakeConsent) {
+      errors.intake = "Please confirm the intake form acknowledgment.";
+    }
+
+    setFieldErrors(errors);
+
+    if (Object.keys(errors).length > 0) {
       return;
     }
 
@@ -171,9 +333,19 @@ export default function Appointment() {
           slot: selectedSlot,
           specialization: selectedSpecialization,
           clinicId: selectedClinicId === "any" ? "global" : selectedClinicId,
+          doctorId: selectedDoctor?.id ?? null,
+          doctorName: selectedDoctor?.name ?? null,
           notes,
-          patientName,
-          patientEmail,
+          patientName: trimmedName,
+          patientEmail: trimmedEmail,
+          medicalRecord: medicalRecord?.name ?? null,
+          intake: FORM_REQUIRED_CLINICS.has(selectedClinicId)
+            ? {
+                reason: intakeReason,
+                allergies: intakeAllergies,
+                consent: intakeConsent,
+              }
+            : null,
         }),
       });
 
@@ -221,7 +393,7 @@ export default function Appointment() {
           <div className="space-y-2">
             <h1 className="text-2xl font-bold text-slate-900">Appointment Confirmed!</h1>
             <p className="text-slate-600 max-w-md mx-auto">
-              Your appointment with the {selectedSpecialization} has been successfully booked for {selectedDate?.toLocaleDateString()} at {selectedSlot}.
+              Your appointment with {selectedDoctor?.name ?? `the ${selectedSpecialization}`} has been successfully booked for {selectedDate?.toLocaleDateString()} at {selectedSlot}.
             </p>
           </div>
 
@@ -444,6 +616,80 @@ export default function Appointment() {
             </div>
           </div>
 
+          <div className="mb-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold">
+                  Select Doctor
+                </p>
+                <p className="text-sm text-slate-600">
+                  Choose a provider from the selected clinic and specialization.
+                </p>
+              </div>
+              {selectedDoctor ? (
+                <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full">
+                  Selected: {selectedDoctor.name}
+                </span>
+              ) : null}
+            </div>
+
+            {selectedClinicId === "any" ? (
+              <div className="mt-5 rounded-xl border border-dashed border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+                Select a clinic to view doctors and languages spoken.
+              </div>
+            ) : doctorsForSelection.length === 0 ? (
+              <div className="mt-5 rounded-xl border border-dashed border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+                No doctors available for this specialization at the selected clinic.
+              </div>
+            ) : (
+              <div className="mt-5 grid gap-4 md:grid-cols-2">
+                {doctorsForSelection.map((doctor) => (
+                  <button
+                    key={doctor.id}
+                    onClick={() => {
+                      setSelectedDoctorId(doctor.id);
+                      clearFieldError("doctor");
+                    }}
+                    className={cn(
+                      "w-full text-left rounded-2xl border p-4 transition-all",
+                      selectedDoctorId === doctor.id
+                        ? "border-[#0089FF] bg-[#0089FF]/5 shadow-md"
+                        : "border-slate-200 bg-white hover:border-[#0089FF]/60 hover:shadow-sm"
+                    )}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-base font-semibold text-slate-900">{doctor.name}</p>
+                        <p className="text-sm text-slate-600">{doctor.specialization}</p>
+                      </div>
+                      <div className="flex items-center gap-1 text-sm font-semibold text-slate-700">
+                        <Star className="h-4 w-4 text-amber-400" />
+                        {doctor.rating.toFixed(1)}
+                      </div>
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {doctor.languages.map((language) => (
+                        <span
+                          key={language}
+                          className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600"
+                        >
+                          {language}
+                        </span>
+                      ))}
+                    </div>
+                    <p className="mt-3 text-xs text-slate-500">
+                      Next availability: {doctor.nextAvailable}
+                    </p>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {fieldErrors.doctor ? (
+              <p className="mt-3 text-sm text-red-500">{fieldErrors.doctor}</p>
+            ) : null}
+          </div>
+
           {/* Main Grid Layout - Calendar and Time Slots Side by Side */}
           <div className="grid lg:grid-cols-[1.5fr_1fr] gap-6 mb-6">
             {/* Calendar Section */}
@@ -528,10 +774,20 @@ export default function Appointment() {
                       <Input
                         id="patient-name"
                         value={patientName}
-                        onChange={(e) => setPatientName(e.target.value)}
+                        onChange={(e) => {
+                          setPatientName(e.target.value);
+                          if (fieldErrors.name) clearFieldError("name");
+                        }}
                         placeholder="Alex Patient"
                         required
+                        aria-invalid={!!fieldErrors.name}
+                        className={cn(
+                          fieldErrors.name ? "border-red-400 focus-visible:ring-red-200" : ""
+                        )}
                       />
+                      {fieldErrors.name ? (
+                        <p className="text-sm text-red-500">{fieldErrors.name}</p>
+                      ) : null}
                     </div>
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-slate-700" htmlFor="patient-email">
@@ -541,10 +797,20 @@ export default function Appointment() {
                         id="patient-email"
                         type="email"
                         value={patientEmail}
-                        onChange={(e) => setPatientEmail(e.target.value)}
+                        onChange={(e) => {
+                          setPatientEmail(e.target.value);
+                          if (fieldErrors.email) clearFieldError("email");
+                        }}
                         placeholder="you@example.com"
                         required
+                        aria-invalid={!!fieldErrors.email}
+                        className={cn(
+                          fieldErrors.email ? "border-red-400 focus-visible:ring-red-200" : ""
+                        )}
                       />
+                      {fieldErrors.email ? (
+                        <p className="text-sm text-red-500">{fieldErrors.email}</p>
+                      ) : null}
                     </div>
                   </div>
                 </div>
@@ -561,6 +827,78 @@ export default function Appointment() {
                     className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm focus:border-[#0089FF] focus:outline-none focus:ring-2 focus:ring-[#0089FF]/20"
                   />
                 </div>
+                <div className="space-y-2">
+                  <label className="text-xs uppercase tracking-wide text-slate-500 font-semibold block" htmlFor="medical-record">
+                    Previous medical records (optional)
+                  </label>
+                  <Input
+                    id="medical-record"
+                    type="file"
+                    accept=".pdf,image/*"
+                    onChange={(e) => setMedicalRecord(e.target.files?.[0] ?? null)}
+                    className="h-auto py-2"
+                  />
+                  {medicalRecord ? (
+                    <p className="text-sm text-slate-600">Selected: {medicalRecord.name}</p>
+                  ) : null}
+                </div>
+
+                {FORM_REQUIRED_CLINICS.has(selectedClinicId) ? (
+                  <div className="rounded-2xl border border-dashed border-[#0089FF]/40 bg-[#0089FF]/5 p-4 space-y-3">
+                    <div>
+                      <p className="text-xs uppercase tracking-wide text-[#0089FF] font-semibold">
+                        Quick intake form (prototype)
+                      </p>
+                      <p className="text-sm text-slate-600">
+                        This clinic requires a short intake form before confirming.
+                      </p>
+                    </div>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-slate-700" htmlFor="intake-reason">
+                          Reason for visit
+                        </label>
+                        <select
+                          id="intake-reason"
+                          value={intakeReason}
+                          onChange={(e) => setIntakeReason(e.target.value)}
+                          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:border-[#0089FF] focus:outline-none focus:ring-2 focus:ring-[#0089FF]/20"
+                        >
+                          <option value="">Select a reason</option>
+                          <option value="new-patient">New patient evaluation</option>
+                          <option value="follow-up">Follow-up appointment</option>
+                          <option value="consult">Specialist consult</option>
+                        </select>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-slate-700" htmlFor="intake-allergies">
+                          Allergies (optional)
+                        </label>
+                        <Input
+                          id="intake-allergies"
+                          value={intakeAllergies}
+                          onChange={(e) => setIntakeAllergies(e.target.value)}
+                          placeholder="Penicillin, pollen, etc."
+                        />
+                      </div>
+                    </div>
+                    <label className="flex items-start gap-2 text-sm text-slate-600">
+                      <input
+                        type="checkbox"
+                        checked={intakeConsent}
+                        onChange={(e) => {
+                          setIntakeConsent(e.target.checked);
+                          if (fieldErrors.intake) clearFieldError("intake");
+                        }}
+                        className="mt-1 h-4 w-4 rounded border-slate-300 text-[#0089FF] focus:ring-[#0089FF]"
+                      />
+                      I confirm the information is correct for this clinic intake form.
+                    </label>
+                    {fieldErrors.intake ? (
+                      <p className="text-sm text-red-500">{fieldErrors.intake}</p>
+                    ) : null}
+                  </div>
+                ) : null}
               </div>
             </div>
 
@@ -575,6 +913,16 @@ export default function Appointment() {
                   <div>
                     <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Specialization</p>
                     <p className="text-sm text-slate-800 font-medium">{selectedSpecialization}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <Stethoscope className="w-5 h-5 text-[#0089FF] mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Doctor</p>
+                    <p className="text-sm text-slate-800 font-medium">
+                      {selectedDoctor?.name ?? "Select a doctor"}
+                    </p>
                   </div>
                 </div>
 
@@ -596,6 +944,22 @@ export default function Appointment() {
                     <p className="text-sm text-slate-800 font-medium">{clinicLabel}</p>
                   </div>
                 </div>
+
+                <div className="flex items-start gap-3">
+                  <Download className="w-5 h-5 text-[#0089FF] mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Medical record</p>
+                    <p className="text-sm text-slate-800 font-medium">
+                      {medicalRecord ? medicalRecord.name : "None uploaded"}
+                    </p>
+                  </div>
+                </div>
+
+                {FORM_REQUIRED_CLINICS.has(selectedClinicId) ? (
+                  <div className="rounded-xl border border-dashed border-[#0089FF]/40 bg-[#0089FF]/5 p-3 text-xs text-slate-600">
+                    Intake form required · {intakeConsent ? "Acknowledged" : "Pending confirmation"}
+                  </div>
+                ) : null}
               </div>
 
               {/* Confirm Button */}
