@@ -39,18 +39,30 @@ const SPECIALIZATIONS = [
   "Nephrology",
 ];
 
+const SAMPLE_APPOINTMENTS = [
+  {
+    id: "sample-1",
+    doctor: "Dr. Lina Carter",
+    specialization: "Dermatologist",
+    date: "Tuesday, Jan 21, 2026",
+    time: "10:30 AM",
+    clinic: "DocNearMe Downtown Clinic",
+    type: "In-person",
+  },
+];
+
 export default function Appointment() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const specializationParam = searchParams.get("specialization") ?? "";
   const clinicId = searchParams.get("clinic");
 
+  const [view, setView] = useState<"upcoming" | "booking">("upcoming");
   const [step, setStep] = useState<"booking" | "confirmation">("booking");
 
   const [selectedSpecialization, setSelectedSpecialization] = useState(
     specializationParam || "General Physician"
   );
-  const [visitType, setVisitType] = useState<"In-person" | "Online">("In-person");
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [selectedSlot, setSelectedSlot] = useState<string | undefined>();
   const [notes, setNotes] = useState("");
@@ -59,6 +71,8 @@ export default function Appointment() {
   const [isBooking, setIsBooking] = useState(false);
 
   const clinicLabel = clinicId ? clinicId.replace(/-/g, " ") : "Any clinic";
+  const appointments = SAMPLE_APPOINTMENTS;
+  const hasAppointments = appointments.length > 0;
 
   // Fetch available slots based on selected date
   const { data: slotsData, isLoading: isLoadingSlots } = useQuery({
@@ -70,7 +84,7 @@ export default function Appointment() {
       const data = await res.json();
       return data.slots as string[];
     },
-    enabled: !!selectedDate,
+    enabled: view === "booking" && !!selectedDate,
   });
 
   const timeSlots = slotsData || [];
@@ -110,6 +124,11 @@ export default function Appointment() {
       endTime,
     };
   }, [selectedDate, selectedSlot, selectedSpecialization, clinicLabel, notes]);
+
+  const handleStartBooking = () => {
+    setView("booking");
+    setStep("booking");
+  };
 
   const handleConfirm = async () => {
     if (!patientName.trim() || !patientEmail.trim()) {
@@ -168,7 +187,7 @@ export default function Appointment() {
     }
   };
 
-  if (step === "confirmation") {
+  if (view === "booking" && step === "confirmation") {
     return (
       <PageScaffold contentClassName="pb-28 lg:pb-12">
         <div className="flex flex-col items-center justify-center min-h-[60vh] p-6 text-center space-y-6">
@@ -204,12 +223,132 @@ export default function Appointment() {
           </div>
 
           <button
-            onClick={() => navigate("/")}
+            onClick={() => {
+              setView("upcoming");
+              setStep("booking");
+            }}
             className="text-[#0089FF] font-semibold hover:underline"
           >
-            Return to Home
+            Back to appointments
           </button>
         </div>
+        <div className="lg:hidden">
+          <BottomNav />
+        </div>
+      </PageScaffold>
+    );
+  }
+
+  if (view === "upcoming") {
+    return (
+      <PageScaffold contentClassName="pb-28 lg:pb-12">
+        <header className="bg-white px-4 pt-10 pb-6 border-b border-gray-100 shadow-sm lg:px-10 lg:rounded-t-3xl lg:border-none lg:shadow-none">
+          <div className="max-w-7xl mx-auto flex items-center gap-4">
+            <button
+              onClick={() => navigate("/")}
+              className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+            >
+              <ChevronLeft className="w-6 h-6 text-black" />
+            </button>
+            <div className="flex-1">
+              <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold">
+                Your care plan
+              </p>
+              <h1 className="text-2xl font-bold text-black">Upcoming appointments</h1>
+            </div>
+            <button
+              onClick={handleStartBooking}
+              className="hidden sm:inline-flex items-center gap-2 rounded-full bg-[#0089FF] px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#0077E6]"
+            >
+              Book appointment
+            </button>
+            <img src="/dnm.png" alt="DocNearMe Logo" className="w-14 h-14 object-contain hidden lg:block" />
+          </div>
+        </header>
+
+        <main className="flex-1 px-4 pt-6 lg:px-10 lg:pt-10">
+          <div className="max-w-5xl mx-auto space-y-6">
+            {hasAppointments ? (
+              <div className="grid gap-4">
+                {appointments.map((appointment) => (
+                  <div
+                    key={appointment.id}
+                    className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
+                  >
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="space-y-3">
+                        <div>
+                          <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold">
+                            Next appointment
+                          </p>
+                          <p className="text-lg font-semibold text-slate-900">
+                            {appointment.doctor} · {appointment.specialization}
+                          </p>
+                        </div>
+
+                        <div className="flex flex-wrap gap-4 text-sm text-slate-600">
+                          <span className="flex items-center gap-2">
+                            <CalendarClock className="h-4 w-4 text-[#0089FF]" />
+                            {appointment.date} · {appointment.time}
+                          </span>
+                          <span className="flex items-center gap-2">
+                            <MapPin className="h-4 w-4 text-[#0089FF]" />
+                            {appointment.clinic}
+                          </span>
+                          <span className="flex items-center gap-2">
+                            <Stethoscope className="h-4 w-4 text-[#0089FF]" />
+                            {appointment.type}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap gap-3">
+                        <button className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:border-[#0089FF] hover:text-[#0089FF]">
+                          View details
+                        </button>
+                        <button className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:border-[#0089FF] hover:text-[#0089FF]">
+                          Reschedule
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-10 text-center">
+                <CalendarClock className="mx-auto h-10 w-10 text-slate-400" />
+                <h2 className="mt-4 text-lg font-semibold text-slate-800">
+                  No upcoming appointments
+                </h2>
+                <p className="mt-2 text-sm text-slate-600">
+                  Book your first visit and we will keep everything organized here.
+                </p>
+                <button
+                  onClick={handleStartBooking}
+                  className="mt-6 inline-flex items-center gap-2 rounded-full bg-[#0089FF] px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#0077E6]"
+                >
+                  Book an appointment
+                </button>
+              </div>
+            )}
+
+            <div className="flex flex-col items-start justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:flex-row sm:items-center">
+              <div>
+                <h3 className="text-base font-semibold text-slate-900">Need another visit?</h3>
+                <p className="text-sm text-slate-600">
+                  Book a new appointment whenever you are ready.
+                </p>
+              </div>
+              <button
+                onClick={handleStartBooking}
+                className="inline-flex items-center gap-2 rounded-full bg-[#0089FF] px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#0077E6]"
+              >
+                Book appointment
+              </button>
+            </div>
+          </div>
+        </main>
+
         <div className="lg:hidden">
           <BottomNav />
         </div>
@@ -222,7 +361,7 @@ export default function Appointment() {
       <header className="bg-white px-4 pt-10 pb-6 border-b border-gray-100 shadow-sm lg:px-10 lg:rounded-t-3xl lg:border-none lg:shadow-none">
         <div className="max-w-7xl mx-auto flex items-center gap-4">
           <button
-            onClick={() => navigate("/")}
+            onClick={() => setView("upcoming")}
             className="p-2 rounded-full hover:bg-gray-100 transition-colors"
           >
             <ChevronLeft className="w-6 h-6 text-black" />
