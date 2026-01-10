@@ -4,24 +4,104 @@ export const DEFAULT_ADDRESS =
   "AP House 5, Ritsumeikan APU, Jumonjibaru 1-5, Beppu City, Oita 874-0011";
 const GEOCODING_PROXY_BASE = "/api/google-maps/geocode";
 
+type GeocodingResponse = {
+  status?: string;
+  error_message?: string;
+  results?: Array<{ formatted_address?: string }>;
+};
+
+type GeocodingErrorContext = {
+  status?: string;
+  errorMessage?: string;
+  httpStatus?: number;
+};
+
+export const getGeocodingErrorMessage = ({
+  status,
+  errorMessage,
+  httpStatus,
+}: GeocodingErrorContext): string => {
+  switch (status) {
+    case "REQUEST_DENIED":
+      return "Geocoding request denied. Please verify your API key, billing, and restrictions.";
+    case "OVER_QUERY_LIMIT":
+      return "Geocoding quota exceeded. Please try again later.";
+    case "INVALID_REQUEST":
+      return "Geocoding request was invalid. Please try again.";
+    case "ZERO_RESULTS":
+      return "No address results found for this location.";
+    default:
+      break;
+  }
+
+  if (httpStatus === 401 || httpStatus === 403) {
+    return "Geocoding request unauthorized. Please verify your Google Maps API key.";
+  }
+
+  if (httpStatus && httpStatus >= 500) {
+    return "Geocoding service is unavailable. Please try again later.";
+  }
+
+  if (errorMessage) {
+    return errorMessage;
+  }
+
+  return "Geocoding service failed. Showing default address.";
+};
+
+export const parseGeocodingResponse = (
+  data: GeocodingResponse,
+  httpStatus?: number,
+): string => {
+  if (data?.status && data.status !== "OK") {
+    throw new Error(
+      getGeocodingErrorMessage({
+        status: data.status,
+        errorMessage: data.error_message,
+        httpStatus,
+      }),
+    );
+  }
+
+  const formattedAddress = data.results?.[0]?.formatted_address;
+  if (formattedAddress) {
+    return formattedAddress;
+  }
+
+  throw new Error(
+    getGeocodingErrorMessage({
+      status: data?.status,
+      errorMessage: data?.error_message,
+      httpStatus,
+    }),
+  );
+};
+
 const getGoogleMapsAddress = async (lat: number, lon: number) => {
   const url = `${GEOCODING_PROXY_BASE}?latlng=${lat},${lon}`;
 
   for (let i = 0; i < 3; i++) {
     try {
       const response = await fetch(url);
+      let data: GeocodingResponse | null = null;
+
+      try {
+        data = (await response.json()) as GeocodingResponse;
+      } catch (parseError) {
+        console.warn("Geocoding response was not valid JSON.", parseError);
+      }
+
       if (!response.ok) {
-        if (i === 2) throw new Error(`Geocoding failed with status: ${response.status}`);
+        const message = getGeocodingErrorMessage({
+          status: data?.status,
+          errorMessage: data?.error_message,
+          httpStatus: response.status,
+        });
+        if (i === 2) throw new Error(message);
         continue;
       }
 
-      const data = await response.json();
-
-      if (data.results && data.results.length > 0) {
-        return data.results[0].formatted_address;
-      } else {
-        throw new Error("Geocoding: No address results found.");
-      }
+      return parseGeocodingResponse(data ?? {}, response.status);
     } catch (error) {
       console.error(`Geocoding Attempt ${i + 1} failed:`, error);
       if (i === 2) throw error;
@@ -59,7 +139,11 @@ export const useLiveLocation = (): LiveLocationState => {
           setLocationError("");
         } catch (e) {
           console.error("Reverse Geocoding Error:", e);
-          setLocationError("Geocoding service failed. Showing default address.");
+          const message =
+            e instanceof Error
+              ? e.message
+              : "Geocoding service failed. Showing default address.";
+          setLocationError(message);
           setCurrentLocation(DEFAULT_ADDRESS);
         } finally {
           setIsFetchingLocation(false);
