@@ -18,26 +18,8 @@ import { BottomNav } from "@/components/BottomNav";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
-
-const SPECIALIZATIONS = [
-  "General Physician",
-  "Cardiologist",
-  "Dermatologist",
-  "Pediatrician",
-  "Orthopedic Surgeon",
-  "Gastroenterology",
-  "Neurology",
-  "Psychiatry",
-  "Ophthalmology",
-  "Endocrinology",
-  "Oncology",
-  "Pulmonology",
-  "Rheumatology",
-  "ENT",
-  "Gynecology",
-  "Urology",
-  "Nephrology",
-];
+import { CLINICS } from "@/lib/clinics";
+import { matchSpecialization, SPECIALIZATION_OPTIONS } from "@/lib/specializations";
 
 const SAMPLE_APPOINTMENTS = [
   {
@@ -57,12 +39,20 @@ export default function Appointment() {
   const specializationParam = searchParams.get("specialization") ?? "";
   const clinicId = searchParams.get("clinic");
 
-  const [view, setView] = useState<"upcoming" | "booking">("upcoming");
+  const initialView =
+    searchParams.get("view") === "booking" || clinicId || specializationParam
+      ? "booking"
+      : "upcoming";
+  const [view, setView] = useState<"upcoming" | "booking">(initialView);
   const [step, setStep] = useState<"booking" | "confirmation">("booking");
 
+  const normalizedParam =
+    (specializationParam && matchSpecialization(specializationParam)) ||
+    specializationParam;
   const [selectedSpecialization, setSelectedSpecialization] = useState(
-    specializationParam || "General Physician"
+    normalizedParam || "General Physician"
   );
+  const [selectedClinicId, setSelectedClinicId] = useState(clinicId ?? "any");
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [selectedSlot, setSelectedSlot] = useState<string | undefined>();
   const [notes, setNotes] = useState("");
@@ -70,16 +60,34 @@ export default function Appointment() {
   const [patientEmail, setPatientEmail] = useState("");
   const [isBooking, setIsBooking] = useState(false);
 
-  const clinicLabel = clinicId ? clinicId.replace(/-/g, " ") : "Any clinic";
+  const selectedClinic =
+    selectedClinicId === "any"
+      ? null
+      : CLINICS.find((clinic) => clinic.id === selectedClinicId) ?? null;
+  const clinicLabel = selectedClinic ? selectedClinic.name : "Any clinic";
   const appointments = SAMPLE_APPOINTMENTS;
   const hasAppointments = appointments.length > 0;
 
+  const clinicsForSpecialization = useMemo(
+    () =>
+      CLINICS.filter((clinic) =>
+        clinic.specializations.some((spec) => {
+          const normalized = matchSpecialization(spec) ?? spec;
+          return normalized.toLowerCase() === selectedSpecialization.toLowerCase();
+        })
+      ),
+    [selectedSpecialization]
+  );
+
   // Fetch available slots based on selected date
   const { data: slotsData, isLoading: isLoadingSlots } = useQuery({
-    queryKey: ["availability", selectedDate?.toISOString(), clinicId],
+    queryKey: ["availability", selectedDate?.toISOString(), selectedClinicId],
     queryFn: async () => {
       if (!selectedDate) return [];
-      const res = await fetch(`/api/availability?date=${selectedDate.toISOString()}&clinicId=${clinicId || ""}`);
+      const activeClinicId = selectedClinicId === "any" ? "" : selectedClinicId;
+      const res = await fetch(
+        `/api/availability?date=${selectedDate.toISOString()}&clinicId=${activeClinicId}`
+      );
       if (!res.ok) throw new Error("Failed to fetch slots");
       const data = await res.json();
       return data.slots as string[];
@@ -90,10 +98,25 @@ export default function Appointment() {
   const timeSlots = slotsData || [];
 
   useEffect(() => {
-    if (specializationParam) {
-      setSelectedSpecialization(specializationParam);
+    if (normalizedParam) {
+      setSelectedSpecialization(normalizedParam);
     }
-  }, [specializationParam]);
+  }, [normalizedParam]);
+
+  useEffect(() => {
+    if (clinicId) {
+      setSelectedClinicId(clinicId);
+    }
+  }, [clinicId]);
+
+  useEffect(() => {
+    if (
+      selectedClinicId !== "any" &&
+      !clinicsForSpecialization.some((clinic) => clinic.id === selectedClinicId)
+    ) {
+      setSelectedClinicId("any");
+    }
+  }, [clinicsForSpecialization, selectedClinicId]);
 
   // Reset selected slot when date changes
   useEffect(() => {
@@ -140,14 +163,14 @@ export default function Appointment() {
 
     setIsBooking(true);
     try {
-      const res = await fetch("/api/appointments", {
+          const res = await fetch("/api/appointments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           date: selectedDate.toISOString(),
           slot: selectedSlot,
           specialization: selectedSpecialization,
-          clinicId: clinicId || "global",
+          clinicId: selectedClinicId === "any" ? "global" : selectedClinicId,
           notes,
           patientName,
           patientEmail,
@@ -379,7 +402,7 @@ export default function Appointment() {
       <main className="flex-1 px-4 pt-6 lg:px-10 lg:pt-10">
         <div className="max-w-7xl mx-auto">
           {/* Specialization Selection - Full Width */}
-          <div className="mb-6 rounded-2xl border border-slate-200 bg-white shadow-sm p-6">
+          <div className="mb-6 grid gap-4 rounded-2xl border border-slate-200 bg-white shadow-sm p-6 lg:grid-cols-[1fr_1fr]">
             <div className="flex items-center gap-4">
               <Stethoscope className="w-6 h-6 text-[#0089FF] flex-shrink-0" />
               <div className="flex-1">
@@ -389,11 +412,31 @@ export default function Appointment() {
                 <select
                   value={selectedSpecialization}
                   onChange={(e) => setSelectedSpecialization(e.target.value)}
-                  className="w-full max-w-md bg-white border border-gray-300 rounded-xl shadow-sm px-4 py-3 text-gray-700 focus:outline-none focus:border-[#0089FF] focus:ring-2 focus:ring-[#0089FF]/20"
+                  className="w-full bg-white border border-gray-300 rounded-xl shadow-sm px-4 py-3 text-gray-700 focus:outline-none focus:border-[#0089FF] focus:ring-2 focus:ring-[#0089FF]/20"
                 >
-                  {SPECIALIZATIONS.map((spec) => (
-                    <option key={spec} value={spec}>
-                      {spec}
+                  {SPECIALIZATION_OPTIONS.map((spec) => (
+                    <option key={spec.id} value={spec.id}>
+                      {spec.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="flex items-center gap-4">
+              <MapPin className="w-6 h-6 text-[#0089FF] flex-shrink-0" />
+              <div className="flex-1">
+                <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold mb-2">
+                  Select Clinic
+                </p>
+                <select
+                  value={selectedClinicId}
+                  onChange={(e) => setSelectedClinicId(e.target.value)}
+                  className="w-full bg-white border border-gray-300 rounded-xl shadow-sm px-4 py-3 text-gray-700 focus:outline-none focus:border-[#0089FF] focus:ring-2 focus:ring-[#0089FF]/20"
+                >
+                  <option value="any">Any clinic</option>
+                  {clinicsForSpecialization.map((clinic) => (
+                    <option key={clinic.id} value={clinic.id}>
+                      {clinic.name}
                     </option>
                   ))}
                 </select>

@@ -67,7 +67,7 @@ export default function Index() {
             <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
               <button
                 className="bg-[#0089FF] rounded-[20px] shadow-[2px_0_20px_0_rgba(24,57,107,0.05)] p-4 min-h-[120px] flex flex-col items-center justify-center gap-2 text-white hover:bg-[#0077E6] transition-colors"
-                onClick={() => navigate("/appointment")}
+                onClick={() => navigate("/appointment?view=booking")}
               >
                 <ClipboardList className="w-8 h-8" />
                 <span className="text-sm font-medium text-center">{t("Book Appointment")}</span>

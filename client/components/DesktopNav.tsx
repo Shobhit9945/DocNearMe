@@ -23,7 +23,7 @@ export function DesktopNav() {
           <img src="/dnm.png" alt="DocNearMe" className="w-12 h-12 object-contain" />
           <div>
             <p className="text-xs uppercase tracking-wide text-slate-400">{t("DocNearMe")}</p>
-            <p className="text-lg font-semibold text-slate-900">{t("Care Hub")}</p>
+            <p className="text-lg font-semibold text-slate-900">{t("DocNearMe")}</p>
           </div>
         </div>
         <nav className="space-y-2">

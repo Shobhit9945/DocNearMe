@@ -3,6 +3,7 @@ import { Send, Loader2, ChevronLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { PageScaffold } from "@/components/PageScaffold";
 import { useTranslation } from "@/lib/i18n";
+import { matchSpecialization, SPECIALIZATION_IDS } from "@/lib/specializations";
 
 // ---------- Types ----------
 type ChatMessage = {
@@ -46,8 +47,9 @@ async function askZAIWithRetry(
 
   const systemPromptFollowup =
     "You are DocDaisy, a friendly medical triage assistant. Ask ONE concise follow-up question at a time based only on the user's previous answers. Do not give diagnoses or mention specializations yet.";
+  const specializationList = SPECIALIZATION_IDS.join(", ");
   const systemPromptConclusion =
-    'You are DocDaisy, a medical triage assistant. Based on the conversation, summarize your assessment and recommend ONE most appropriate medical specialization (for example: "Dermatology", "Internal Medicine", "ENT", "Psychiatry"). Respond ONLY as valid JSON in this exact shape: {"reply": "...", "specialization": "..."}';
+    `You are DocDaisy, a medical triage assistant. Based on the conversation, summarize your assessment and recommend ONE most appropriate medical specialization from this list: ${specializationList}. Respond ONLY as valid JSON in this exact shape: {"reply": "...", "specialization": "..."} If none of the listed specializations are appropriate, set specialization to "Other" and keep the reply concise about the closest fit.`;
 
   const isConclusion = mode === "conclusion";
 
@@ -211,7 +213,9 @@ const DocDaisy: React.FC = () => {
       setMessages((prev) => [...prev, { sender: "bot", text: finalBotReply }]);
 
       if (specialization && specialization !== "Unsure") {
-        setRecommendedSpecialization(specialization.trim());
+        const normalized = matchSpecialization(specialization);
+        const safeSpecialization = normalized ?? specialization.trim();
+        setRecommendedSpecialization(safeSpecialization);
       }
     } catch (err) {
       console.error("DocDaisy Z.AI Error:", err);
