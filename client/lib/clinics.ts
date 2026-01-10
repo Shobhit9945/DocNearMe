@@ -1,0 +1,275 @@
+export type Clinic = {
+  id: string;
+  name: string;
+  type: "Hospital" | "Clinic";
+  rating: number;
+  patients: string;
+  distance: string;
+  location: string;
+  image: string;
+  specializations: string[];
+  nextAvailability: string;
+};
+
+export const CLINICS: Clinic[] = [
+  {
+    id: "noguchi",
+    name: "Noguchi Hospital",
+    type: "Hospital",
+    rating: 3.9,
+    patients: "10K+ patients",
+    distance: "12 km away",
+    location: "Aoyamacho, Beppu",
+    image:
+      "https://images.unsplash.com/photo-1586773860418-d37222d8fce3?auto=format&fit=crop&w=800&q=80",
+    specializations: [
+      "Cardiologist",
+      "Cardiology",
+      "Gastroenterology",
+      "Neurology",
+      "Pulmonology",
+      "General Physician",
+      "General Medicine",
+      "Internal Medicine",
+      "Nephrology",
+    ],
+    nextAvailability: "Today, 4:30 PM",
+  },
+  {
+    id: "beppu-medical",
+    name: "Beppu Medical Center",
+    type: "Clinic",
+    rating: 4.5,
+    patients: "4K+ patients",
+    distance: "8 km away",
+    location: "Beppu Station",
+    image:
+      "https://images.unsplash.com/photo-1504439468489-c8920d796a29?auto=format&fit=crop&w=800&q=80",
+    specializations: [
+      "Cardiologist",
+      "Cardiology",
+      "Dermatologist",
+      "Dermatology",
+      "Orthopedic Surgeon",
+      "Orthopedics",
+      "Endocrinology",
+      "Allergy & Immunology",
+    ],
+    nextAvailability: "Today, 6:10 PM",
+  },
+  {
+    id: "oita-ent",
+    name: "Oita ENT & Hearing",
+    type: "Clinic",
+    rating: 4.8,
+    patients: "2.3K patients",
+    distance: "6 km away",
+    location: "Kitahama, Beppu",
+    image:
+      "https://images.unsplash.com/photo-1505751172876-fa1923c5c528?auto=format&fit=crop&w=800&q=80",
+    specializations: ["ENT", "Otolaryngology", "Pulmonology"],
+    nextAvailability: "Tomorrow, 10:00 AM",
+  },
+  {
+    id: "harbor-derma",
+    name: "Harbor Dermatology",
+    type: "Clinic",
+    rating: 4.2,
+    patients: "1.1K patients",
+    distance: "4 km away",
+    location: "Minami Beppu",
+    image:
+      "https://images.unsplash.com/photo-1527613426441-4da17471b66d?auto=format&fit=crop&w=800&q=80",
+    specializations: ["Dermatologist", "Dermatology"],
+    nextAvailability: "Tomorrow, 1:15 PM",
+  },
+  {
+    id: "ap-house-family",
+    name: "AP House Family Care",
+    type: "Hospital",
+    rating: 4.1,
+    patients: "7.2K patients",
+    distance: "2 km away",
+    location: "Jumonjibaru, Beppu",
+    image:
+      "https://images.unsplash.com/photo-1506126613408-eca07ce68773?auto=format&fit=crop&w=800&q=80",
+    specializations: [
+      "General Physician",
+      "General Medicine",
+      "Pediatrician",
+      "Pediatrics",
+      "Gynecology",
+      "Internal Medicine",
+    ],
+    nextAvailability: "Today, 5:20 PM",
+  },
+  {
+    id: "sakura-ortho",
+    name: "Sakura Ortho & Rehab",
+    type: "Clinic",
+    rating: 4.7,
+    patients: "3.4K patients",
+    distance: "10 km away",
+    location: "Higashi Beppu",
+    image:
+      "https://images.unsplash.com/photo-1485846234645-a62644f84728?auto=format&fit=crop&w=800&q=80",
+    specializations: [
+      "Orthopedic Surgeon",
+      "Orthopedics",
+      "Rheumatology",
+      "General Physician",
+      "General Medicine",
+      "Sports Medicine",
+      "Physical Therapy",
+    ],
+    nextAvailability: "Tomorrow, 9:40 AM",
+  },
+  {
+    id: "sunrise-peds",
+    name: "Sunrise Children's Clinic",
+    type: "Clinic",
+    rating: 4.6,
+    patients: "5.1K patients",
+    distance: "5 km away",
+    location: "Ishigaki, Beppu",
+    image:
+      "https://images.unsplash.com/photo-1484980972926-edee96e0960d?auto=format&fit=crop&w=800&q=80",
+    specializations: ["Pediatrician", "Pediatrics"],
+    nextAvailability: "Today, 3:00 PM",
+  },
+  {
+    id: "bluewave-gastro",
+    name: "Bluewave Digestive Center",
+    type: "Clinic",
+    rating: 4.4,
+    patients: "3.1K patients",
+    distance: "7 km away",
+    location: "Beppu Bayfront",
+    image:
+      "https://images.unsplash.com/photo-1504439904031-93ded9f93e3c?auto=format&fit=crop&w=800&q=80",
+    specializations: ["Gastroenterology"],
+    nextAvailability: "Tomorrow, 11:20 AM",
+  },
+  {
+    id: "beacon-neuro",
+    name: "Beacon Neurology Institute",
+    type: "Hospital",
+    rating: 4.9,
+    patients: "8.5K patients",
+    distance: "14 km away",
+    location: "Oita City",
+    image:
+      "https://images.unsplash.com/photo-1505751172876-fa1923c5c528?auto=format&fit=crop&w=800&q=80",
+    specializations: ["Neurology"],
+    nextAvailability: "Tomorrow, 2:00 PM",
+  },
+  {
+    id: "serenity-mental",
+    name: "Serenity Mental Health",
+    type: "Clinic",
+    rating: 4.3,
+    patients: "2.8K patients",
+    distance: "3 km away",
+    location: "Downtown Beppu",
+    image:
+      "https://images.unsplash.com/photo-1526256262350-7da7584cf5eb?auto=format&fit=crop&w=800&q=80",
+    specializations: ["Psychiatry", "Psychology"],
+    nextAvailability: "Today, 7:15 PM",
+  },
+  {
+    id: "clearview-eye",
+    name: "Clearview Eye Hospital",
+    type: "Hospital",
+    rating: 4.6,
+    patients: "6.7K patients",
+    distance: "9 km away",
+    location: "Kamegawa, Beppu",
+    image:
+      "https://images.unsplash.com/photo-1502741338009-cac2772e18bc?auto=format&fit=crop&w=800&q=80",
+    specializations: ["Ophthalmology"],
+    nextAvailability: "Tomorrow, 8:45 AM",
+  },
+  {
+    id: "koyo-endo",
+    name: "Koyo Endocrine & Diabetes",
+    type: "Clinic",
+    rating: 4.4,
+    patients: "2.9K patients",
+    distance: "5 km away",
+    location: "Kannawa, Beppu",
+    image:
+      "https://images.unsplash.com/photo-1521791136064-7986c2920216?auto=format&fit=crop&w=800&q=80",
+    specializations: ["Endocrinology"],
+    nextAvailability: "Today, 4:50 PM",
+  },
+  {
+    id: "harbor-oncology",
+    name: "Harbor Oncology Institute",
+    type: "Hospital",
+    rating: 4.8,
+    patients: "9.1K patients",
+    distance: "16 km away",
+    location: "Oita Waterfront",
+    image:
+      "https://images.unsplash.com/photo-1580281657525-3b2420e98b1c?auto=format&fit=crop&w=800&q=80",
+    specializations: ["Oncology"],
+    nextAvailability: "Tomorrow, 12:10 PM",
+  },
+  {
+    id: "mountain-pulm",
+    name: "Mountain Air Pulmonary Clinic",
+    type: "Clinic",
+    rating: 4.5,
+    patients: "1.9K patients",
+    distance: "11 km away",
+    location: "Tsukahara Highlands",
+    image:
+      "https://images.unsplash.com/photo-1448932223592-d1fc686e76ea?auto=format&fit=crop&w=800&q=80",
+    specializations: ["Pulmonology"],
+    nextAvailability: "Tomorrow, 9:15 AM",
+  },
+  {
+    id: "riverside-rheum",
+    name: "Riverside Rheumatology",
+    type: "Clinic",
+    rating: 4.3,
+    patients: "2.4K patients",
+    distance: "6 km away",
+    location: "Beppu Riverside",
+    image:
+      "https://images.unsplash.com/photo-1503437313881-503a91226402?auto=format&fit=crop&w=800&q=80",
+    specializations: ["Rheumatology"],
+    nextAvailability: "Today, 6:40 PM",
+  },
+  {
+    id: "harbor-womens",
+    name: "Harbor Women's Health",
+    type: "Hospital",
+    rating: 4.7,
+    patients: "5.6K patients",
+    distance: "5 km away",
+    location: "Hamawaki, Beppu",
+    image:
+      "https://images.unsplash.com/photo-1506126613408-eca07ce68773?auto=format&fit=crop&w=800&q=80",
+    specializations: [
+      "Gynecology",
+      "Obstetrics",
+      "General Physician",
+      "General Medicine",
+    ],
+    nextAvailability: "Today, 5:50 PM",
+  },
+  {
+    id: "bayview-urology",
+    name: "Bayview Urology Center",
+    type: "Clinic",
+    rating: 4.6,
+    patients: "3.7K patients",
+    distance: "13 km away",
+    location: "Beppu Marina",
+    image:
+      "https://images.unsplash.com/photo-1505576399279-565b52d4ac71?auto=format&fit=crop&w=800&q=80",
+    specializations: ["Urology", "Nephrology"],
+    nextAvailability: "Tomorrow, 3:30 PM",
+  },
+];
