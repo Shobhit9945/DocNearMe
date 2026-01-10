@@ -1,7 +1,10 @@
 import { Request, Response } from "express";
-import { ObjectId } from "mongodb";
-import { getAppointmentsCollection } from "../db";
 import { Appointment } from "../types";
+
+const appointments: Appointment[] = [];
+
+const generateBookingId = () =>
+  `DNM-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
 
 export const handleCreateAppointment = async (req: Request, res: Response) => {
   const { date, slot, specialization, clinicId, notes, patientName, patientEmail } = req.body;
@@ -12,57 +15,49 @@ export const handleCreateAppointment = async (req: Request, res: Response) => {
 
   const clinicKey = clinicId || "global";
 
-  try {
-    const appointments = await getAppointmentsCollection();
+  const dateObj = new Date(date);
+  const dateKey = dateObj.toISOString().split("T")[0];
 
-    const dateObj = new Date(date);
-    const dateKey = dateObj.toISOString().split("T")[0];
-
-    const existing = await appointments.findOne({ dateKey, slot, clinicId: clinicKey });
-    if (existing) {
-      return res.status(409).json({ error: "Slot already booked" });
-    }
-
-    const record: Appointment = {
-      date: dateObj.toISOString(),
-      dateKey,
-      slot,
-      specialization,
-      clinicId: clinicKey,
-      notes,
-      patientName: patientName?.trim() || undefined,
-      patientEmail: patientEmail?.trim() || undefined,
-      createdAt: new Date(),
-    };
-
-    const result = await appointments.insertOne(record);
-
-    res
-      .status(201)
-      .json({ success: true, id: result.insertedId.toString(), message: "Appointment booked successfully" });
-  } catch (error) {
-    console.error("Booking error:", error);
-    res.status(500).json({ error: "Failed to book appointment" });
+  const existing = appointments.find(
+    (appointment) => appointment.dateKey === dateKey && appointment.slot === slot && appointment.clinicId === clinicKey
+  );
+  if (existing) {
+    return res.status(409).json({ error: "Slot already booked" });
   }
+
+  const record: Appointment = {
+    date: dateObj.toISOString(),
+    dateKey,
+    slot,
+    specialization,
+    clinicId: clinicKey,
+    notes,
+    patientName: patientName?.trim() || undefined,
+    patientEmail: patientEmail?.trim() || undefined,
+    createdAt: new Date(),
+  };
+
+  appointments.push(record);
+
+  res.status(201).json({
+    success: true,
+    id: generateBookingId(),
+    message: "Appointment booked successfully",
+  });
 };
 
 export const handleListAppointments = async (_req: Request, res: Response) => {
-  try {
-    const appointments = await getAppointmentsCollection();
-    const items = await appointments
-      .find({})
-      .sort({ date: 1, slot: 1 })
-      .toArray();
+  const sorted = [...appointments].sort((a, b) => {
+    if (a.date === b.date) {
+      return a.slot.localeCompare(b.slot);
+    }
+    return a.date.localeCompare(b.date);
+  });
 
-    const serialized = items.map((item) => ({
+  res.json({
+    appointments: sorted.map((item) => ({
       ...item,
-      _id: (item._id as ObjectId).toString(),
       createdAt: item.createdAt instanceof Date ? item.createdAt.toISOString() : item.createdAt,
-    }));
-
-    res.json({ appointments: serialized });
-  } catch (error) {
-    console.error("List appointments error", error);
-    res.status(500).json({ error: "Failed to load appointments" });
-  }
+    })),
+  });
 };

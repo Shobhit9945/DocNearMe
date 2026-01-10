@@ -1,7 +1,6 @@
 import "dotenv/config";
 import express, { Express } from "express";
 import cors from "cors";
-import { connectToDatabase } from "./db";
 import { handleDemo } from "./routes/demo";
 import { handleAvailability } from "./routes/availability";
 import { handleCreateAppointment, handleListAppointments } from "./routes/appointment";
@@ -9,8 +8,6 @@ import docDaisyRouter from "./routes/docdaisy";
 import healthRouter from "./routes/health";
 
 export async function createServer(): Promise<Express> {
-  await connectToDatabase();
-
   const app = express();
 
   // Middleware

@@ -44,6 +44,18 @@ type DoctorProfile = {
   nextAvailable: string;
 };
 
+type ConfirmationDetails = {
+  id: string;
+  clinicName: string;
+  patientName: string;
+  patientEmail: string;
+  doctorName: string;
+  specialization: string;
+  dateLabel: string;
+  timeLabel: string;
+  notes?: string;
+};
+
 const DOCTORS: DoctorProfile[] = [
   {
     id: "dr-ayanami",
@@ -160,6 +172,7 @@ export default function Appointment() {
   const [intakeReason, setIntakeReason] = useState("");
   const [intakeConsent, setIntakeConsent] = useState(false);
   const [intakeAllergies, setIntakeAllergies] = useState("");
+  const [confirmationDetails, setConfirmationDetails] = useState<ConfirmationDetails | null>(null);
   const [fieldErrors, setFieldErrors] = useState<{
     name?: string;
     email?: string;
@@ -167,6 +180,17 @@ export default function Appointment() {
     intake?: string;
   }>({});
   const [isBooking, setIsBooking] = useState(false);
+
+  const generateBookingId = () =>
+    `DNM-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+
+  const formatDateLabel = (date: Date) =>
+    new Intl.DateTimeFormat("en-US", {
+      weekday: "long",
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    }).format(date);
 
   const clearFieldError = (field: keyof typeof fieldErrors) => {
     setFieldErrors((prev) => ({ ...prev, [field]: undefined }));
@@ -291,6 +315,7 @@ export default function Appointment() {
   const handleStartBooking = () => {
     setView("booking");
     setStep("booking");
+    setConfirmationDetails(null);
   };
 
   const handleConfirm = async () => {
@@ -324,45 +349,24 @@ export default function Appointment() {
     if (!selectedDate || !selectedSlot) return;
 
     setIsBooking(true);
-    try {
-          const res = await fetch("/api/appointments", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          date: selectedDate.toISOString(),
-          slot: selectedSlot,
-          specialization: selectedSpecialization,
-          clinicId: selectedClinicId === "any" ? "global" : selectedClinicId,
-          doctorId: selectedDoctor?.id ?? null,
-          doctorName: selectedDoctor?.name ?? null,
-          notes,
-          patientName: trimmedName,
-          patientEmail: trimmedEmail,
-          medicalRecord: medicalRecord?.name ?? null,
-          intake: FORM_REQUIRED_CLINICS.has(selectedClinicId)
-            ? {
-                reason: intakeReason,
-                allergies: intakeAllergies,
-                consent: intakeConsent,
-              }
-            : null,
-        }),
-      });
+    const doctorLabel = selectedDoctor?.name ?? selectedSpecialization;
+    const bookingId = generateBookingId();
 
-      if (!res.ok) {
-        const error = await res.json();
-        alert(error.error || "Failed to book appointment");
-        return;
-      }
+    setConfirmationDetails({
+      id: bookingId,
+      clinicName: clinicLabel,
+      patientName: trimmedName,
+      patientEmail: trimmedEmail,
+      doctorName: doctorLabel,
+      specialization: selectedSpecialization,
+      dateLabel: formatDateLabel(selectedDate),
+      timeLabel: selectedSlot,
+      notes,
+    });
 
-      setStep("confirmation");
-      window.scrollTo(0, 0);
-    } catch (error) {
-      console.error("Booking failed", error);
-      alert("Something went wrong. Please try again.");
-    } finally {
-      setIsBooking(false);
-    }
+    setStep("confirmation");
+    window.scrollTo(0, 0);
+    setIsBooking(false);
   };
 
   const handleAddToGoogleCalendar = () => {
@@ -383,6 +387,18 @@ export default function Appointment() {
   };
 
   if (view === "booking" && step === "confirmation") {
+    const details = confirmationDetails ?? {
+      id: generateBookingId(),
+      clinicName: clinicLabel,
+      patientName: patientName || "Patient",
+      patientEmail,
+      doctorName: selectedDoctor?.name ?? selectedSpecialization,
+      specialization: selectedSpecialization,
+      dateLabel: selectedDate ? formatDateLabel(selectedDate) : "Date pending",
+      timeLabel: selectedSlot ?? "Time pending",
+      notes,
+    };
+
     return (
       <PageScaffold contentClassName="pb-28 lg:pb-12">
         <div className="flex flex-col items-center justify-center min-h-[60vh] p-6 text-center space-y-6">
@@ -393,27 +409,76 @@ export default function Appointment() {
           <div className="space-y-2">
             <h1 className="text-2xl font-bold text-slate-900">Appointment Confirmed!</h1>
             <p className="text-slate-600 max-w-md mx-auto">
-              Your appointment with {selectedDoctor?.name ?? `the ${selectedSpecialization}`} has been successfully booked for {selectedDate?.toLocaleDateString()} at {selectedSlot}.
+              Your appointment with {details.doctorName} has been successfully booked for {details.dateLabel} at {details.timeLabel}.
             </p>
           </div>
 
-          <div className="w-full max-w-md bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
-            <h3 className="font-semibold text-slate-900">Add to Calendar</h3>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <button
-                onClick={handleAddToGoogleCalendar}
-                className="flex items-center justify-center gap-2 w-full bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-medium py-3 px-4 rounded-xl transition-colors"
-              >
-                <CalendarIcon className="w-5 h-5 text-blue-500" />
-                Google Calendar
-              </button>
-              <button
-                onClick={handleDownloadICS}
-                className="flex items-center justify-center gap-2 w-full bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-medium py-3 px-4 rounded-xl transition-colors"
-              >
-                <Download className="w-5 h-5 text-slate-500" />
-                Apple / Outlook
-              </button>
+          <div className="w-full max-w-2xl grid gap-4">
+            <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm text-left space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold text-slate-900">Booking details</h3>
+                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                  Booking ID: {details.id}
+                </span>
+              </div>
+              <div className="grid gap-3 text-sm text-slate-700">
+                <div className="flex items-start justify-between gap-3">
+                  <span className="text-slate-500">Clinic</span>
+                  <span className="font-medium text-slate-900">{details.clinicName}</span>
+                </div>
+                <div className="flex items-start justify-between gap-3">
+                  <span className="text-slate-500">Patient</span>
+                  <span className="font-medium text-slate-900">{details.patientName}</span>
+                </div>
+                <div className="flex items-start justify-between gap-3">
+                  <span className="text-slate-500">Doctor</span>
+                  <span className="font-medium text-slate-900">{details.doctorName}</span>
+                </div>
+                <div className="flex items-start justify-between gap-3">
+                  <span className="text-slate-500">Specialization</span>
+                  <span className="font-medium text-slate-900">{details.specialization}</span>
+                </div>
+                <div className="flex items-start justify-between gap-3">
+                  <span className="text-slate-500">Date</span>
+                  <span className="font-medium text-slate-900">{details.dateLabel}</span>
+                </div>
+                <div className="flex items-start justify-between gap-3">
+                  <span className="text-slate-500">Time</span>
+                  <span className="font-medium text-slate-900">{details.timeLabel}</span>
+                </div>
+                {details.patientEmail ? (
+                  <div className="flex items-start justify-between gap-3">
+                    <span className="text-slate-500">Email</span>
+                    <span className="font-medium text-slate-900">{details.patientEmail}</span>
+                  </div>
+                ) : null}
+                {details.notes ? (
+                  <div className="flex items-start justify-between gap-3">
+                    <span className="text-slate-500">Notes</span>
+                    <span className="font-medium text-slate-900">{details.notes}</span>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
+              <h3 className="font-semibold text-slate-900">Add to Calendar</h3>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <button
+                  onClick={handleAddToGoogleCalendar}
+                  className="flex items-center justify-center gap-2 w-full bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-medium py-3 px-4 rounded-xl transition-colors"
+                >
+                  <CalendarIcon className="w-5 h-5 text-blue-500" />
+                  Google Calendar
+                </button>
+                <button
+                  onClick={handleDownloadICS}
+                  className="flex items-center justify-center gap-2 w-full bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-medium py-3 px-4 rounded-xl transition-colors"
+                >
+                  <Download className="w-5 h-5 text-slate-500" />
+                  Apple Calendar
+                </button>
+              </div>
             </div>
           </div>
 
@@ -421,6 +486,7 @@ export default function Appointment() {
             onClick={() => {
               setView("upcoming");
               setStep("booking");
+              setConfirmationDetails(null);
             }}
             className="text-[#0089FF] font-semibold hover:underline"
           >
