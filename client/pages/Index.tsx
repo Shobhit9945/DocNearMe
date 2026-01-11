@@ -1,3 +1,4 @@
+
 import React, { useMemo } from "react";
 import { Navigation, ClipboardList, Activity, Ambulance } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
@@ -6,8 +7,36 @@ import { PageScaffold } from "@/components/PageScaffold";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useLiveLocation } from "@/hooks/useLiveLocation";
-import { useTranslation } from "@/lib/i18n";
+import { useTranslation } from "@/lib/i18n"
 
+const Index: React.FC = () => {
+  const { user, loading } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!loading && !user) {
+      navigate('/auth');
+    }
+  }, [user, loading, navigate]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen gradient-hero flex items-center justify-center">
+        <div className="text-center animate-pulse">
+          <Sparkles className="h-12 w-12 text-primary mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null;
+  }
+return user.role === 'clinic' ? <TeacherDashboard /> : <StudentDashboard />;
+};
+
+export default Index;
 export default function Index() {
   const navigate = useNavigate();
   const { currentLocation, locationError, isFetchingLocation } = useLiveLocation();
