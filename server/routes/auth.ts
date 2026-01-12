@@ -8,6 +8,58 @@ import { AuthResponse, AuthUser, UserRole } from "@shared/api";
 
 const roleSchema = z.enum(["patient", "clinic"]);
 
+const parseRequestBody = (body: unknown) => {
+  if (typeof body === "string") {
+    const trimmed = body.trim();
+    if (!trimmed) {
+      return body;
+    }
+    try {
+      return JSON.parse(trimmed);
+    } catch {
+      return { __parseError: "invalid_json" };
+    }
+  }
+  return body;
+};
+
+const parsePayload = <T>(schema: z.ZodSchema<T>, body: unknown, label: string) => {
+  const normalizedBody = parseRequestBody(body);
+
+  if (
+    typeof normalizedBody === "object" &&
+    normalizedBody !== null &&
+    "__parseError" in normalizedBody
+  ) {
+    return {
+      ok: false,
+      status: 400,
+      body: {
+        error: `Malformed JSON in ${label} payload.`,
+        detail: "invalid_json",
+        hint: "Ensure the request body is valid JSON and the Content-Type header is set to application/json.",
+      },
+    } as const;
+  }
+
+  const result = schema.safeParse(normalizedBody);
+  if (!result.success) {
+    return {
+      ok: false,
+      status: 400,
+      body: {
+        error: `Invalid ${label} payload.`,
+        detail: "invalid_payload",
+        receivedType: normalizedBody === null ? "null" : typeof normalizedBody,
+        issues: result.error.flatten().fieldErrors,
+        hint: "Ensure all required fields are present and formatted correctly.",
+      },
+    } as const;
+  }
+
+  return { ok: true, data: result.data } as const;
+};
+
 const signupSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8),
@@ -39,7 +91,11 @@ const issueToken = (user: AuthUser) =>
 
 export const handleSignup: RequestHandler = async (req, res, next) => {
   try {
-    const payload = signupSchema.parse(req.body);
+    const parsed = parsePayload(signupSchema, req.body, "signup");
+    if (!parsed.ok) {
+      return res.status(parsed.status).json(parsed.body);
+    }
+    const payload = parsed.data;
     const users = await getUsersCollection();
     const email = payload.email.trim().toLowerCase();
 
@@ -81,7 +137,11 @@ export const handleSignup: RequestHandler = async (req, res, next) => {
 
 export const handleSignin: RequestHandler = async (req, res, next) => {
   try {
-    const payload = signinSchema.parse(req.body);
+    const parsed = parsePayload(signinSchema, req.body, "signin");
+    if (!parsed.ok) {
+      return res.status(parsed.status).json(parsed.body);
+    }
+    const payload = parsed.data;
     const users = await getUsersCollection();
     const email = payload.email.trim().toLowerCase();
 

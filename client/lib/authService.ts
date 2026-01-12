@@ -27,11 +27,35 @@ const persistSession = (session: StoredSession | null) => {
 const loadSession = (): StoredSession | null =>
   parseJson<StoredSession | null>(localStorage.getItem(LOCAL_SESSION_KEY), null);
 
+const formatIssueSummary = (issues?: Record<string, string[]>) => {
+  if (!issues) return "";
+  const entries = Object.entries(issues).filter(([, messages]) => messages?.length);
+  if (!entries.length) return "";
+  const summary = entries
+    .map(([field, messages]) => `${field}: ${messages.join(", ")}`)
+    .join("; ");
+  return summary ? ` Fields: ${summary}.` : "";
+};
+
+const parseResponseBody = async (response: Response) => {
+  const text = await response.text();
+  if (!text) return {};
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { message: text };
+  }
+};
+
 const handleApiResponse = async (response: Response) => {
-  const data = await response.json().catch(() => ({}));
+  const data = await parseResponseBody(response);
   if (!response.ok) {
-    const message = data?.error || data?.message || "Unable to reach authentication server.";
-    throw new Error(message);
+    const baseMessage = data?.error || data?.message || "Unable to reach authentication server.";
+    const suffix = baseMessage.endsWith(".") ? "" : ".";
+    const detail = data?.detail ? ` (${data.detail})` : "";
+    const issues = formatIssueSummary(data?.issues);
+    const status = ` Status: ${response.status}.`;
+    throw new Error(`${baseMessage}${detail}${suffix}${issues}${status}`);
   }
   return data;
 };
