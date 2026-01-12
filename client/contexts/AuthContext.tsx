@@ -1,84 +1,80 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { mongoService } from '@/lib/mongoService';
-import { AuthSession, AuthUser, UserRole } from '@/types/auth';
-export type { UserRole } from '@/types/auth';
+import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
+import type { AuthUser } from "@shared/api";
+import { authService } from "@/lib/authService";
 
-interface AuthContextType {
+type AuthContextValue = {
   user: AuthUser | null;
-  session: AuthSession | null;
+  token: string | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
-  signUp: (
-    email: string,
-    password: string,
-    role: UserRole,
-  ) => Promise<{ error: string | null }>;
-  signOut: () => Promise<void>;
-}
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+  signUp: (payload: {
+    email: string;
+    password: string;
+    role: "patient" | "clinic";
+    fullName: string;
+  }) => Promise<{ error: string | null }>;
+  signOut: () => void;
+};
 
-export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
-  const [session, setSession] = useState<AuthSession | null>(null);
+  const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const loadSession = async () => {
-      try {
-        const { user, session } = await mongoService.getSession();
-        setUser(user);
-        setSession(session);
-      } catch (error) {
-        console.error('Error loading session', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadSession();
+    const session = authService.getSession();
+    setUser(session?.user ?? null);
+    setToken(session?.token ?? null);
+    setLoading(false);
   }, []);
 
   const signIn = async (email: string, password: string) => {
     try {
-      const { user, session } = await mongoService.signIn(email, password);
-      setUser(user);
-      setSession(session);
+      const response = await authService.signIn({ email, password });
+      setUser(response.user);
+      setToken(response.token);
       return { error: null };
-    } catch (err: any) {
-      return { error: err?.message || 'Unable to sign in right now.' };
+    } catch (error: any) {
+      return { error: error?.message ?? "Unable to sign in right now." };
     }
   };
 
-  const signUp = async (
-    email: string,
-    password: string,
-    role: UserRole,
-    fullName: string
-    ) => {
+  const signUp = async (payload: {
+    email: string;
+    password: string;
+    role: "patient" | "clinic";
+    fullName: string;
+  }) => {
     try {
-      const { user, session } = await mongoService.signUp(email, password, role, fullName);
-      setUser(user);
-      setSession(session);
+      const response = await authService.signUp(payload);
+      setUser(response.user);
+      setToken(response.token);
       return { error: null };
-    } catch (err: any) {
-      return { error: err?.message || 'Unable to sign up right now.' };
+    } catch (error: any) {
+      return { error: error?.message ?? "Unable to sign up right now." };
     }
   };
 
-  const signOut = async () => {
-    await mongoService.signOut();
+  const signOut = () => {
+    authService.signOut();
     setUser(null);
-    setSession(null);
+    setToken(null);
   };
 
-  return (
-    <AuthContext.Provider value={{ user, session, loading, signIn, signUp, signOut }}>
-      {children}
-    </AuthContext.Provider>
+  const value = useMemo(
+    () => ({ user, token, loading, signIn, signUp, signOut }),
+    [user, token, loading],
   );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
+  return context;
+};
