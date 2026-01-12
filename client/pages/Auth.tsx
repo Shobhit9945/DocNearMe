@@ -42,21 +42,36 @@ export const Auth: React.FC = () => {
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setIsLoading(true);
+    const normalizedEmail = email.trim();
 
     try {
       if (isSignup) {
+        const normalizedFullName = fullName.trim();
+        if (!normalizedFullName) {
+          toast.error("Full name is required.");
+          return;
+        }
+        if (password.length < 8) {
+          toast.error("Password must be at least 8 characters.");
+          return;
+        }
         if (password !== confirmPassword) {
           toast.error("Passwords do not match.");
           return;
         }
-        const { error } = await signUp({ email, password, role, fullName });
+        const { error } = await signUp({
+          email: normalizedEmail,
+          password,
+          role,
+          fullName: normalizedFullName,
+        });
         if (error) {
           toast.error(error);
           return;
         }
         toast.success(t("signupSuccess"));
       } else {
-        const { error } = await signIn(email, password);
+        const { error } = await signIn(normalizedEmail, password);
         if (error) {
           toast.error(error);
           return;
@@ -155,6 +170,7 @@ export const Auth: React.FC = () => {
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
                     placeholder="••••••••"
+                    minLength={8}
                     required
                     className="rounded-xl pr-10"
                   />
@@ -177,6 +193,7 @@ export const Auth: React.FC = () => {
                     value={confirmPassword}
                     onChange={(event) => setConfirmPassword(event.target.value)}
                     placeholder="••••••••"
+                    minLength={8}
                     required
                     className="rounded-xl"
                   />
