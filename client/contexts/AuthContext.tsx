@@ -1,7 +1,8 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { mongoService } from '@/lib/mongoService';
-import { AuthSession, AuthUser, UserRole } from '@/types/auth';
-export type { UserRole } from '@/types/auth';
+import React, { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { mongoService } from "@/lib/mongoService";
+import { AuthSession, AuthUser, UserRole } from "@/types/auth";
+
+export type { UserRole } from "@/types/auth";
 
 interface AuthContextType {
   user: AuthUser | null;
@@ -12,9 +13,11 @@ interface AuthContextType {
     email: string,
     password: string,
     role: UserRole,
+    fullName: string,
   ) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
 }
+
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -29,7 +32,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setUser(user);
         setSession(session);
       } catch (error) {
-        console.error('Error loading session', error);
+        console.error("Error loading session", error);
       } finally {
         setLoading(false);
       }
@@ -45,23 +48,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setSession(session);
       return { error: null };
     } catch (err: any) {
-      return { error: err?.message || 'Unable to sign in right now.' };
+      return { error: err?.message || "Unable to sign in right now." };
     }
   };
 
-  const signUp = async (
-    email: string,
-    password: string,
-    role: UserRole,
-    fullName: string
-    ) => {
+  const signUp = async (email: string, password: string, role: UserRole, fullName: string) => {
     try {
       const { user, session } = await mongoService.signUp(email, password, role, fullName);
       setUser(user);
       setSession(session);
       return { error: null };
     } catch (err: any) {
-      return { error: err?.message || 'Unable to sign up right now.' };
+      return { error: err?.message || "Unable to sign up right now." };
     }
   };
 
@@ -81,4 +79,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
+  return context;
+};
