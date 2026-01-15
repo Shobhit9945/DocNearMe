@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo } from "react";
-import { Navigation, ClipboardList, Activity, Ambulance, Sparkles } from "lucide-react";
+import React, { useMemo } from "react";
+import { Navigation, ClipboardList, Activity, Ambulance } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { BottomNav } from "@/components/BottomNav";
@@ -7,40 +7,17 @@ import { DocDaisyBanner } from "@/components/DocDaisyBanner";
 import { PageScaffold } from "@/components/PageScaffold";
 import { useLiveLocation } from "@/hooks/useLiveLocation";
 import { useTranslation } from "@/lib/i18n";
-import { useAuth } from "@/contexts/AuthContext";
 
 const Index: React.FC = () => {
   const navigate = useNavigate();
   const { currentLocation, locationError, isFetchingLocation } = useLiveLocation();
   const { t } = useTranslation();
-  const { user, loading } = useAuth();
-
-  useEffect(() => {
-    if (!loading && !user) {
-      navigate("/auth");
-    }
-  }, [loading, navigate, user]);
 
   const locationStatus = useMemo(() => {
     if (isFetchingLocation) return "Fetching your location...";
     if (locationError) return locationError;
     return "Updated a moment ago";
   }, [isFetchingLocation, locationError]);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen gradient-hero flex items-center justify-center">
-        <div className="text-center animate-pulse">
-          <Sparkles className="h-12 w-12 text-primary mx-auto mb-4" />
-          <p className="text-muted-foreground">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return null;
-  }
 
   return (
     <PageScaffold contentClassName="pb-28 lg:pb-12">

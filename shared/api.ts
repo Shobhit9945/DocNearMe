@@ -25,17 +25,3 @@ export interface AppointmentResponseItem {
 export interface AppointmentListResponse {
   appointments: AppointmentResponseItem[];
 }
-
-export type UserRole = "patient" | "clinic";
-
-export interface AuthUser {
-  id: string;
-  email: string;
-  role: UserRole;
-  fullName: string;
-}
-
-export interface AuthResponse {
-  token: string;
-  user: AuthUser;
-}
