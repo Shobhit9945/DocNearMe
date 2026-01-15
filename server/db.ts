@@ -1,7 +1,7 @@
 // server/db.ts
 import "dotenv/config";
 import { MongoClient, Db, Collection, ObjectId } from "mongodb";
-import { Appointment, UserAccount } from "./types";
+import { Appointment } from "./types";
 
 const uri = process.env.MONGODB_URI ?? process.env.MONGODB_API_URL ?? process.env.VITE_MONGODB_API_URL;
 const dbName = process.env.MONGODB_DB_NAME ?? "docnearme";
@@ -102,7 +102,6 @@ export type InMemoryDb = {
   kind: "memory";
   collections: {
     appointments: InMemoryCollection<Appointment>;
-    users: InMemoryCollection<UserAccount>;
   };
 };
 
@@ -110,13 +109,12 @@ const inMemoryDb: InMemoryDb = {
   kind: "memory",
   collections: {
     appointments: new InMemoryCollection<Appointment>([]),
-    users: new InMemoryCollection<UserAccount>([]),
   },
 };
 
 export const isMemoryDb = (db: Db | InMemoryDb): db is InMemoryDb => (db as InMemoryDb).kind === "memory";
 
-const getCollection = <T>(db: Db | InMemoryDb, name: "appointments" | "users") =>
+const getCollection = <T>(db: Db | InMemoryDb, name: "appointments") =>
   isMemoryDb(db) ? db.collections[name] : db.collection<T>(name);
 
 // Short, serverless-friendly timeouts. Keep pools tiny.
@@ -136,12 +134,10 @@ async function prepareOnce(db: Db | InMemoryDb) {
   if (cache.prepared) return;
 
   const appointments = getCollection<Appointment>(db, "appointments");
-  const users = getCollection<UserAccount>(db, "users");
 
   // Run in parallel, but only once per warm container
   await Promise.all([
     appointments.createIndex({ dateKey: 1, slot: 1, clinicId: 1 }, { unique: true }),
-    users.createIndex({ email: 1 }, { unique: true }),
   ]);
 
   cache.prepared = true;
@@ -219,9 +215,4 @@ export async function connectToDatabase(): Promise<Db | InMemoryDb> {
 export async function getAppointmentsCollection(): Promise<Collection<Appointment> | InMemoryCollection<Appointment>> {
   const db = await connectToDatabase();
   return getCollection<Appointment>(db, "appointments") as Collection<Appointment> | InMemoryCollection<Appointment>;
-}
-
-export async function getUsersCollection(): Promise<Collection<UserAccount> | InMemoryCollection<UserAccount>> {
-  const db = await connectToDatabase();
-  return getCollection<UserAccount>(db, "users") as Collection<UserAccount> | InMemoryCollection<UserAccount>;
 }

@@ -6,7 +6,6 @@ import { handleAvailability } from "./routes/availability";
 import { handleCreateAppointment, handleListAppointments } from "./routes/appointment";
 import docDaisyRouter from "./routes/docdaisy";
 import healthRouter from "./routes/health";
-import { handleSignin, handleSignup } from "./routes/auth";
 
 export async function createServer(): Promise<Express> {
   const app = express();
@@ -49,8 +48,6 @@ export async function createServer(): Promise<Express> {
   app.get("/api/availability", handleAvailability);
   app.post("/api/appointments", handleCreateAppointment);
   app.get("/api/appointments", handleListAppointments);
-  app.post("/api/auth/signup", handleSignup);
-  app.post("/api/auth/signin", handleSignin);
   app.use("/api/docdaisy", docDaisyRouter);
   app.use("/api/health", healthRouter);
 
