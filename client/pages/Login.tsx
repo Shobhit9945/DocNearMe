@@ -29,7 +29,7 @@ const Login = () => {
       }
 
       setStatus("idle");
-      navigate(data.redirectTo ?? (role === "clinic" ? "/clinic" : "/"));
+      navigate(data.redirectTo ?? (role === "clinic" ? "/clinic" : "/home"));
     } catch (error) {
       setStatus("error");
       setMessage(error instanceof Error ? error.message : "Unable to log in");
