@@ -247,7 +247,7 @@ const DocDaisy: React.FC = () => {
       <div className="flex flex-1 flex-col">
         <header className="bg-[#3A12DB] text-white py-4 px-4 font-extrabold text-xl flex items-center lg:px-10 lg:rounded-t-3xl lg:shadow-md">
           <button
-            onClick={() => navigate("/")}
+            onClick={() => navigate("/home")}
             className="mr-3 p-1 rounded-full hover:bg-[#2A0F9D] transition-colors"
           >
             <ChevronLeft className="w-6 h-6" />

@@ -506,7 +506,7 @@ export default function Appointment() {
         <header className="bg-white px-4 pt-10 pb-6 border-b border-gray-100 shadow-sm lg:px-10 lg:rounded-t-3xl lg:border-none lg:shadow-none">
           <div className="max-w-7xl mx-auto flex items-center gap-4">
             <button
-              onClick={() => navigate("/")}
+              onClick={() => navigate("/home")}
               className="p-2 rounded-full hover:bg-gray-100 transition-colors"
             >
               <ChevronLeft className="w-6 h-6 text-black" />

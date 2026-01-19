@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
 
 const navItems = [
-  { path: "/", label: "Home", icon: Home },
+  { path: "/home", label: "Home", icon: Home },
   { path: "/search", label: "Search", icon: Search },
   { path: "/clinics", label: "Clinics", icon: Building2 },
   { path: "/appointment", label: "Appointment", icon: Calendar },

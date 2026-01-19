@@ -8,7 +8,7 @@ export function BottomNav() {
   const { t } = useTranslation();
 
   const navItems = [
-    { path: "/", label: "Home", icon: Home },
+    { path: "/home", label: "Home", icon: Home },
     { path: "/search", label: "Search", icon: Search },
     { path: "/clinics", label: "Clinics", icon: Building2 },
     { path: "/appointment", label: "Appointment", icon: Calendar },
