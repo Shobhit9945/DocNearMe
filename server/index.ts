@@ -12,7 +12,13 @@ export async function createServer(): Promise<Express> {
   const app = express();
 
   // Middleware
-  const allowedOrigins = ["https://docnearby.netlify.app", "http://localhost:5173"];
+  const allowedOrigins = [
+    "https://docnearby.netlify.app", 
+    "http://localhost:5173", 
+    "http://localhost:3000",
+    "http://0.0.0.0:3000",
+    "http://127.0.0.1:3000"
+  ];
   app.use(
     cors({
       origin(origin, callback) {
@@ -48,6 +54,8 @@ export async function createServer(): Promise<Express> {
   app.use("/api/health", healthRouter);
 
   app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+    // console.error("Server Error:", err); // Optional: Enable for debugging
+
     if (err instanceof SyntaxError && "body" in err) {
       return res.status(400).json({
         error: "Malformed JSON in request body",
@@ -56,20 +64,11 @@ export async function createServer(): Promise<Express> {
       });
     }
 
-    const status = typeof err?.status === "number" ? err.status : 500;
-    return res.status(status).json({
-      error: status === 500 ? "Unexpected server error" : err?.message ?? "Request failed",
-      detail: err?.detail ?? "server_error",
-    });
-  });
-
-  app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-    if (err instanceof SyntaxError && "body" in err) {
-      return res.status(400).json({
-        error: "Malformed JSON in request body",
-        detail: "invalid_json",
-        hint: "Ensure the request body is valid JSON and the Content-Type header is set to application/json.",
-      });
+    if (err.message === "Not allowed by CORS") {
+       return res.status(403).json({
+           error: "CORS Error",
+           detail: "Origin not allowed"
+       });
     }
 
     const status = typeof err?.status === "number" ? err.status : 500;

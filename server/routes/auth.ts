@@ -82,8 +82,13 @@ export const handleSignup: RequestHandler = async (req, res, next) => {
     return res.status(201).json(response);
   } catch (error) {
     if (error instanceof z.ZodError) {
+      const messages = error.issues.map(issue => {
+        const path = issue.path.join(".");
+        return `${path}: ${issue.message}`;
+      }).join(", ");
+
       return res.status(400).json({
-        error: "Invalid signup payload.",
+        error: `Invalid signup data: ${messages}`,
         detail: "invalid_payload",
         issues: error.issues,
       });

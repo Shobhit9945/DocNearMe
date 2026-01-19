@@ -1,16 +1,43 @@
 import { BottomNav } from "@/components/BottomNav";
 import { PageScaffold } from "@/components/PageScaffold";
-import { User, ShieldCheck, Bell } from "lucide-react";
+import { User, ShieldCheck, Bell, LogOut } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
+import { Button } from "@/components/ui/button";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 export default function Profile() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
+  const [userName, setUserName] = useState<string | null>(null);
+
+  useEffect(() => {
+    const storedName = localStorage.getItem("docnearme_user_name");
+    if (storedName) {
+      setUserName(storedName);
+    }
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem("docnearme_patient_token");
+    localStorage.removeItem("docnearme_user_name");
+    setUserName(null);
+    navigate("/");
+  };
 
   return (
     <PageScaffold contentClassName="pb-28 lg:pb-12">
-      <header className="bg-white px-4 pt-10 pb-4 border-b border-gray-100 shadow-sm lg:px-10 lg:rounded-t-3xl lg:border-none lg:shadow-none">
-        <h1 className="text-2xl font-bold text-[#002D55]">{t("Profile")}</h1>
-        <p className="text-sm text-slate-500 mt-2">{t("Manage your personal details and preferences.")}</p>
+      <header className="bg-white px-4 pt-10 pb-4 border-b border-gray-100 shadow-sm lg:px-10 lg:rounded-t-3xl lg:border-none lg:shadow-none flex justify-between items-center">
+        <div>
+           <h1 className="text-2xl font-bold text-[#002D55]">{t("Profile")}</h1>
+           <p className="text-sm text-slate-500 mt-2">{t("Manage your personal details and preferences.")}</p>
+        </div>
+        {userName && (
+          <Button variant="ghost" size="sm" onClick={handleLogout} className="text-destructive hover:text-destructive hover:bg-destructive/10 gap-2">
+            <LogOut className="w-4 h-4" />
+            {t("Sign out")}
+          </Button>
+        )}
       </header>
 
       <main className="flex-1 px-4 pt-6 lg:px-10 lg:pt-10">
@@ -22,18 +49,26 @@ export default function Profile() {
               </div>
               <div>
                 <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold">Account</p>
-                <p className="text-lg font-bold text-[#002D55]">{t("Guest profile")}</p>
-                <p className="text-sm text-slate-600">{t("Sign-in has been removed from DocNearMe.")}</p>
+                <p className="text-lg font-bold text-[#002D55]">
+                  {userName ? userName : t("Guest profile")}
+                </p>
+                <p className="text-sm text-slate-600">
+                  {userName 
+                    ? t("You are signed in to DocNearMe.") 
+                    : t("Sign-in has been removed from DocNearMe.")}
+                </p>
               </div>
             </div>
-            <div className="flex flex-wrap gap-3 items-center">
-              <span className="px-3 py-1 bg-[#F5FAFF] text-[#1648CE] rounded-full text-xs font-semibold">
-                {t("Public access")}
-              </span>
-              <p className="text-sm text-slate-600">
-                {t("Book appointments without an account. Profile customization will return later.")}
-              </p>
-            </div>
+            {!userName && (
+               <div className="flex flex-wrap gap-3 items-center">
+                 <span className="px-3 py-1 bg-[#F5FAFF] text-[#1648CE] rounded-full text-xs font-semibold">
+                   {t("Public access")}
+                 </span>
+                 <p className="text-sm text-slate-600">
+                   {t("Book appointments without an account. Profile customization will return later.")}
+                 </p>
+               </div>
+            )}
           </section>
 
           <section className="flex-1 rounded-[24px] border border-slate-200 bg-white p-8 text-center shadow-sm">

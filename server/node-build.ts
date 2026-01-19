@@ -9,7 +9,20 @@ async function start() {
 
   // In production, serve the built SPA files
   const __dirname = import.meta.dirname;
-  const distPath = path.join(__dirname, "../spa");
+  const distPath = path.resolve(__dirname, "../spa");
+  
+  console.log("📂 Serving static files from:", distPath);
+  try {
+      // Basic check
+      const fs = await import("fs");
+      if (fs.existsSync(distPath)) {
+        console.log("✅ distPath exists");
+      } else {
+        console.error("❌ distPath does not exist!");
+      }
+  } catch (e) {
+      console.error("Debug fs check failed", e);
+  }
 
   // Serve static files
   app.use(express.static(distPath));
@@ -21,7 +34,15 @@ async function start() {
       return res.status(404).json({ error: "API endpoint not found" });
     }
 
-    res.sendFile(path.join(distPath, "index.html"));
+    // console.log("Serving index.html for:", req.path);
+    res.sendFile(path.join(distPath, "index.html"), (err) => {
+        if (err) {
+            console.error("❌ Error sending index.html for " + req.path, err);
+            if (!res.headersSent) {
+                res.status(500).json({ error: "Error loading application", details: err.message });
+            }
+        }
+    });
   });
 
   app.listen(port, () => {

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
@@ -25,11 +25,33 @@ const PatientAuth = () => {
   const [activeTab, setActiveTab] = useState<"login" | "signup">("login");
   const [user, setUser] = useState<AuthResponse["user"] | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const navigate = useNavigate();
 
   const setError = (message: string) => setStatus({ type: "error", message });
   const setSuccess = (message: string) => setStatus({ type: "success", message });
 
+  const validateSignup = () => {
+    if (activeTab !== "signup") return true;
+    if (signupData.name.trim().length < 2) {
+      setError("Name must be at least 2 characters long.");
+      return false;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(signupData.email)) {
+      setError("Please enter a valid email address.");
+      return false;
+    }
+    if (signupData.password.length < 8) {
+      setError("Password must be at least 8 characters long.");
+      return false;
+    }
+    return true;
+  };
+
   const handleSubmit = async (endpoint: "/api/auth/signup" | "/api/auth/login", payload: object) => {
+    if (endpoint === "/api/auth/signup" && !validateSignup()) {
+      return;
+    }
+    
     setIsSubmitting(true);
     setStatus(initialStatus);
 
@@ -48,8 +70,14 @@ const PatientAuth = () => {
       }
 
       localStorage.setItem(TOKEN_KEY, data.token);
+      localStorage.setItem("docnearme_user_name", data.user.name);
       setUser(data.user);
       setSuccess(`Welcome back, ${data.user.name}!`);
+
+      // Redirect to profile after a short delay
+      setTimeout(() => {
+         navigate("/profile");
+      }, 1000);
     } catch (error) {
       setError(error instanceof Error ? error.message : "Network error. Please try again.");
     } finally {
