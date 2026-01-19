@@ -11,12 +11,25 @@ import { handleLogin } from "./routes/login";
 export async function createServer(): Promise<Express> {
   const app = express();
 
- // Middleware
-app.use(cors());
+  // Middleware
+  const allowedOrigins = ["https://docnearby.netlify.app", "http://localhost:5173"];
+  app.use(
+    cors({
+      origin(origin, callback) {
+        if (!origin || allowedOrigins.includes(origin)) {
+          callback(null, true);
+          return;
+        }
+        callback(new Error("Not allowed by CORS"));
+      },
+      methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+      allowedHeaders: ["Content-Type", "Authorization"],
+    }),
+  );
 
-// Parse JSON even if Netlify drops/changes Content-Type
-app.use(express.json({ type: "*/*", limit: "1mb" }));
-app.use(express.urlencoded({ extended: true }));
+  // Parse JSON even if Netlify drops/changes Content-Type
+  app.use(express.json({ type: "*/*", limit: "1mb" }));
+  app.use(express.urlencoded({ extended: true }));
 
 
   // Example API routes

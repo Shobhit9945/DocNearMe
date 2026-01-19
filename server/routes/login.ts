@@ -3,9 +3,13 @@ import { MongoClient } from "mongodb";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 
-const mongoUri =
-  process.env.MONGODB_URI ??
-  "mongodb+srv://dnm_admin:MvsZctHg3oDjoALa@docnearme.qqhwmtb.mongodb.net/?appName=docnearme";
+const getMongoUri = () => {
+  const mongoUri = process.env.MONGODB_URI;
+  if (!mongoUri) {
+    throw new Error("MONGODB_URI is not set");
+  }
+  return mongoUri;
+};
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -19,7 +23,7 @@ async function getMongoClient(): Promise<MongoClient> {
   if (cachedClient) {
     return cachedClient;
   }
-  const client = new MongoClient(mongoUri);
+  const client = new MongoClient(getMongoUri());
   await client.connect();
   cachedClient = client;
   return client;
@@ -35,6 +39,13 @@ export const handleLogin: RequestHandler = async (req, res) => {
   }
 
   try {
+    if (!process.env.MONGODB_URI) {
+      return res.status(500).json({
+        error: "Database connection is not configured",
+        detail: "missing_mongodb_uri",
+        hint: "Set MONGODB_URI in the environment variables for the deployed function.",
+      });
+    }
     const client = await getMongoClient();
     const db = client.db("docnearme");
     const users = db.collection<{
@@ -58,13 +69,13 @@ export const handleLogin: RequestHandler = async (req, res) => {
     }
 
     if (!user.passwordHash) {
-  return res.status(500).json({
-    error: "Account missing password hash (contact admin).",
-    detail: "missing_password_hash",
-  });
-}
+      return res.status(500).json({
+        error: "Account missing password hash (contact admin).",
+        detail: "missing_password_hash",
+      });
+    }
 
-const passwordMatches = await bcrypt.compare(parsed.data.password, user.passwordHash);
+    const passwordMatches = await bcrypt.compare(parsed.data.password, user.passwordHash);
 
     if (!passwordMatches) {
       return res.status(401).json({
