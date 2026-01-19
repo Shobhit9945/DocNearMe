@@ -45,10 +45,10 @@ export const handleLogin: RequestHandler = async (req, res) => {
       name?: string;
     }>("users");
 
-    const user = await users.findOne({
-      email: parsed.data.email,
-      role: parsed.data.role,
-    });
+    const email = parsed.data.email.trim().toLowerCase();
+    const role = parsed.data.role;
+
+    const user = await users.findOne({ email, role });
 
     if (!user) {
       return res.status(401).json({
@@ -57,9 +57,14 @@ export const handleLogin: RequestHandler = async (req, res) => {
       });
     }
 
-    const passwordMatches = user.passwordHash
-      ? await bcrypt.compare(parsed.data.password, user.passwordHash)
-      : user.password === parsed.data.password;
+    if (!user.passwordHash) {
+  return res.status(500).json({
+    error: "Account missing password hash (contact admin).",
+    detail: "missing_password_hash",
+  });
+}
+
+const passwordMatches = await bcrypt.compare(parsed.data.password, user.passwordHash);
 
     if (!passwordMatches) {
       return res.status(401).json({
