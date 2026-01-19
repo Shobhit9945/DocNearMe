@@ -25,3 +25,26 @@ export interface AppointmentResponseItem {
 export interface AppointmentListResponse {
   appointments: AppointmentResponseItem[];
 }
+
+export interface SignupRequest {
+  name: string;
+  email: string;
+  password: string;
+}
+
+export interface LoginRequest {
+  email: string;
+  password: string;
+}
+
+export interface AuthUser {
+  id: string;
+  name: string;
+  email: string;
+  createdAt: string;
+}
+
+export interface AuthResponse {
+  token: string;
+  user: AuthUser;
+}

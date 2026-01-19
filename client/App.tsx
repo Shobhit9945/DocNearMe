@@ -13,6 +13,7 @@ import Clinics from "./pages/Clinics";
 import DocDaisy from "./pages/DocDaisy";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
+import PatientAuth from "./pages/PatientAuth";
 import Profile from "./pages/Profile";
 import Search from "./pages/Search";
 
@@ -26,6 +27,7 @@ const routes = [
   { path: "/appointment", element: <Appointment /> },
   { path: "/profile", element: <Profile /> },
   { path: "/docdaisy", element: <DocDaisy /> },
+  { path: "/patient-auth", element: <PatientAuth /> },
   { path: "/admin/bookings", element: <AdminBookings /> },
 ] as const;
 

@@ -142,6 +142,12 @@ const Index: React.FC = () => {
                     <button className="bg-[#002D55] text-white text-sm font-semibold px-6 py-3 rounded-[12px] shadow-[0_3px_16px_0_rgba(15,39,74,0.10)] hover:bg-[#003366] transition-colors">
                       {t("Learn more")}
                     </button>
+                    <button
+                      className="bg-white text-[#002D55] text-sm font-semibold px-6 py-3 rounded-[12px] border border-[#002D55] hover:bg-[#F0F6FF] transition-colors"
+                      onClick={() => navigate("/patient-auth")}
+                    >
+                      {t("Patient Login")}
+                    </button>
                     <p className="text-xs text-slate-500">{t("Plan, book and manage visits in seconds.")}</p>
                   </div>
                 </div>

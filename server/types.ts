@@ -11,3 +11,11 @@ export interface Appointment {
   patientEmail?: string;
   createdAt: Date;
 }
+
+export interface PatientUser {
+  _id?: unknown;
+  name: string;
+  email: string;
+  passwordHash: string;
+  createdAt: Date;
+}
