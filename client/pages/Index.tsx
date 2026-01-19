@@ -1,12 +1,67 @@
 import React, { useMemo } from "react";
-import { Navigation, ClipboardList, Activity, Ambulance } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Activity, Ambulance, ClipboardList, Navigation } from "lucide-react";
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import { BottomNav } from "@/components/BottomNav";
 import { DocDaisyBanner } from "@/components/DocDaisyBanner";
 import { PageScaffold } from "@/components/PageScaffold";
 import { useLiveLocation } from "@/hooks/useLiveLocation";
 import { useTranslation } from "@/lib/i18n";
+
+const VIEW_APPOINTMENTS_ICON = (
+  <svg className="w-8 h-8" viewBox="0 0 32 32" fill="none">
+    <path
+      d="M4 9.33333V6.66667C4 5.95942 4.28095 5.28115 4.78105 4.78105C5.28115 4.28095 5.95942 4 6.66667 4H9.33333"
+      stroke="white"
+      strokeWidth="2.66667"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M22.6667 4H25.3334C26.0406 4 26.7189 4.28095 27.219 4.78105C27.7191 5.28115 28 5.95942 28 6.66667V9.33333"
+      stroke="white"
+      strokeWidth="2.66667"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M28 22.6667V25.3333C28 26.0406 27.7191 26.7188 27.219 27.2189C26.7189 27.719 26.0406 28 25.3334 28H22.6667"
+      stroke="white"
+      strokeWidth="2.66667"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M9.33333 28H6.66667C5.95942 28 5.28115 27.719 4.78105 27.2189C4.28095 26.7188 4 26.0406 4 25.3333V22.6667"
+      stroke="white"
+      strokeWidth="2.66667"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M16 20C18.2091 20 20 18.2091 20 16C20 13.7909 18.2091 12 16 12C13.7909 12 12 13.7909 12 16C12 18.2091 13.7909 20 16 20Z"
+      stroke="white"
+      strokeWidth="2.66667"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M21.3333 21.3334L18.7999 18.8"
+      stroke="white"
+      strokeWidth="2.66667"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+type QuickAction = {
+  label: string;
+  className: string;
+  icon: React.ReactNode;
+  textClassName: string;
+  onClick?: () => void;
+};
 
 const Index: React.FC = () => {
   const navigate = useNavigate();
@@ -18,6 +73,38 @@ const Index: React.FC = () => {
     if (locationError) return locationError;
     return "Updated a moment ago";
   }, [isFetchingLocation, locationError]);
+
+  const quickActions: QuickAction[] = [
+    {
+      label: "Book Appointment",
+      className:
+        "bg-[#0089FF] rounded-[20px] shadow-[2px_0_20px_0_rgba(24,57,107,0.05)] p-4 min-h-[120px] flex flex-col items-center justify-center gap-2 text-white hover:bg-[#0077E6] transition-colors",
+      icon: <ClipboardList className="w-8 h-8" />,
+      onClick: () => navigate("/appointment?view=booking"),
+      textClassName: "text-sm font-medium text-center",
+    },
+    {
+      label: "View Appointments",
+      className:
+        "bg-[#0089FF] rounded-[20px] shadow-[2px_0_20px_0_rgba(24,57,107,0.05)] p-4 min-h-[120px] flex flex-col items-center justify-center gap-2 text-white/90 hover:bg-[#0077E6] transition-colors",
+      icon: VIEW_APPOINTMENTS_ICON,
+      textClassName: "text-sm font-medium text-center",
+    },
+    {
+      label: "Medical Records",
+      className:
+        "bg-[#0089FF] rounded-[20px] shadow-[2px_0_20px_0_rgba(24,57,107,0.05)] p-4 min-h-[120px] flex flex-col items-center justify-center gap-2 text-white/90 hover:bg-[#0077E6] transition-colors",
+      icon: <Activity className="w-8 h-8" />,
+      textClassName: "text-sm font-medium text-center",
+    },
+    {
+      label: "Emergency SOS",
+      className:
+        "bg-[#FB4F4F] rounded-[20px] shadow-[2px_0_20px_0_rgba(24,57,107,0.05)] p-4 min-h-[120px] flex flex-col items-center justify-center gap-2 text-white hover:bg-[#E94444] transition-colors",
+      icon: <Ambulance className="w-[42px] h-[30px]" />,
+      textClassName: "text-sm font-medium text-center",
+    },
+  ] as const;
 
   return (
     <PageScaffold contentClassName="pb-28 lg:pb-12">
@@ -67,71 +154,16 @@ const Index: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-              <button
-                className="bg-[#0089FF] rounded-[20px] shadow-[2px_0_20px_0_rgba(24,57,107,0.05)] p-4 min-h-[120px] flex flex-col items-center justify-center gap-2 text-white hover:bg-[#0077E6] transition-colors"
-                onClick={() => navigate("/appointment?view=booking")}
-              >
-                <ClipboardList className="w-8 h-8" />
-                <span className="text-sm font-medium text-center">{t("Book Appointment")}</span>
-              </button>
-
-              <button className="bg-[#0089FF] rounded-[20px] shadow-[2px_0_20px_0_rgba(24,57,107,0.05)] p-4 min-h-[120px] flex flex-col items-center justify-center gap-2 text-white/90 hover:bg-[#0077E6] transition-colors">
-                <svg className="w-8 h-8" viewBox="0 0 32 32" fill="none">
-                  <path
-                    d="M4 9.33333V6.66667C4 5.95942 4.28095 5.28115 4.78105 4.78105C5.28115 4.28095 5.95942 4 6.66667 4H9.33333"
-                    stroke="white"
-                    strokeWidth="2.66667"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <path
-                    d="M22.6667 4H25.3334C26.0406 4 26.7189 4.28095 27.219 4.78105C27.7191 5.28115 28 5.95942 28 6.66667V9.33333"
-                    stroke="white"
-                    strokeWidth="2.66667"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <path
-                    d="M28 22.6667V25.3333C28 26.0406 27.7191 26.7188 27.219 27.2189C26.7189 27.719 26.0406 28 25.3334 28H22.6667"
-                    stroke="white"
-                    strokeWidth="2.66667"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <path
-                    d="M9.33333 28H6.66667C5.95942 28 5.28115 27.719 4.78105 27.2189C4.28095 26.7188 4 26.0406 4 25.3333V22.6667"
-                    stroke="white"
-                    strokeWidth="2.66667"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <path
-                    d="M16 20C18.2091 20 20 18.2091 20 16C20 13.7909 18.2091 12 16 12C13.7909 12 12 13.7909 12 16C12 18.2091 13.7909 20 16 20Z"
-                    stroke="white"
-                    strokeWidth="2.66667"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <path
-                    d="M21.3333 21.3334L18.7999 18.8"
-                    stroke="white"
-                    strokeWidth="2.66667"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-                <span className="text-sm font-medium text-center">{t("View Appointments")}</span>
-              </button>
-
-              <button className="bg-[#0089FF] rounded-[20px] shadow-[2px_0_20px_0_rgba(24,57,107,0.05)] p-4 min-h-[120px] flex flex-col items-center justify-center gap-2 text-white/90 hover:bg-[#0077E6] transition-colors">
-                <Activity className="w-8 h-8" />
-                <span className="text-sm font-medium text-center">{t("Medical Records")}</span>
-              </button>
-
-              <button className="bg-[#FB4F4F] rounded-[20px] shadow-[2px_0_20px_0_rgba(24,57,107,0.05)] p-4 min-h-[120px] flex flex-col items-center justify-center gap-2 text-white hover:bg-[#E94444] transition-colors">
-                <Ambulance className="w-[42px] h-[30px]" />
-                <span className="text-sm font-medium text-center">{t("Emergency SOS")}</span>
-              </button>
+              {quickActions.map((action) => (
+                <button
+                  key={action.label}
+                  className={action.className}
+                  onClick={action.onClick}
+                >
+                  {action.icon}
+                  <span className={action.textClassName}>{t(action.label)}</span>
+                </button>
+              ))}
             </div>
 
             <div className="rounded-[20px] bg-gradient-to-b from-[#FAFAFE] to-[#D4F5FF] px-4 py-6 text-center lg:px-10">
