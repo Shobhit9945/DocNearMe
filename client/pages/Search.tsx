@@ -5,6 +5,11 @@ import { useTranslation } from "@/lib/i18n";
 
 export default function Search() {
   const { t } = useTranslation();
+  const roadmapItems = [
+    "Specialty search with DocDaisy hand-off",
+    "Realtime slot availability",
+    "Saved providers & favourites",
+  ];
 
   return (
     <PageScaffold contentClassName="pb-28 lg:pb-12">
@@ -31,9 +36,11 @@ export default function Search() {
             <div className="rounded-2xl bg-white p-6 shadow-sm border border-slate-100">
               <p className="text-xs uppercase tracking-wide text-slate-500">{t("Roadmap sneak peek")}</p>
               <ul className="mt-4 space-y-3 text-sm text-slate-600">
-                <li className="flex items-center gap-2"><ArrowRight className="w-4 h-4 text-[#0089FF]" /> {t("Specialty search with DocDaisy hand-off")}</li>
-                <li className="flex items-center gap-2"><ArrowRight className="w-4 h-4 text-[#0089FF]" /> {t("Realtime slot availability")}</li>
-                <li className="flex items-center gap-2"><ArrowRight className="w-4 h-4 text-[#0089FF]" /> {t("Saved providers & favourites")}</li>
+                {roadmapItems.map((item) => (
+                  <li key={item} className="flex items-center gap-2">
+                    <ArrowRight className="w-4 h-4 text-[#0089FF]" /> {t(item)}
+                  </li>
+                ))}
               </ul>
             </div>
             <div className="rounded-2xl border border-slate-200 bg-[#F8FBFF] p-6">
