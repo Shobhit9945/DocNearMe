@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -7,7 +7,15 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { PageScaffold } from "@/components/PageScaffold";
-import type { AuthResponse, OtpResponse, RequestOtpRequest, VerifyOtpRequest } from "@shared/api";
+import type {
+  AuthResponse,
+  OtpResponse,
+  RequestOtpRequest,
+  RequestPasswordResetRequest,
+  ResetPasswordRequest,
+  ResetPasswordResponse,
+  VerifyOtpRequest,
+} from "@shared/api";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 
 const TOKEN_KEY = "docnearme_patient_token";
@@ -31,10 +39,39 @@ const PatientAuth = () => {
   const [otpEmail, setOtpEmail] = useState("");
   const [otpVerified, setOtpVerified] = useState(false);
   const [otpLoading, setOtpLoading] = useState(false);
+  const [otpCooldown, setOtpCooldown] = useState(0);
+  const [otpSent, setOtpSent] = useState(false);
+  const [resetOpen, setResetOpen] = useState(false);
+  const [resetData, setResetData] = useState({ email: "", otp: "", password: "" });
+  const [resetOtpCooldown, setResetOtpCooldown] = useState(0);
+  const [resetOtpSent, setResetOtpSent] = useState(false);
+  const [resetOtpLoading, setResetOtpLoading] = useState(false);
+  const [resetPasswordLoading, setResetPasswordLoading] = useState(false);
   const navigate = useNavigate();
 
   const setError = (message: string) => setStatus({ type: "error", message });
   const setSuccess = (message: string) => setStatus({ type: "success", message });
+  const formatCountdown = (seconds: number) => {
+    const minutes = Math.floor(seconds / 60);
+    const remaining = seconds % 60;
+    return `${minutes}:${remaining.toString().padStart(2, "0")}`;
+  };
+
+  useEffect(() => {
+    if (otpCooldown <= 0) return;
+    const interval = window.setInterval(() => {
+      setOtpCooldown((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => window.clearInterval(interval);
+  }, [otpCooldown]);
+
+  useEffect(() => {
+    if (resetOtpCooldown <= 0) return;
+    const interval = window.setInterval(() => {
+      setResetOtpCooldown((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => window.clearInterval(interval);
+  }, [resetOtpCooldown]);
 
   const validateSignup = () => {
     if (activeTab !== "signup") return true;
@@ -113,6 +150,10 @@ const PatientAuth = () => {
   };
 
   const requestOtp = async () => {
+    if (otpCooldown > 0) {
+      setError(`Please wait ${formatCountdown(otpCooldown)} before requesting another code.`);
+      return;
+    }
     if (!emailPattern.test(signupData.email)) {
       setError("Please enter a valid email address to request a verification code.");
       return;
@@ -138,6 +179,8 @@ const PatientAuth = () => {
       setOtpEmail(signupData.email);
       setOtpVerified(false);
       setOtpValue("");
+      setOtpSent(true);
+      setOtpCooldown(60);
       setSuccess(data.message);
     } catch (error) {
       setError(error instanceof Error ? error.message : "Network error. Please try again.");
@@ -176,6 +219,90 @@ const PatientAuth = () => {
       setError(error instanceof Error ? error.message : "Network error. Please try again.");
     } finally {
       setOtpLoading(false);
+    }
+  };
+
+  const requestPasswordResetOtp = async () => {
+    if (resetOtpCooldown > 0) {
+      setError(`Please wait ${formatCountdown(resetOtpCooldown)} before requesting another code.`);
+      return;
+    }
+    if (!emailPattern.test(resetData.email)) {
+      setError("Please enter a valid email address to reset your password.");
+      return;
+    }
+
+    setResetOtpLoading(true);
+    setStatus(initialStatus);
+
+    try {
+      const payload: RequestPasswordResetRequest = { email: resetData.email };
+      const response = await fetch("/api/auth/request-password-reset", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = (await response.json()) as OtpResponse;
+      if (!response.ok || !data.success) {
+        setError(data.message || "Failed to send reset code.");
+        return;
+      }
+
+      setResetOtpSent(true);
+      setResetOtpCooldown(60);
+      setSuccess(data.message);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Network error. Please try again.");
+    } finally {
+      setResetOtpLoading(false);
+    }
+  };
+
+  const resetPassword = async () => {
+    if (!emailPattern.test(resetData.email)) {
+      setError("Please enter a valid email address.");
+      return;
+    }
+    if (resetData.otp.length < 6) {
+      setError("Please enter the 6-digit reset code.");
+      return;
+    }
+    if (resetData.password.length < 8) {
+      setError("Password must be at least 8 characters long.");
+      return;
+    }
+
+    setResetPasswordLoading(true);
+    setStatus(initialStatus);
+
+    try {
+      const payload: ResetPasswordRequest = {
+        email: resetData.email,
+        otp: resetData.otp,
+        password: resetData.password,
+      };
+      const response = await fetch("/api/auth/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = (await response.json()) as ResetPasswordResponse;
+      if (!response.ok || !data.success) {
+        setError(data.message || "Unable to reset password.");
+        return;
+      }
+
+      setSuccess(data.message);
+      setResetOpen(false);
+      setResetData({ email: "", otp: "", password: "" });
+      setResetOtpSent(false);
+      setResetOtpCooldown(0);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Network error. Please try again.");
+    } finally {
+      setResetPasswordLoading(false);
     }
   };
 
@@ -244,6 +371,92 @@ const PatientAuth = () => {
                     {isSubmitting ? "Signing in..." : "Sign in"}
                   </Button>
                 </form>
+                <div className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-slate-50/80 p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900">Forgot your password?</p>
+                      <p className="text-xs text-slate-500">Request a one-time code to reset it.</p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="link"
+                      className="px-0 text-[#0089FF]"
+                      onClick={() => setResetOpen((prev) => !prev)}
+                    >
+                      {resetOpen ? "Hide" : "Reset password"}
+                    </Button>
+                  </div>
+                  {resetOpen && (
+                    <div className="space-y-3">
+                      <div className="space-y-2">
+                        <Label htmlFor="reset-email">Email</Label>
+                        <Input
+                          id="reset-email"
+                          type="email"
+                          placeholder="patient@email.com"
+                          value={resetData.email}
+                          onChange={(event) =>
+                            setResetData((prev) => ({ ...prev, email: event.target.value }))
+                          }
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Reset code</Label>
+                        <InputOTP maxLength={6} value={resetData.otp} onChange={(value) =>
+                          setResetData((prev) => ({ ...prev, otp: value }))
+                        }>
+                          <InputOTPGroup>
+                            {Array.from({ length: 6 }).map((_, index) => (
+                              <InputOTPSlot key={index} index={index} />
+                            ))}
+                          </InputOTPGroup>
+                        </InputOTP>
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            disabled={resetOtpLoading || resetOtpCooldown > 0}
+                            onClick={requestPasswordResetOtp}
+                          >
+                            {resetOtpLoading ? "Sending..." : "Send reset OTP"}
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            disabled={!resetOtpSent || resetOtpLoading || resetOtpCooldown > 0}
+                            onClick={requestPasswordResetOtp}
+                          >
+                            {resetOtpLoading
+                              ? "Sending..."
+                              : resetOtpCooldown > 0
+                                ? `Resend in ${formatCountdown(resetOtpCooldown)}`
+                                : "Resend OTP"}
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="reset-password">New password</Label>
+                        <Input
+                          id="reset-password"
+                          type="password"
+                          placeholder="Enter a new password"
+                          value={resetData.password}
+                          onChange={(event) =>
+                            setResetData((prev) => ({ ...prev, password: event.target.value }))
+                          }
+                        />
+                      </div>
+                      <Button
+                        className="w-full"
+                        type="button"
+                        disabled={resetPasswordLoading}
+                        onClick={resetPassword}
+                      >
+                        {resetPasswordLoading ? "Updating..." : "Reset password"}
+                      </Button>
+                    </div>
+                  )}
+                </div>
               </TabsContent>
 
               <TabsContent value="signup" className="mt-6 space-y-4">
@@ -277,6 +490,8 @@ const PatientAuth = () => {
                         if (otpEmail && nextEmail.toLowerCase() !== otpEmail.toLowerCase()) {
                           setOtpVerified(false);
                           setOtpValue("");
+                          setOtpSent(false);
+                          setOtpCooldown(0);
                         }
                       }}
                     />
@@ -294,10 +509,22 @@ const PatientAuth = () => {
                       <Button
                         type="button"
                         variant="secondary"
-                        disabled={otpLoading}
+                        disabled={otpLoading || otpCooldown > 0}
                         onClick={requestOtp}
                       >
                         {otpLoading ? "Sending..." : "Send OTP"}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        disabled={!otpSent || otpLoading || otpCooldown > 0}
+                        onClick={requestOtp}
+                      >
+                        {otpLoading
+                          ? "Sending..."
+                          : otpCooldown > 0
+                            ? `Resend in ${formatCountdown(otpCooldown)}`
+                            : "Resend OTP"}
                       </Button>
                       <Button type="button" disabled={otpLoading || otpValue.length < 6} onClick={verifyOtpCode}>
                         {otpLoading ? "Verifying..." : "Verify OTP"}

@@ -81,3 +81,18 @@ export interface OtpResponse {
   message: string;
   debugOtp?: string;
 }
+
+export interface RequestPasswordResetRequest {
+  email: string;
+}
+
+export interface ResetPasswordRequest {
+  email: string;
+  otp: string;
+  password: string;
+}
+
+export interface ResetPasswordResponse {
+  success: boolean;
+  message: string;
+}
