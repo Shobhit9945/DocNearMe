@@ -14,14 +14,24 @@ import { DocDaisyBanner } from "@/components/DocDaisyBanner";
 import { PageScaffold } from "@/components/PageScaffold";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Calendar } from "@/components/ui/calendar";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { generateGoogleCalendarLink, generateICSFile, CalendarEvent } from "@/lib/CalendarUtils";
 import { BottomNav } from "@/components/BottomNav";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { CLINICS } from "@/lib/clinics";
 import { matchSpecialization, SPECIALIZATION_OPTIONS } from "@/lib/specializations";
 import type { AppointmentCreateRequest, AppointmentCreateResponse, AppointmentListResponse } from "@shared/api";
+import { toast } from "@/components/ui/use-toast";
 
 const TOKEN_KEY = "docnearme_patient_token";
 const NAME_KEY = "docnearme_user_name";
@@ -63,6 +73,10 @@ type UpcomingAppointment = {
   time: string;
   clinic: string;
   type: string;
+  clinicId: string;
+  patientName?: string;
+  patientEmail?: string;
+  notes?: string;
 };
 
 const DOCTORS: DoctorProfile[] = [
@@ -182,6 +196,11 @@ export default function Appointment() {
   const [intakeConsent, setIntakeConsent] = useState(false);
   const [intakeAllergies, setIntakeAllergies] = useState("");
   const [confirmationDetails, setConfirmationDetails] = useState<ConfirmationDetails | null>(null);
+  const [detailsAppointment, setDetailsAppointment] = useState<UpcomingAppointment | null>(null);
+  const [actionAppointment, setActionAppointment] = useState<UpcomingAppointment | null>(null);
+  const [actionType, setActionType] = useState<"reschedule" | "cancel" | null>(null);
+  const [actionReason, setActionReason] = useState("");
+  const [actionError, setActionError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<{
     name?: string;
     email?: string;
@@ -403,15 +422,19 @@ export default function Appointment() {
         appointment.clinicId === "global"
           ? "Any clinic"
           : CLINICS.find((clinic) => clinic.id === appointment.clinicId)?.name ?? "Clinic";
-    const doctorLabel = appointment.doctorName ?? appointment.specialization;
-    return {
-      id: appointment._id,
-      doctor: doctorLabel,
+      const doctorLabel = appointment.doctorName ?? appointment.specialization;
+      return {
+        id: appointment._id,
+        doctor: doctorLabel,
         specialization: appointment.specialization,
         date: formatDateLabel(new Date(appointment.date)),
         time: appointment.slot,
         clinic: clinicName,
         type: "In-person",
+        clinicId: appointment.clinicId,
+        patientName: appointment.patientName,
+        patientEmail: appointment.patientEmail,
+        notes: appointment.notes,
       };
     });
   }, [appointmentsData, formatDateLabel]);
@@ -530,6 +553,40 @@ export default function Appointment() {
     } finally {
       setIsBooking(false);
     }
+  };
+
+  const handleOpenDetails = (appointment: UpcomingAppointment) => {
+    setDetailsAppointment(appointment);
+  };
+
+  const handleOpenAction = (appointment: UpcomingAppointment, type: "reschedule" | "cancel") => {
+    setActionAppointment(appointment);
+    setActionType(type);
+    setActionReason("");
+    setActionError(null);
+  };
+
+  const handleCloseAction = () => {
+    setActionAppointment(null);
+    setActionType(null);
+    setActionReason("");
+    setActionError(null);
+  };
+
+  const handleSubmitAction = () => {
+    const trimmedReason = actionReason.trim();
+    if (!trimmedReason) {
+      setActionError("Please provide a reason before submitting.");
+      return;
+    }
+
+    if (!actionAppointment || !actionType) return;
+
+    toast({
+      title: actionType === "cancel" ? "Cancellation request sent" : "Reschedule request sent",
+      description: `We received your ${actionType} request for ${actionAppointment.doctor}.`,
+    });
+    handleCloseAction();
   };
 
   const handleAddToGoogleCalendar = () => {
@@ -747,11 +804,23 @@ export default function Appointment() {
                       </div>
 
                       <div className="flex flex-wrap gap-3">
-                        <button className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:border-[#0089FF] hover:text-[#0089FF]">
+                        <button
+                          onClick={() => handleOpenDetails(appointment)}
+                          className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:border-[#0089FF] hover:text-[#0089FF]"
+                        >
                           View details
                         </button>
-                        <button className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:border-[#0089FF] hover:text-[#0089FF]">
+                        <button
+                          onClick={() => handleOpenAction(appointment, "reschedule")}
+                          className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:border-[#0089FF] hover:text-[#0089FF]"
+                        >
                           Reschedule
+                        </button>
+                        <button
+                          onClick={() => handleOpenAction(appointment, "cancel")}
+                          className="rounded-full border border-rose-200 px-4 py-2 text-sm font-semibold text-rose-600 hover:border-rose-500 hover:text-rose-700"
+                        >
+                          Cancel
                         </button>
                       </div>
                     </div>
@@ -792,6 +861,146 @@ export default function Appointment() {
             </div>
           </div>
         </main>
+
+        <Dialog
+          open={Boolean(detailsAppointment)}
+          onOpenChange={(open) => {
+            if (!open) setDetailsAppointment(null);
+          }}
+        >
+          <DialogContent className="max-w-2xl">
+            {detailsAppointment ? (
+              <>
+                <DialogHeader>
+                  <DialogTitle>Appointment details</DialogTitle>
+                  <DialogDescription>
+                    Review the full booking information for your upcoming visit.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-5 text-sm text-slate-700">
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="text-slate-500">Doctor</span>
+                    <span className="font-medium text-slate-900">
+                      {detailsAppointment.doctor}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="text-slate-500">Specialization</span>
+                    <span className="font-medium text-slate-900">
+                      {detailsAppointment.specialization}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="text-slate-500">Date</span>
+                    <span className="font-medium text-slate-900">
+                      {detailsAppointment.date}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="text-slate-500">Time</span>
+                    <span className="font-medium text-slate-900">
+                      {detailsAppointment.time}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="text-slate-500">Clinic</span>
+                    <span className="font-medium text-slate-900">
+                      {detailsAppointment.clinic}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="text-slate-500">Location</span>
+                    <span className="font-medium text-slate-900">
+                      Location details coming soon.
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="text-slate-500">Visit type</span>
+                    <span className="font-medium text-slate-900">
+                      {detailsAppointment.type}
+                    </span>
+                  </div>
+                  {detailsAppointment.patientName ? (
+                    <div className="flex items-center justify-between gap-4">
+                      <span className="text-slate-500">Patient</span>
+                      <span className="font-medium text-slate-900">
+                        {detailsAppointment.patientName}
+                      </span>
+                    </div>
+                  ) : null}
+                  {detailsAppointment.patientEmail ? (
+                    <div className="flex items-center justify-between gap-4">
+                      <span className="text-slate-500">Email</span>
+                      <span className="font-medium text-slate-900">
+                        {detailsAppointment.patientEmail}
+                      </span>
+                    </div>
+                  ) : null}
+                  {detailsAppointment.notes ? (
+                    <div className="flex flex-col gap-1">
+                      <span className="text-slate-500">Notes</span>
+                      <span className="font-medium text-slate-900">
+                        {detailsAppointment.notes}
+                      </span>
+                    </div>
+                  ) : null}
+                </div>
+              </>
+            ) : null}
+          </DialogContent>
+        </Dialog>
+
+        <Dialog
+          open={Boolean(actionType && actionAppointment)}
+          onOpenChange={(open) => {
+            if (!open) handleCloseAction();
+          }}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>
+                {actionType === "cancel" ? "Cancel appointment" : "Reschedule appointment"}
+              </DialogTitle>
+              <DialogDescription>
+                {actionAppointment
+                  ? `Please share a reason for your ${
+                      actionType === "cancel" ? "cancellation" : "reschedule request"
+                    } for ${actionAppointment.doctor}.`
+                  : "Please share a reason for this request."}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3">
+              <label className="text-sm font-medium text-slate-700" htmlFor="appointment-reason">
+                Reason (required)
+              </label>
+              <Textarea
+                id="appointment-reason"
+                value={actionReason}
+                onChange={(event) => {
+                  setActionReason(event.target.value);
+                  if (actionError) setActionError(null);
+                }}
+                placeholder="Let us know what changed so we can assist you."
+                className="min-h-[120px]"
+              />
+              {actionError ? <p className="text-sm text-rose-500">{actionError}</p> : null}
+            </div>
+            <DialogFooter>
+              <button
+                onClick={handleCloseAction}
+                className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:border-slate-400"
+              >
+                Keep appointment
+              </button>
+              <button
+                onClick={handleSubmitAction}
+                className="rounded-full bg-[#0089FF] px-5 py-2 text-sm font-semibold text-white hover:bg-[#0077E6]"
+              >
+                Submit request
+              </button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         <div className="lg:hidden">
           <BottomNav />
