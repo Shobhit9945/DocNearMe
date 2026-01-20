@@ -31,3 +31,13 @@ export interface PatientUser {
   appointments?: PatientAppointmentSummary[];
   createdAt: Date;
 }
+
+export interface EmailOtp {
+  _id?: unknown;
+  email: string;
+  otpHash: string;
+  createdAt: Date;
+  expiresAt: Date;
+  verifiedAt?: Date;
+  usedAt?: Date;
+}

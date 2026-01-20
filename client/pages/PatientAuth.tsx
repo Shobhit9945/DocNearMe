@@ -7,7 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { PageScaffold } from "@/components/PageScaffold";
-import type { AuthResponse } from "@shared/api";
+import type { AuthResponse, OtpResponse, RequestOtpRequest, VerifyOtpRequest } from "@shared/api";
+import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 
 const TOKEN_KEY = "docnearme_patient_token";
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -26,6 +27,10 @@ const PatientAuth = () => {
   const [activeTab, setActiveTab] = useState<"login" | "signup">("login");
   const [user, setUser] = useState<AuthResponse["user"] | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [otpValue, setOtpValue] = useState("");
+  const [otpEmail, setOtpEmail] = useState("");
+  const [otpVerified, setOtpVerified] = useState(false);
+  const [otpLoading, setOtpLoading] = useState(false);
   const navigate = useNavigate();
 
   const setError = (message: string) => setStatus({ type: "error", message });
@@ -43,6 +48,10 @@ const PatientAuth = () => {
     }
     if (signupData.password.length < 8) {
       setError("Password must be at least 8 characters long.");
+      return false;
+    }
+    if (!otpVerified || signupData.email.toLowerCase() !== otpEmail.toLowerCase()) {
+      setError("Please verify your email with the OTP before signing up.");
       return false;
     }
     return true;
@@ -100,6 +109,73 @@ const PatientAuth = () => {
       setError(error instanceof Error ? error.message : "Network error. Please try again.");
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const requestOtp = async () => {
+    if (!emailPattern.test(signupData.email)) {
+      setError("Please enter a valid email address to request a verification code.");
+      return;
+    }
+
+    setOtpLoading(true);
+    setStatus(initialStatus);
+
+    try {
+      const payload: RequestOtpRequest = { email: signupData.email };
+      const response = await fetch("/api/auth/request-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = (await response.json()) as OtpResponse;
+      if (!response.ok || !data.success) {
+        setError(data.message || "Failed to send verification code.");
+        return;
+      }
+
+      setOtpEmail(signupData.email);
+      setOtpVerified(false);
+      setOtpValue("");
+      setSuccess(data.message);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Network error. Please try again.");
+    } finally {
+      setOtpLoading(false);
+    }
+  };
+
+  const verifyOtpCode = async () => {
+    if (!otpValue || otpValue.length < 6) {
+      setError("Please enter the 6-digit verification code.");
+      return;
+    }
+
+    setOtpLoading(true);
+    setStatus(initialStatus);
+
+    try {
+      const payload: VerifyOtpRequest = { email: signupData.email, otp: otpValue };
+      const response = await fetch("/api/auth/verify-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = (await response.json()) as OtpResponse;
+      if (!response.ok || !data.success) {
+        setError(data.message || "Verification failed.");
+        return;
+      }
+
+      setOtpVerified(true);
+      setOtpEmail(signupData.email);
+      setSuccess(data.message);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Network error. Please try again.");
+    } finally {
+      setOtpLoading(false);
     }
   };
 
@@ -195,8 +271,41 @@ const PatientAuth = () => {
                       type="email"
                       placeholder="patient@email.com"
                       value={signupData.email}
-                      onChange={(event) => setSignupData((prev) => ({ ...prev, email: event.target.value }))}
+                      onChange={(event) => {
+                        const nextEmail = event.target.value;
+                        setSignupData((prev) => ({ ...prev, email: nextEmail }));
+                        if (otpEmail && nextEmail.toLowerCase() !== otpEmail.toLowerCase()) {
+                          setOtpVerified(false);
+                          setOtpValue("");
+                        }
+                      }}
                     />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Verification code</Label>
+                    <InputOTP maxLength={6} value={otpValue} onChange={setOtpValue}>
+                      <InputOTPGroup>
+                        {Array.from({ length: 6 }).map((_, index) => (
+                          <InputOTPSlot key={index} index={index} />
+                        ))}
+                      </InputOTPGroup>
+                    </InputOTP>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        disabled={otpLoading}
+                        onClick={requestOtp}
+                      >
+                        {otpLoading ? "Sending..." : "Send OTP"}
+                      </Button>
+                      <Button type="button" disabled={otpLoading || otpValue.length < 6} onClick={verifyOtpCode}>
+                        {otpLoading ? "Verifying..." : "Verify OTP"}
+                      </Button>
+                      {otpVerified && (
+                        <span className="text-sm font-medium text-emerald-600">Email verified</span>
+                      )}
+                    </div>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="signup-password">Password</Label>

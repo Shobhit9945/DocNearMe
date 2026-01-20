@@ -1,7 +1,7 @@
 // server/db.ts
 import "dotenv/config";
 import { MongoClient, Db, Collection, ObjectId } from "mongodb";
-import { Appointment, PatientUser } from "./types";
+import { Appointment, EmailOtp, PatientUser } from "./types";
 
 const uri = process.env.MONGODB_URI ?? process.env.MONGODB_API_URL ?? process.env.VITE_MONGODB_API_URL;
 const dbName = process.env.MONGODB_DB_NAME ?? process.env.MONGODB_DATABASE ?? "patients";
@@ -129,6 +129,7 @@ export type InMemoryDb = {
   collections: {
     appointments: InMemoryCollection<Appointment>;
     patients: InMemoryCollection<PatientUser>;
+    emailOtps: InMemoryCollection<EmailOtp>;
   };
 };
 
@@ -137,12 +138,13 @@ const inMemoryDb: InMemoryDb = {
   collections: {
     appointments: new InMemoryCollection<Appointment>([]),
     patients: new InMemoryCollection<PatientUser>([]),
+    emailOtps: new InMemoryCollection<EmailOtp>([]),
   },
 };
 
 export const isMemoryDb = (db: Db | InMemoryDb): db is InMemoryDb => (db as InMemoryDb).kind === "memory";
 
-const getCollection = <T>(db: Db | InMemoryDb, name: "appointments" | "patients") =>
+const getCollection = <T>(db: Db | InMemoryDb, name: "appointments" | "patients" | "emailOtps") =>
   isMemoryDb(db) ? db.collections[name] : db.collection<T>(name);
 
 // Short, serverless-friendly timeouts. Keep pools tiny.
@@ -163,11 +165,14 @@ async function prepareOnce(db: Db | InMemoryDb) {
 
   const appointments = getCollection<Appointment>(db, "appointments");
   const patients = getCollection<PatientUser>(db, "patients");
+  const emailOtps = getCollection<EmailOtp>(db, "emailOtps");
 
   // Run in parallel, but only once per warm container
   await Promise.all([
     appointments.createIndex({ dateKey: 1, slot: 1, clinicId: 1 }, { unique: true }),
     patients.createIndex({ email: 1 }, { unique: true }),
+    emailOtps.createIndex({ email: 1, createdAt: -1 }),
+    emailOtps.createIndex({ expiresAt: 1 }),
   ]);
 
   cache.prepared = true;
@@ -250,4 +255,9 @@ export async function getAppointmentsCollection(): Promise<Collection<Appointmen
 export async function getPatientsCollection(): Promise<Collection<PatientUser> | InMemoryCollection<PatientUser>> {
   const db = await connectToDatabase();
   return getCollection<PatientUser>(db, "patients") as Collection<PatientUser> | InMemoryCollection<PatientUser>;
+}
+
+export async function getEmailOtpsCollection(): Promise<Collection<EmailOtp> | InMemoryCollection<EmailOtp>> {
+  const db = await connectToDatabase();
+  return getCollection<EmailOtp>(db, "emailOtps") as Collection<EmailOtp> | InMemoryCollection<EmailOtp>;
 }
