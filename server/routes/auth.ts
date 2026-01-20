@@ -48,9 +48,28 @@ const signToken = (user: PatientUser) =>
     { expiresIn: jwtExpiry },
   );
 
+const parseRequestBody = (body: unknown): unknown => {
+  if (body && typeof body === "object") return body;
+  if (typeof body !== "string") return {};
+
+  const trimmed = body.trim();
+  if (!trimmed) return {};
+
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    const params = new URLSearchParams(trimmed);
+    const payload: Record<string, string> = {};
+    params.forEach((value, key) => {
+      payload[key] = value;
+    });
+    return payload;
+  }
+};
+
 export const handleSignup: RequestHandler = async (req, res, next) => {
   try {
-    const payload = signupSchema.parse(req.body) as SignupRequest;
+    const payload = signupSchema.parse(parseRequestBody(req.body)) as SignupRequest;
     const patients = await getPatientsCollection();
     const normalizedEmail = payload.email.toLowerCase();
 
@@ -99,7 +118,7 @@ export const handleSignup: RequestHandler = async (req, res, next) => {
 
 export const handleLogin: RequestHandler = async (req, res, next) => {
   try {
-    const payload = loginSchema.parse(req.body) as LoginRequest;
+    const payload = loginSchema.parse(parseRequestBody(req.body)) as LoginRequest;
     const patients = await getPatientsCollection();
     const normalizedEmail = payload.email.toLowerCase();
 
