@@ -28,7 +28,7 @@ export interface AppointmentCreateRequest {
   slot: string;
   specialization: string;
   doctorName?: string;
-  clinicId?: string;
+  clinicId: string;
   notes?: string;
   patientName?: string;
   patientEmail?: string;
