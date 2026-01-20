@@ -3,6 +3,31 @@ import { ObjectId } from "mongodb";
 import { getAppointmentsCollection, getPatientsCollection } from "../db";
 import { Appointment, PatientAppointmentSummary } from "../types";
 
+const parseRequestBody = (body: unknown): Record<string, unknown> => {
+  if (body instanceof Buffer) {
+    return parseRequestBody(body.toString("utf8"));
+  }
+  if (body instanceof Uint8Array) {
+    return parseRequestBody(Buffer.from(body).toString("utf8"));
+  }
+  if (body && typeof body === "object") return body as Record<string, unknown>;
+  if (typeof body !== "string") return {};
+
+  const trimmed = body.trim();
+  if (!trimmed) return {};
+
+  try {
+    return JSON.parse(trimmed) as Record<string, unknown>;
+  } catch {
+    const params = new URLSearchParams(trimmed);
+    const payload: Record<string, string> = {};
+    params.forEach((value, key) => {
+      payload[key] = value;
+    });
+    return payload;
+  }
+};
+
 const generateBookingId = () =>
   `DNM-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
 
@@ -17,7 +42,8 @@ const serializeAppointment = (appointment: Appointment) => ({
 });
 
 export const handleCreateAppointment = async (req: Request, res: Response) => {
-  const { date, slot, specialization, clinicId, notes, patientName, patientEmail, doctorName } = req.body ?? {};
+  const payload = parseRequestBody(req.body);
+  const { date, slot, specialization, clinicId, notes, patientName, patientEmail, doctorName } = payload ?? {};
 
   if (!req.auth) {
     return res.status(401).json({ error: "Authentication required." });
