@@ -132,6 +132,7 @@ export const handler = async (event: NetlifyEvent, context: any) => {
       ...event,
       httpMethod: resolvedMethod,
       path: expressPath,
+      headers,
       requestContext: {
         ...(event as any).requestContext,
         http: { ...(event as any).requestContext?.http, method: resolvedMethod },
