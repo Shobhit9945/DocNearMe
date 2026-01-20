@@ -14,12 +14,30 @@ export interface AppointmentResponseItem {
   dateKey: string;
   slot: string;
   specialization: string;
+  doctorName?: string;
   clinicId: string;
   notes?: string;
   patientId?: string;
   patientName?: string;
   patientEmail?: string;
   createdAt: string;
+}
+
+export interface AppointmentCreateRequest {
+  date: string;
+  slot: string;
+  specialization: string;
+  doctorName?: string;
+  clinicId?: string;
+  notes?: string;
+  patientName?: string;
+  patientEmail?: string;
+}
+
+export interface AppointmentCreateResponse {
+  success: boolean;
+  id: string;
+  message: string;
 }
 
 export interface AppointmentListResponse {

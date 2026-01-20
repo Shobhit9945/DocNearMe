@@ -21,18 +21,11 @@ import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { CLINICS } from "@/lib/clinics";
 import { matchSpecialization, SPECIALIZATION_OPTIONS } from "@/lib/specializations";
+import type { AppointmentCreateRequest, AppointmentCreateResponse, AppointmentListResponse } from "@shared/api";
 
-const SAMPLE_APPOINTMENTS = [
-  {
-    id: "sample-1",
-    doctor: "Dr. Lina Carter",
-    specialization: "Dermatologist",
-    date: "Tuesday, Jan 21, 2026",
-    time: "10:30 AM",
-    clinic: "DocNearMe Downtown Clinic",
-    type: "In-person",
-  },
-];
+const TOKEN_KEY = "docnearme_patient_token";
+const NAME_KEY = "docnearme_user_name";
+const EMAIL_KEY = "docnearme_user_email";
 
 type DoctorProfile = {
   id: string;
@@ -54,6 +47,22 @@ type ConfirmationDetails = {
   dateLabel: string;
   timeLabel: string;
   notes?: string;
+};
+
+type AuthSession = {
+  token: string;
+  name: string;
+  email: string;
+};
+
+type UpcomingAppointment = {
+  id: string;
+  doctor: string;
+  specialization: string;
+  date: string;
+  time: string;
+  clinic: string;
+  type: string;
 };
 
 const DOCTORS: DoctorProfile[] = [
@@ -180,6 +189,8 @@ export default function Appointment() {
     intake?: string;
   }>({});
   const [isBooking, setIsBooking] = useState(false);
+  const [authSession, setAuthSession] = useState<AuthSession | null>(null);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   const generateBookingId = () =>
     `DNM-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
@@ -196,13 +207,25 @@ export default function Appointment() {
     setFieldErrors((prev) => ({ ...prev, [field]: undefined }));
   };
 
+  useEffect(() => {
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (!token) {
+      setAuthSession(null);
+      return;
+    }
+    setAuthSession({
+      token,
+      name: localStorage.getItem(NAME_KEY) ?? "",
+      email: localStorage.getItem(EMAIL_KEY) ?? "",
+    });
+  }, []);
+
   const selectedClinic =
     selectedClinicId === "any"
       ? null
       : CLINICS.find((clinic) => clinic.id === selectedClinicId) ?? null;
   const clinicLabel = selectedClinic ? selectedClinic.name : "Any clinic";
-  const appointments = SAMPLE_APPOINTMENTS;
-  const hasAppointments = appointments.length > 0;
+  const isAuthenticated = Boolean(authSession?.token);
 
   const clinicsForSpecialization = useMemo(
     () =>
@@ -247,11 +270,38 @@ export default function Appointment() {
 
   const timeSlots = slotsData || [];
 
+  const { data: appointmentsData, isLoading: isLoadingAppointments, refetch: refetchAppointments } = useQuery({
+    queryKey: ["appointments", "me", authSession?.token],
+    enabled: isAuthenticated,
+    queryFn: async () => {
+      const res = await fetch("/api/appointments/me", {
+        headers: {
+          Authorization: `Bearer ${authSession?.token}`,
+        },
+      });
+      if (!res.ok) {
+        throw new Error("Unable to load appointments");
+      }
+      return (await res.json()) as AppointmentListResponse;
+    },
+  });
+
   useEffect(() => {
     if (normalizedParam) {
       setSelectedSpecialization(normalizedParam);
     }
   }, [normalizedParam]);
+
+  useEffect(() => {
+    if (!authSession) return;
+    if (!patientName && authSession.name) {
+      setPatientName(authSession.name);
+    }
+    if (!patientEmail && authSession.email) {
+      setPatientEmail(authSession.email);
+    }
+    setAuthError(null);
+  }, [authSession, patientEmail, patientName]);
 
   useEffect(() => {
     if (clinicId) {
@@ -312,6 +362,28 @@ export default function Appointment() {
     };
   }, [selectedDate, selectedSlot, selectedSpecialization, clinicLabel, notes, selectedDoctor]);
 
+  const appointments = useMemo<UpcomingAppointment[]>(() => {
+    const items = appointmentsData?.appointments ?? [];
+    return items.map((appointment) => {
+      const clinicName =
+        appointment.clinicId === "global"
+          ? "Any clinic"
+          : CLINICS.find((clinic) => clinic.id === appointment.clinicId)?.name ?? "Clinic";
+      const doctorLabel = appointment.doctorName ?? appointment.specialization;
+      return {
+        id: appointment._id,
+        doctor: doctorLabel,
+        specialization: appointment.specialization,
+        date: formatDateLabel(new Date(appointment.date)),
+        time: appointment.slot,
+        clinic: clinicName,
+        type: "In-person",
+      };
+    });
+  }, [appointmentsData, formatDateLabel]);
+
+  const hasAppointments = appointments.length > 0;
+
   const handleStartBooking = () => {
     setView("booking");
     setStep("booking");
@@ -319,6 +391,12 @@ export default function Appointment() {
   };
 
   const handleConfirm = async () => {
+    setAuthError(null);
+    if (!isAuthenticated) {
+      setAuthError("Please sign in to book an appointment.");
+      return;
+    }
+
     const errors: typeof fieldErrors = {};
     const trimmedName = patientName.trim();
     const trimmedEmail = patientEmail.trim();
@@ -350,23 +428,61 @@ export default function Appointment() {
 
     setIsBooking(true);
     const doctorLabel = selectedDoctor?.name ?? selectedSpecialization;
-    const bookingId = generateBookingId();
-
-    setConfirmationDetails({
-      id: bookingId,
-      clinicName: clinicLabel,
+    const clinicKey = selectedClinicId === "any" ? "global" : selectedClinicId;
+    const payload: AppointmentCreateRequest = {
+      date: selectedDate.toISOString(),
+      slot: selectedSlot,
+      specialization: selectedSpecialization,
+      doctorName: selectedDoctor?.name,
+      clinicId: clinicKey,
+      notes,
       patientName: trimmedName,
       patientEmail: trimmedEmail,
-      doctorName: doctorLabel,
-      specialization: selectedSpecialization,
-      dateLabel: formatDateLabel(selectedDate),
-      timeLabel: selectedSlot,
-      notes,
-    });
+    };
 
-    setStep("confirmation");
-    window.scrollTo(0, 0);
-    setIsBooking(false);
+    try {
+      const response = await fetch("/api/appointments", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authSession?.token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const data = (await response.json()) as AppointmentCreateResponse | { error?: string };
+      if (!response.ok) {
+        const message = "error" in data && data.error ? data.error : "Unable to book appointment.";
+        if (response.status === 401) {
+          setAuthError("Your session has expired. Please sign in again.");
+        } else {
+          setAuthError(message);
+        }
+        return;
+      }
+
+      const bookingId = "id" in data && data.id ? data.id : generateBookingId();
+
+      setConfirmationDetails({
+        id: bookingId,
+        clinicName: clinicLabel,
+        patientName: trimmedName,
+        patientEmail: trimmedEmail,
+        doctorName: doctorLabel,
+        specialization: selectedSpecialization,
+        dateLabel: formatDateLabel(selectedDate),
+        timeLabel: selectedSlot,
+        notes,
+      });
+
+      setStep("confirmation");
+      window.scrollTo(0, 0);
+      await refetchAppointments();
+    } catch (error) {
+      setAuthError(error instanceof Error ? error.message : "Unable to book appointment.");
+    } finally {
+      setIsBooking(false);
+    }
   };
 
   const handleAddToGoogleCalendar = () => {
@@ -529,7 +645,27 @@ export default function Appointment() {
 
         <main className="flex-1 px-4 pt-6 lg:px-10 lg:pt-10">
           <div className="max-w-5xl mx-auto space-y-6">
-            {hasAppointments ? (
+            {!isAuthenticated ? (
+              <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-10 text-center">
+                <CalendarClock className="mx-auto h-10 w-10 text-slate-400" />
+                <h2 className="mt-4 text-lg font-semibold text-slate-800">
+                  Sign in to view your appointments
+                </h2>
+                <p className="mt-2 text-sm text-slate-600">
+                  Your booking history is tied to your patient account.
+                </p>
+                <button
+                  onClick={() => navigate("/patient-auth")}
+                  className="mt-6 inline-flex items-center gap-2 rounded-full bg-[#0089FF] px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#0077E6]"
+                >
+                  Sign in to continue
+                </button>
+              </div>
+            ) : isLoadingAppointments ? (
+              <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-10 text-center text-sm text-slate-600">
+                Loading appointments...
+              </div>
+            ) : hasAppointments ? (
               <div className="grid gap-4">
                 {appointments.map((appointment) => (
                   <div
@@ -639,6 +775,22 @@ export default function Appointment() {
 
       <main className="flex-1 px-4 pt-6 lg:px-10 lg:pt-10">
         <div className="max-w-7xl mx-auto">
+          {authError ? (
+            <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700">
+              {authError}
+            </div>
+          ) : null}
+          {!isAuthenticated ? (
+            <div className="mb-6 rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-sm text-slate-600 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <span>Sign in to book an appointment and keep your visit history in one place.</span>
+              <button
+                onClick={() => navigate("/patient-auth")}
+                className="inline-flex items-center justify-center rounded-full bg-[#0089FF] px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#0077E6]"
+              >
+                Sign in
+              </button>
+            </div>
+          ) : null}
           {/* Specialization Selection - Full Width */}
           <div className="mb-6 grid gap-4 rounded-2xl border border-slate-200 bg-white shadow-sm p-6 lg:grid-cols-[1fr_1fr]">
             <div className="flex items-center gap-4">
@@ -1031,8 +1183,8 @@ export default function Appointment() {
               {/* Confirm Button */}
               <button
                 onClick={handleConfirm}
-                disabled={!selectedDate || !selectedSlot || isBooking}
-                className={`w-full text-white text-base font-bold px-6 py-4 rounded-xl shadow-lg transition-all ${!selectedDate || !selectedSlot || isBooking
+                disabled={!selectedDate || !selectedSlot || isBooking || !isAuthenticated}
+                className={`w-full text-white text-base font-bold px-6 py-4 rounded-xl shadow-lg transition-all ${!selectedDate || !selectedSlot || isBooking || !isAuthenticated
                   ? "bg-slate-300 cursor-not-allowed"
                   : "bg-[#0089FF] hover:bg-[#0077E6] hover:shadow-xl hover:scale-[1.02]"
                   }`}

@@ -88,6 +88,7 @@ const PatientAuth = () => {
 
       localStorage.setItem(TOKEN_KEY, data.token);
       localStorage.setItem("docnearme_user_name", data.user.name);
+      localStorage.setItem("docnearme_user_email", data.user.email);
       setUser(data.user);
       setSuccess(`Welcome back, ${data.user.name}!`);
 

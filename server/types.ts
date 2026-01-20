@@ -4,6 +4,7 @@ export interface Appointment {
   dateKey: string;
   slot: string;
   specialization: string;
+  doctorName?: string;
   clinicId: string;
   notes?: string;
   patientId?: string;
