@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { ObjectId } from "mongodb";
 import { getAppointmentsCollection, getPatientsCollection } from "../db";
 import { Appointment, PatientAppointmentSummary } from "../types";
+import { sendEmail } from "../services/mailer";
 
 const parseRequestBody = (body: unknown): Record<string, unknown> => {
   if (body instanceof Buffer) {
@@ -107,6 +108,34 @@ export const handleCreateAppointment = async (req: Request, res: Response) => {
         $push: { appointments: patientAppointment },
       },
     );
+
+    const emailAddress = record.patientEmail;
+    if (emailAddress) {
+      const appointmentDate = new Date(record.date);
+      const formattedDate = Number.isNaN(appointmentDate.getTime())
+        ? record.date
+        : appointmentDate.toLocaleString();
+
+      try {
+        await sendEmail({
+          to: emailAddress,
+          subject: "Your DocNearMe appointment is confirmed",
+          text: `Hi ${record.patientName ?? "there"}, your appointment is confirmed for ${formattedDate} at ${record.slot}.`,
+          html: `
+            <div style="font-family: Arial, sans-serif; line-height: 1.5;">
+              <h2 style="margin-bottom: 12px;">Appointment Confirmed</h2>
+              <p>Hi ${record.patientName ?? "there"},</p>
+              <p>Your appointment is confirmed for <strong>${formattedDate}</strong> at <strong>${record.slot}</strong>.</p>
+              <p><strong>Specialization:</strong> ${record.specialization}</p>
+              ${record.doctorName ? `<p><strong>Doctor:</strong> ${record.doctorName}</p>` : ""}
+              <p>If you need to reschedule, please contact the clinic.</p>
+            </div>
+          `,
+        });
+      } catch (error) {
+        console.error("Failed to send appointment confirmation email", error);
+      }
+    }
 
     res.status(201).json({
       success: true,

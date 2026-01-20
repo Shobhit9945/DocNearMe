@@ -6,7 +6,7 @@ import { handleAvailability } from "./routes/availability";
 import { handleCreateAppointment, handleListAppointments, handleListAppointmentsForUser } from "./routes/appointment";
 import docDaisyRouter from "./routes/docdaisy";
 import healthRouter from "./routes/health";
-import { handleLogin, handleSignup } from "./routes/auth";
+import { handleLogin, handleRequestOtp, handleSignup, handleVerifyOtp } from "./routes/auth";
 import { requireAuth } from "./middleware/auth";
 
 export async function createServer(): Promise<Express> {
@@ -52,6 +52,8 @@ export async function createServer(): Promise<Express> {
   app.get("/api/appointments/me", requireAuth, handleListAppointmentsForUser);
   app.post("/api/auth/signup", handleSignup);
   app.post("/api/auth/login", handleLogin);
+  app.post("/api/auth/request-otp", handleRequestOtp);
+  app.post("/api/auth/verify-otp", handleVerifyOtp);
   app.use("/api/docdaisy", docDaisyRouter);
   app.use("/api/health", healthRouter);
 

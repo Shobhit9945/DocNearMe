@@ -66,3 +66,18 @@ export interface AuthResponse {
   token: string;
   user: AuthUser;
 }
+
+export interface RequestOtpRequest {
+  email: string;
+}
+
+export interface VerifyOtpRequest {
+  email: string;
+  otp: string;
+}
+
+export interface OtpResponse {
+  success: boolean;
+  message: string;
+  debugOtp?: string;
+}
