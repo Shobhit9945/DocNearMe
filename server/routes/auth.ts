@@ -49,6 +49,12 @@ const signToken = (user: PatientUser) =>
   );
 
 const parseRequestBody = (body: unknown): unknown => {
+  if (body instanceof Buffer) {
+    return parseRequestBody(body.toString("utf8"));
+  }
+  if (body instanceof Uint8Array) {
+    return parseRequestBody(Buffer.from(body).toString("utf8"));
+  }
   if (body && typeof body === "object") return body;
   if (typeof body !== "string") return {};
 
