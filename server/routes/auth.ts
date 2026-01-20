@@ -5,7 +5,17 @@ import jwt from "jsonwebtoken";
 import { ObjectId } from "mongodb";
 import { getEmailOtpsCollection, getPatientsCollection } from "../db";
 import { EmailOtp, PatientUser } from "../types";
-import { AuthResponse, LoginRequest, OtpResponse, RequestOtpRequest, SignupRequest, VerifyOtpRequest } from "@shared/api";
+import {
+  AuthResponse,
+  LoginRequest,
+  OtpResponse,
+  RequestOtpRequest,
+  RequestPasswordResetRequest,
+  ResetPasswordRequest,
+  ResetPasswordResponse,
+  SignupRequest,
+  VerifyOtpRequest,
+} from "@shared/api";
 import { buildOtpEmail, generateOtpCode, getOtpTtlMinutes, hashOtp, verifyOtp } from "../services/otp";
 import { sendEmail } from "../services/mailer";
 
@@ -31,6 +41,12 @@ const requestOtpSchema = z.object({
 const verifyOtpSchema = z.object({
   email: emailSchema,
   otp: z.string().trim().length(6),
+});
+
+const resetPasswordSchema = z.object({
+  email: emailSchema,
+  otp: z.string().trim().length(6),
+  password: passwordSchema,
 });
 
 const jwtSecret = process.env.AUTH_JWT_SECRET ?? process.env.JWT_SECRET ?? "dev-secret-change-me";
@@ -84,9 +100,13 @@ const parseRequestBody = (body: unknown): unknown => {
   }
 };
 
-const getLatestOtp = async (email: string) => {
+const getLatestOtp = async (email: string, purpose: "signup" | "password_reset") => {
   const otps = await getEmailOtpsCollection();
-  const list = await otps.find({ email }).sort({ createdAt: -1 }).toArray();
+  const query =
+    purpose === "signup"
+      ? { email, $or: [{ purpose: "signup" }, { purpose: { $exists: false } }] }
+      : { email, purpose };
+  const list = await otps.find(query).sort({ createdAt: -1 }).toArray();
   return list[0] ?? null;
 };
 
@@ -104,6 +124,14 @@ export const handleRequestOtp: RequestHandler = async (req, res, next) => {
       } satisfies OtpResponse);
     }
 
+    const recentOtp = await getLatestOtp(normalizedEmail, "signup");
+    if (recentOtp && Date.now() - recentOtp.createdAt.getTime() < 60 * 1000) {
+      return res.status(429).json({
+        success: false,
+        message: "Please wait 1 minute before requesting another code.",
+      } satisfies OtpResponse);
+    }
+
     const otpCode = generateOtpCode();
     const otpHash = await hashOtp(otpCode);
     const expiresAt = new Date(Date.now() + getOtpTtlMinutes() * 60 * 1000);
@@ -114,6 +142,7 @@ export const handleRequestOtp: RequestHandler = async (req, res, next) => {
       otpHash,
       createdAt: new Date(),
       expiresAt,
+      purpose: "signup",
     };
     await otps.insertOne(record);
 
@@ -157,7 +186,7 @@ export const handleVerifyOtp: RequestHandler = async (req, res, next) => {
   try {
     const payload = verifyOtpSchema.parse(parseRequestBody(req.body)) as VerifyOtpRequest;
     const normalizedEmail = payload.email.toLowerCase();
-    const otpRecord = await getLatestOtp(normalizedEmail);
+    const otpRecord = await getLatestOtp(normalizedEmail, "signup");
 
     if (!otpRecord) {
       return res.status(400).json({
@@ -227,7 +256,7 @@ export const handleSignup: RequestHandler = async (req, res, next) => {
       });
     }
 
-    const otpRecord = await getLatestOtp(normalizedEmail);
+    const otpRecord = await getLatestOtp(normalizedEmail, "signup");
     if (!otpRecord || !otpRecord.verifiedAt || otpRecord.usedAt || otpRecord.expiresAt.getTime() < Date.now()) {
       return res.status(400).json({
         error: "Email verification required before signup.",
@@ -317,6 +346,150 @@ export const handleLogin: RequestHandler = async (req, res, next) => {
         detail: "invalid_payload",
         issues: error.issues,
       });
+    }
+    return next(error);
+  }
+};
+
+export const handleRequestPasswordReset: RequestHandler = async (req, res, next) => {
+  try {
+    const payload = requestOtpSchema.parse(parseRequestBody(req.body)) as RequestPasswordResetRequest;
+    const normalizedEmail = payload.email.toLowerCase();
+
+    const patients = await getPatientsCollection();
+    const existing = await patients.findOne({ email: normalizedEmail });
+    if (!existing) {
+      return res.status(404).json({
+        success: false,
+        message: "No account found for that email.",
+      } satisfies OtpResponse);
+    }
+
+    const recentOtp = await getLatestOtp(normalizedEmail, "password_reset");
+    if (recentOtp && Date.now() - recentOtp.createdAt.getTime() < 60 * 1000) {
+      return res.status(429).json({
+        success: false,
+        message: "Please wait 1 minute before requesting another code.",
+      } satisfies OtpResponse);
+    }
+
+    const otpCode = generateOtpCode();
+    const otpHash = await hashOtp(otpCode);
+    const expiresAt = new Date(Date.now() + getOtpTtlMinutes() * 60 * 1000);
+
+    const otps = await getEmailOtpsCollection();
+    const record: EmailOtp = {
+      email: normalizedEmail,
+      otpHash,
+      createdAt: new Date(),
+      expiresAt,
+      purpose: "password_reset",
+    };
+    await otps.insertOne(record);
+
+    const emailContent = buildOtpEmail(otpCode);
+    const sent = await sendEmail({
+      to: normalizedEmail,
+      subject: "Reset your DocNearMe password",
+      text: emailContent.text,
+      html: emailContent.html,
+    });
+
+    if (!sent) {
+      return res.status(500).json({
+        success: false,
+        message: "Unable to send reset code. Please try again later.",
+      } satisfies OtpResponse);
+    }
+
+    const response: OtpResponse = {
+      success: true,
+      message: "Password reset code sent to your email.",
+    };
+
+    if (process.env.OTP_DEV_MODE === "true") {
+      response.debugOtp = otpCode;
+    }
+
+    return res.status(200).json(response);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid email address.",
+      } satisfies OtpResponse);
+    }
+    return next(error);
+  }
+};
+
+export const handleResetPassword: RequestHandler = async (req, res, next) => {
+  try {
+    const payload = resetPasswordSchema.parse(parseRequestBody(req.body)) as ResetPasswordRequest;
+    const normalizedEmail = payload.email.toLowerCase();
+
+    const patients = await getPatientsCollection();
+    const existing = await patients.findOne({ email: normalizedEmail });
+    if (!existing) {
+      return res.status(404).json({
+        success: false,
+        message: "No account found for that email.",
+      } satisfies ResetPasswordResponse);
+    }
+
+    const otpRecord = await getLatestOtp(normalizedEmail, "password_reset");
+    if (!otpRecord) {
+      return res.status(400).json({
+        success: false,
+        message: "Reset code not found. Please request a new code.",
+      } satisfies ResetPasswordResponse);
+    }
+
+    if (otpRecord.usedAt) {
+      return res.status(400).json({
+        success: false,
+        message: "Reset code has already been used.",
+      } satisfies ResetPasswordResponse);
+    }
+
+    if (otpRecord.expiresAt.getTime() < Date.now()) {
+      return res.status(400).json({
+        success: false,
+        message: "Reset code has expired. Please request a new one.",
+      } satisfies ResetPasswordResponse);
+    }
+
+    const otpOk = await verifyOtp(payload.otp, otpRecord.otpHash);
+    if (!otpOk) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid reset code.",
+      } satisfies ResetPasswordResponse);
+    }
+
+    const passwordHash = await bcryptjs.hash(payload.password, 12);
+    await patients.updateOne({ _id: existing._id }, { $set: { passwordHash } });
+
+    const otps = await getEmailOtpsCollection();
+    await otps.updateOne(
+      { _id: otpRecord._id },
+      {
+        $set: {
+          usedAt: new Date(),
+        },
+      },
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Password reset successfully.",
+    } satisfies ResetPasswordResponse);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid reset payload.",
+      } satisfies ResetPasswordResponse);
     }
     return next(error);
   }

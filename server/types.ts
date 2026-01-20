@@ -38,6 +38,7 @@ export interface EmailOtp {
   otpHash: string;
   createdAt: Date;
   expiresAt: Date;
+  purpose?: "signup" | "password_reset";
   verifiedAt?: Date;
   usedAt?: Date;
 }
