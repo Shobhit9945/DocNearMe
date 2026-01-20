@@ -3,8 +3,8 @@ import { z } from "zod";
 import bcryptjs from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { ObjectId } from "mongodb";
-import { getEmailOtpsCollection, getPatientsCollection } from "../db";
-import { EmailOtp, PatientUser } from "../types";
+import { getEmailOtpsCollection, getMedicalConsentsCollection, getPatientsCollection } from "../db";
+import { EmailOtp, MedicalConsent, PatientUser } from "../types";
 import {
   AuthResponse,
   LoginRequest,
@@ -22,11 +22,19 @@ import { sendEmail } from "../services/mailer";
 const emailSchema = z.string().trim().toLowerCase().email().max(254);
 const passwordSchema = z.string().min(8).max(128);
 const nameSchema = z.string().trim().min(2).max(80);
+const consentAcceptedSchema = z.literal(true);
+
+const SIGNUP_CONSENT_VERSION = "signup-2024-09-01";
+const SIGNUP_CONSENT_TEXT =
+  "I consent to the collection, use, and secure storage of my personal information, including " +
+  "health-related data, in accordance with Japan's Act on the Protection of Personal Information (APPI). " +
+  "I understand DocNearMe will use this information to create my account, coordinate care, and protect my data.";
 
 const signupSchema = z.object({
   name: nameSchema,
   email: emailSchema,
   password: passwordSchema,
+  consentAccepted: consentAcceptedSchema,
 });
 
 const loginSchema = z.object({
@@ -275,6 +283,17 @@ export const handleSignup: RequestHandler = async (req, res, next) => {
 
     const result = await patients.insertOne(user);
     const userWithId: PatientUser = { ...user, _id: result.insertedId };
+    const patientId = getUserId(userWithId);
+    const consents = await getMedicalConsentsCollection();
+    const consentRecord: MedicalConsent = {
+      patientId,
+      consentVersion: SIGNUP_CONSENT_VERSION,
+      consentText: SIGNUP_CONSENT_TEXT,
+      consentedAt: new Date(),
+      ipAddress: req.ip,
+      userAgent: req.get("user-agent") ?? undefined,
+    };
+    await consents.insertOne(consentRecord);
     const token = signToken(userWithId);
 
     const response: AuthResponse = {

@@ -29,7 +29,7 @@ type StatusState = {
 const initialStatus: StatusState = { type: "idle", message: "" };
 
 const PatientAuth = () => {
-  const [signupData, setSignupData] = useState({ name: "", email: "", password: "" });
+  const [signupData, setSignupData] = useState({ name: "", email: "", password: "", consentAccepted: false });
   const [loginData, setLoginData] = useState({ email: "", password: "" });
   const [status, setStatus] = useState<StatusState>(initialStatus);
   const [activeTab, setActiveTab] = useState<"login" | "signup">("login");
@@ -91,6 +91,10 @@ const PatientAuth = () => {
       setError("Please verify your email with the OTP before signing up.");
       return false;
     }
+    if (!signupData.consentAccepted) {
+      setError("Please provide consent to proceed with account creation.");
+      return false;
+    }
     return true;
   };
 
@@ -129,6 +133,10 @@ const PatientAuth = () => {
       if (!response.ok) {
         const errorMessage = "error" in data && data.error ? data.error : "Something went wrong. Please try again.";
         setError(errorMessage);
+        return;
+      }
+      if (!("token" in data) || !("user" in data)) {
+        setError("Unexpected response from the server. Please try again.");
         return;
       }
 
@@ -543,6 +551,25 @@ const PatientAuth = () => {
                       value={signupData.password}
                       onChange={(event) => setSignupData((prev) => ({ ...prev, password: event.target.value }))}
                     />
+                  </div>
+                  <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50/80 p-4 text-sm text-slate-600">
+                    <p className="font-semibold text-slate-900">Consent for medical data handling (Japan APPI)</p>
+                    <p>
+                      I consent to DocNearMe collecting, using, and securely storing my personal information,
+                      including health-related data, in compliance with Japan&apos;s Act on the Protection of Personal
+                      Information (APPI), for account creation, care coordination, and secure service delivery.
+                    </p>
+                    <label className="flex items-start gap-2">
+                      <input
+                        type="checkbox"
+                        className="mt-1"
+                        checked={signupData.consentAccepted}
+                        onChange={(event) =>
+                          setSignupData((prev) => ({ ...prev, consentAccepted: event.target.checked }))
+                        }
+                      />
+                      <span>I agree and provide my explicit consent.</span>
+                    </label>
                   </div>
                   <Button className="w-full" disabled={isSubmitting} type="submit">
                     {isSubmitting ? "Creating account..." : "Create account"}
