@@ -12,6 +12,7 @@ import Appointment from "./pages/Appointment";
 import Clinics from "./pages/Clinics";
 import DocDaisy from "./pages/DocDaisy";
 import Index from "./pages/Index";
+import MedicalRecords from "./pages/MedicalRecords";
 import NotFound from "./pages/NotFound";
 import PatientAuth from "./pages/PatientAuth";
 import Profile from "./pages/Profile";
@@ -25,6 +26,7 @@ const routes = [
   { path: "/search", element: <Search /> },
   { path: "/clinics", element: <Clinics /> },
   { path: "/appointment", element: <Appointment /> },
+  { path: "/medical-records", element: <MedicalRecords /> },
   { path: "/profile", element: <Profile /> },
   { path: "/docdaisy", element: <DocDaisy /> },
   { path: "/patient-auth", element: <PatientAuth /> },
