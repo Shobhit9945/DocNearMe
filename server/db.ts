@@ -4,7 +4,7 @@ import { MongoClient, Db, Collection, ObjectId } from "mongodb";
 import { Appointment, PatientUser } from "./types";
 
 const uri = process.env.MONGODB_URI ?? process.env.MONGODB_API_URL ?? process.env.VITE_MONGODB_API_URL;
-const dbName = process.env.MONGODB_DB_NAME ?? "docnearme";
+const dbName = process.env.MONGODB_DB_NAME ?? process.env.MONGODB_DATABASE ?? "patients";
 const preferMemory = process.env.USE_IN_MEMORY_DB === "true";
 const allowMemoryFallback = process.env.ALLOW_IN_MEMORY_DB !== "false";
 
