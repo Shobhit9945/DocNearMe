@@ -120,15 +120,65 @@ export const handleCreateAppointment = async (req: Request, res: Response) => {
         await sendEmail({
           to: emailAddress,
           subject: "Your DocNearMe appointment is confirmed",
-          text: `Hi ${record.patientName ?? "there"}, your appointment is confirmed for ${formattedDate} at ${record.slot}.`,
+          text: [
+            `Hi ${record.patientName ?? "there"},`,
+            "",
+            "Your appointment is confirmed. Here are your booking details:",
+            `Booking ID: ${appointmentId}`,
+            `Clinic: ${record.clinicId}`,
+            "Clinic location: (placeholder - coming soon)",
+            `Patient: ${record.patientName ?? "Patient"}`,
+            `Doctor: ${record.doctorName ?? "To be assigned"}`,
+            `Specialization: ${record.specialization}`,
+            `Date: ${formattedDate}`,
+            `Time: ${record.slot}`,
+            "",
+            "Please arrive 10 minutes early and bring a photo ID and insurance card if applicable.",
+            "To reschedule, contact the clinic from the DocNearMe web app.",
+          ].join("\n"),
           html: `
             <div style="font-family: Arial, sans-serif; line-height: 1.5;">
               <h2 style="margin-bottom: 12px;">Appointment Confirmed</h2>
               <p>Hi ${record.patientName ?? "there"},</p>
-              <p>Your appointment is confirmed for <strong>${formattedDate}</strong> at <strong>${record.slot}</strong>.</p>
-              <p><strong>Specialization:</strong> ${record.specialization}</p>
-              ${record.doctorName ? `<p><strong>Doctor:</strong> ${record.doctorName}</p>` : ""}
-              <p>If you need to reschedule, please contact the clinic.</p>
+              <p>Your appointment is confirmed. Here are your booking details:</p>
+              <table style="border-collapse: collapse; width: 100%; margin: 16px 0;">
+                <tbody>
+                  <tr>
+                    <td style="padding: 6px 0; color: #64748b; width: 140px;">Booking ID</td>
+                    <td style="padding: 6px 0; font-weight: 600;">${appointmentId}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 6px 0; color: #64748b;">Clinic</td>
+                    <td style="padding: 6px 0; font-weight: 600;">${record.clinicId}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 6px 0; color: #64748b;">Clinic location</td>
+                    <td style="padding: 6px 0; font-weight: 600;">(placeholder - coming soon)</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 6px 0; color: #64748b;">Patient</td>
+                    <td style="padding: 6px 0; font-weight: 600;">${record.patientName ?? "Patient"}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 6px 0; color: #64748b;">Doctor</td>
+                    <td style="padding: 6px 0; font-weight: 600;">${record.doctorName ?? "To be assigned"}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 6px 0; color: #64748b;">Specialization</td>
+                    <td style="padding: 6px 0; font-weight: 600;">${record.specialization}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 6px 0; color: #64748b;">Date</td>
+                    <td style="padding: 6px 0; font-weight: 600;">${formattedDate}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 6px 0; color: #64748b;">Time</td>
+                    <td style="padding: 6px 0; font-weight: 600;">${record.slot}</td>
+                  </tr>
+                </tbody>
+              </table>
+              <p>Please arrive 10 minutes early and bring a photo ID and insurance card if applicable.</p>
+              <p>To reschedule, contact the clinic from the DocNearMe web app.</p>
             </div>
           `,
         });
