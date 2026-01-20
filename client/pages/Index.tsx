@@ -88,6 +88,7 @@ const Index: React.FC = () => {
       className:
         "bg-[#0089FF] rounded-[20px] shadow-[2px_0_20px_0_rgba(24,57,107,0.05)] p-4 min-h-[120px] flex flex-col items-center justify-center gap-2 text-white/90 hover:bg-[#0077E6] transition-colors",
       icon: VIEW_APPOINTMENTS_ICON,
+      onClick: () => navigate("/appointment?view=upcoming"),
       textClassName: "text-sm font-medium text-center",
     },
     {
@@ -95,6 +96,7 @@ const Index: React.FC = () => {
       className:
         "bg-[#0089FF] rounded-[20px] shadow-[2px_0_20px_0_rgba(24,57,107,0.05)] p-4 min-h-[120px] flex flex-col items-center justify-center gap-2 text-white/90 hover:bg-[#0077E6] transition-colors",
       icon: <Activity className="w-8 h-8" />,
+      onClick: () => navigate("/medical-records"),
       textClassName: "text-sm font-medium text-center",
     },
     {

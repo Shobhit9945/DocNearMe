@@ -15,6 +15,13 @@ import {
   handleVerifyOtp,
 } from "./routes/auth";
 import { requireAuth } from "./middleware/auth";
+import {
+  handleCreateMedicalConsent,
+  handleDeleteMedicalRecord,
+  handleGetMedicalConsent,
+  handleListMedicalRecords,
+  handleUploadMedicalRecord,
+} from "./routes/medical-records";
 
 export async function createServer(): Promise<Express> {
   const app = express();
@@ -42,7 +49,7 @@ export async function createServer(): Promise<Express> {
   );
 
   // Parse JSON even if Netlify drops/changes Content-Type
-  app.use(express.json({ type: "*/*", limit: "1mb" }));
+  app.use(express.json({ type: "*/*", limit: "10mb" }));
   app.use(express.urlencoded({ extended: true }));
 
 
@@ -63,6 +70,11 @@ export async function createServer(): Promise<Express> {
   app.post("/api/auth/verify-otp", handleVerifyOtp);
   app.post("/api/auth/request-password-reset", handleRequestPasswordReset);
   app.post("/api/auth/reset-password", handleResetPassword);
+  app.get("/api/medical-records/consent", requireAuth, handleGetMedicalConsent);
+  app.post("/api/medical-records/consent", requireAuth, handleCreateMedicalConsent);
+  app.get("/api/medical-records", requireAuth, handleListMedicalRecords);
+  app.post("/api/medical-records", requireAuth, handleUploadMedicalRecord);
+  app.delete("/api/medical-records/:id", requireAuth, handleDeleteMedicalRecord);
   app.use("/api/docdaisy", docDaisyRouter);
   app.use("/api/health", healthRouter);
 

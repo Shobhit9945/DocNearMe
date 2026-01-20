@@ -42,3 +42,24 @@ export interface EmailOtp {
   verifiedAt?: Date;
   usedAt?: Date;
 }
+
+export interface MedicalRecord {
+  _id?: unknown;
+  patientId: string;
+  name: string;
+  type: string;
+  size: number;
+  iv: string;
+  data: string;
+  createdAt: Date;
+}
+
+export interface MedicalConsent {
+  _id?: unknown;
+  patientId: string;
+  consentVersion: string;
+  consentText: string;
+  consentedAt: Date;
+  ipAddress?: string;
+  userAgent?: string;
+}

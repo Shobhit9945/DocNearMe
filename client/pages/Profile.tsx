@@ -3,6 +3,7 @@ import { PageScaffold } from "@/components/PageScaffold";
 import { User, ShieldCheck, Bell, LogOut } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -10,11 +11,35 @@ export default function Profile() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [userName, setUserName] = useState<string | null>(null);
+  const [profileEmail, setProfileEmail] = useState("");
+  const [profilePhone, setProfilePhone] = useState("");
+  const [profileAddress, setProfileAddress] = useState("");
+  const [emergencyContact, setEmergencyContact] = useState("");
+  const [preferredLanguage, setPreferredLanguage] = useState("Japanese");
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [profileSaved, setProfileSaved] = useState(false);
 
   useEffect(() => {
     const storedName = localStorage.getItem("docnearme_user_name");
     if (storedName) {
       setUserName(storedName);
+    }
+    const storedProfile = localStorage.getItem("docnearme_profile");
+    if (storedProfile) {
+      const parsed = JSON.parse(storedProfile) as {
+        email?: string;
+        phone?: string;
+        address?: string;
+        emergencyContact?: string;
+        preferredLanguage?: string;
+        notificationsEnabled?: boolean;
+      };
+      setProfileEmail(parsed.email ?? "");
+      setProfilePhone(parsed.phone ?? "");
+      setProfileAddress(parsed.address ?? "");
+      setEmergencyContact(parsed.emergencyContact ?? "");
+      setPreferredLanguage(parsed.preferredLanguage ?? "Japanese");
+      setNotificationsEnabled(parsed.notificationsEnabled ?? true);
     }
   }, []);
 
@@ -23,6 +48,22 @@ export default function Profile() {
     localStorage.removeItem("docnearme_user_name");
     setUserName(null);
     navigate("/");
+  };
+
+  const handleProfileSave = () => {
+    localStorage.setItem(
+      "docnearme_profile",
+      JSON.stringify({
+        email: profileEmail,
+        phone: profilePhone,
+        address: profileAddress,
+        emergencyContact,
+        preferredLanguage,
+        notificationsEnabled,
+      })
+    );
+    setProfileSaved(true);
+    window.setTimeout(() => setProfileSaved(false), 2000);
   };
 
   return (
@@ -53,34 +94,126 @@ export default function Profile() {
                   {userName ? userName : t("Guest profile")}
                 </p>
                 <p className="text-sm text-slate-600">
-                  {userName 
-                    ? t("You are signed in to DocNearMe.") 
-                    : t("Sign-in has been removed from DocNearMe.")}
+                  {userName ? t("You are signed in to DocNearMe.") : t("Sign in to personalize your profile.")}
                 </p>
               </div>
             </div>
             {!userName && (
-               <div className="flex flex-wrap gap-3 items-center">
-                 <span className="px-3 py-1 bg-[#F5FAFF] text-[#1648CE] rounded-full text-xs font-semibold">
-                   {t("Public access")}
-                 </span>
-                 <p className="text-sm text-slate-600">
-                   {t("Book appointments without an account. Profile customization will return later.")}
-                 </p>
-               </div>
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="px-3 py-1 bg-[#F5FAFF] text-[#1648CE] rounded-full text-xs font-semibold">
+                  {t("Public access")}
+                </span>
+                <p className="text-sm text-slate-600">
+                  {t("Book appointments without an account, or sign in to save your profile details.")}
+                </p>
+                <Button
+                  type="button"
+                  size="sm"
+                  className="bg-[#0089FF] hover:bg-[#0077E6]"
+                  onClick={() => navigate("/patient-auth")}
+                >
+                  {t("Login")}
+                </Button>
+              </div>
             )}
           </section>
 
-          <section className="flex-1 rounded-[24px] border border-slate-200 bg-white p-8 text-center shadow-sm">
-            <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-[#0089FF]/10">
-              <User className="w-8 h-8 text-[#0089FF]" />
+          <section className="flex-1 rounded-[24px] border border-slate-200 bg-white p-8 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#0089FF]/10">
+                <User className="w-6 h-6 text-[#0089FF]" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-[#002D55]">{t("Profile details")}</h2>
+                <p className="text-sm text-[#556070]">{t("Update your contact and care preferences.")}</p>
+              </div>
             </div>
-            <h2 className="text-xl font-bold text-[#002D55] mb-2">{t("Profile Coming Soon")}</h2>
-            <p className="text-sm text-[#556070] max-w-md mx-auto">
-              {t(
-                "Soon you'll be able to update insurance details, manage dependents and sync appointment reminders across devices."
-              )}
-            </p>
+            <div className="mt-6 grid gap-4">
+              <div>
+                <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  {t("Email address")}
+                </label>
+                <Input
+                  type="email"
+                  value={profileEmail}
+                  onChange={(event) => setProfileEmail(event.target.value)}
+                  placeholder="you@example.com"
+                  className="mt-2"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  {t("Phone number")}
+                </label>
+                <Input
+                  type="tel"
+                  value={profilePhone}
+                  onChange={(event) => setProfilePhone(event.target.value)}
+                  placeholder="+81 90 0000 0000"
+                  className="mt-2"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  {t("Home address")}
+                </label>
+                <Input
+                  type="text"
+                  value={profileAddress}
+                  onChange={(event) => setProfileAddress(event.target.value)}
+                  placeholder="Chiyoda-ku, Tokyo"
+                  className="mt-2"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  {t("Emergency contact")}
+                </label>
+                <Input
+                  type="text"
+                  value={emergencyContact}
+                  onChange={(event) => setEmergencyContact(event.target.value)}
+                  placeholder="Name + phone"
+                  className="mt-2"
+                />
+              </div>
+              <div className="grid gap-2">
+                <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  {t("Preferred language")}
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {["Japanese", "English", "Korean", "Mandarin"].map((language) => (
+                    <button
+                      key={language}
+                      type="button"
+                      className={`rounded-full border px-3 py-1 text-xs font-semibold transition-colors ${
+                        preferredLanguage === language
+                          ? "border-[#0089FF] bg-[#0089FF]/10 text-[#1648CE]"
+                          : "border-slate-200 text-slate-500 hover:border-[#0089FF]/40"
+                      }`}
+                      onClick={() => setPreferredLanguage(language)}
+                    >
+                      {t(language)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <label className="flex items-center gap-2 text-sm text-slate-600">
+                <input
+                  type="checkbox"
+                  checked={notificationsEnabled}
+                  onChange={(event) => setNotificationsEnabled(event.target.checked)}
+                  className="h-4 w-4 rounded border-slate-300 text-[#0089FF] focus:ring-[#0089FF]"
+                />
+                {t("Send me appointment reminders and care tips.")}
+              </label>
+            </div>
+            <div className="mt-6 flex flex-wrap items-center gap-3">
+              <Button type="button" className="bg-[#0089FF] hover:bg-[#0077E6]" onClick={handleProfileSave}>
+                {t("Save profile")}
+              </Button>
+              {profileSaved && <span className="text-sm text-emerald-600">{t("Profile saved.")}</span>}
+            </div>
           </section>
 
           <aside className="hidden lg:flex lg:w-1/3 flex-col gap-4">

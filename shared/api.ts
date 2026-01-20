@@ -96,3 +96,51 @@ export interface ResetPasswordResponse {
   success: boolean;
   message: string;
 }
+
+export interface MedicalRecordResponseItem {
+  id: string;
+  name: string;
+  type: string;
+  size: number;
+  iv: string;
+  data: string;
+  createdAt: string;
+}
+
+export interface MedicalRecordListResponse {
+  records: MedicalRecordResponseItem[];
+}
+
+export interface MedicalRecordUploadRequest {
+  name: string;
+  type: string;
+  size: number;
+  iv: string;
+  data: string;
+}
+
+export interface MedicalRecordUploadResponse {
+  success: boolean;
+  record: MedicalRecordResponseItem;
+}
+
+export interface MedicalConsentStatusResponse {
+  hasConsented: boolean;
+  consentedAt?: string;
+  consentVersion?: string;
+}
+
+export interface MedicalConsentRequest {
+  consentVersion: string;
+  consentText: string;
+}
+
+export interface MedicalConsentResponse {
+  success: boolean;
+  consentedAt: string;
+  consentVersion: string;
+}
+
+export interface MedicalRecordDeleteResponse {
+  success: boolean;
+}

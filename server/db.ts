@@ -1,7 +1,7 @@
 // server/db.ts
 import "dotenv/config";
 import { MongoClient, Db, Collection, ObjectId } from "mongodb";
-import { Appointment, EmailOtp, PatientUser } from "./types";
+import { Appointment, EmailOtp, MedicalConsent, MedicalRecord, PatientUser } from "./types";
 
 const uri = process.env.MONGODB_URI ?? process.env.MONGODB_API_URL ?? process.env.VITE_MONGODB_API_URL;
 const dbName = process.env.MONGODB_DB_NAME ?? process.env.MONGODB_DATABASE ?? "patients";
@@ -122,6 +122,15 @@ class InMemoryCollection<T extends Record<string, unknown>> {
 
     return { matchedCount: 1, modifiedCount: 1 };
   }
+
+  async deleteOne(filter: Record<string, unknown>) {
+    const index = this.items.findIndex((entry) => matches(entry, filter));
+    if (index === -1) {
+      return { deletedCount: 0 };
+    }
+    this.items.splice(index, 1);
+    return { deletedCount: 1 };
+  }
 }
 
 export type InMemoryDb = {
@@ -130,6 +139,8 @@ export type InMemoryDb = {
     appointments: InMemoryCollection<Appointment>;
     patients: InMemoryCollection<PatientUser>;
     emailOtps: InMemoryCollection<EmailOtp>;
+    medicalRecords: InMemoryCollection<MedicalRecord>;
+    medicalConsents: InMemoryCollection<MedicalConsent>;
   };
 };
 
@@ -139,13 +150,17 @@ const inMemoryDb: InMemoryDb = {
     appointments: new InMemoryCollection<Appointment>([]),
     patients: new InMemoryCollection<PatientUser>([]),
     emailOtps: new InMemoryCollection<EmailOtp>([]),
+    medicalRecords: new InMemoryCollection<MedicalRecord>([]),
+    medicalConsents: new InMemoryCollection<MedicalConsent>([]),
   },
 };
 
 export const isMemoryDb = (db: Db | InMemoryDb): db is InMemoryDb => (db as InMemoryDb).kind === "memory";
 
-const getCollection = <T>(db: Db | InMemoryDb, name: "appointments" | "patients" | "emailOtps") =>
-  isMemoryDb(db) ? db.collections[name] : db.collection<T>(name);
+const getCollection = <T>(
+  db: Db | InMemoryDb,
+  name: "appointments" | "patients" | "emailOtps" | "medicalRecords" | "medicalConsents",
+) => (isMemoryDb(db) ? db.collections[name] : db.collection<T>(name));
 
 // Short, serverless-friendly timeouts. Keep pools tiny.
 function newClient() {
@@ -166,6 +181,8 @@ async function prepareOnce(db: Db | InMemoryDb) {
   const appointments = getCollection<Appointment>(db, "appointments");
   const patients = getCollection<PatientUser>(db, "patients");
   const emailOtps = getCollection<EmailOtp>(db, "emailOtps");
+  const medicalRecords = getCollection<MedicalRecord>(db, "medicalRecords");
+  const medicalConsents = getCollection<MedicalConsent>(db, "medicalConsents");
 
   // Run in parallel, but only once per warm container
   await Promise.all([
@@ -173,6 +190,8 @@ async function prepareOnce(db: Db | InMemoryDb) {
     patients.createIndex({ email: 1 }, { unique: true }),
     emailOtps.createIndex({ email: 1, createdAt: -1 }),
     emailOtps.createIndex({ expiresAt: 1 }),
+    medicalRecords.createIndex({ patientId: 1, createdAt: -1 }),
+    medicalConsents.createIndex({ patientId: 1, consentVersion: 1 }, { unique: true }),
   ]);
 
   cache.prepared = true;
@@ -260,4 +279,20 @@ export async function getPatientsCollection(): Promise<Collection<PatientUser> |
 export async function getEmailOtpsCollection(): Promise<Collection<EmailOtp> | InMemoryCollection<EmailOtp>> {
   const db = await connectToDatabase();
   return getCollection<EmailOtp>(db, "emailOtps") as Collection<EmailOtp> | InMemoryCollection<EmailOtp>;
+}
+
+export async function getMedicalRecordsCollection(): Promise<Collection<MedicalRecord> | InMemoryCollection<MedicalRecord>> {
+  const db = await connectToDatabase();
+  return getCollection<MedicalRecord>(db, "medicalRecords") as
+    | Collection<MedicalRecord>
+    | InMemoryCollection<MedicalRecord>;
+}
+
+export async function getMedicalConsentsCollection(): Promise<
+  Collection<MedicalConsent> | InMemoryCollection<MedicalConsent>
+> {
+  const db = await connectToDatabase();
+  return getCollection<MedicalConsent>(db, "medicalConsents") as
+    | Collection<MedicalConsent>
+    | InMemoryCollection<MedicalConsent>;
 }
