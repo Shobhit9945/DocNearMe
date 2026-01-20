@@ -69,6 +69,7 @@ export interface SignupRequest {
   name: string;
   email: string;
   password: string;
+  consentAccepted: boolean;
 }
 
 export interface LoginRequest {
