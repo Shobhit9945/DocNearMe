@@ -10,6 +10,7 @@ import { PageScaffold } from "@/components/PageScaffold";
 import type { AuthResponse } from "@shared/api";
 
 const TOKEN_KEY = "docnearme_patient_token";
+const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 type StatusState = {
   type: "idle" | "success" | "error";
@@ -36,7 +37,7 @@ const PatientAuth = () => {
       setError("Name must be at least 2 characters long.");
       return false;
     }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(signupData.email)) {
+    if (!emailPattern.test(signupData.email)) {
       setError("Please enter a valid email address.");
       return false;
     }
@@ -47,8 +48,24 @@ const PatientAuth = () => {
     return true;
   };
 
+  const validateLogin = () => {
+    if (activeTab !== "login") return true;
+    if (!emailPattern.test(loginData.email)) {
+      setError("Please enter a valid email address.");
+      return false;
+    }
+    if (loginData.password.length < 8) {
+      setError("Password must be at least 8 characters long.");
+      return false;
+    }
+    return true;
+  };
+
   const handleSubmit = async (endpoint: "/api/auth/signup" | "/api/auth/login", payload: object) => {
     if (endpoint === "/api/auth/signup" && !validateSignup()) {
+      return;
+    }
+    if (endpoint === "/api/auth/login" && !validateLogin()) {
       return;
     }
     
@@ -119,73 +136,81 @@ const PatientAuth = () => {
               </TabsList>
 
               <TabsContent value="login" className="mt-6 space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="login-email">Email</Label>
-                  <Input
-                    id="login-email"
-                    type="email"
-                    placeholder="patient@email.com"
-                    value={loginData.email}
-                    onChange={(event) => setLoginData((prev) => ({ ...prev, email: event.target.value }))}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="login-password">Password</Label>
-                  <Input
-                    id="login-password"
-                    type="password"
-                    placeholder="Enter your password"
-                    value={loginData.password}
-                    onChange={(event) => setLoginData((prev) => ({ ...prev, password: event.target.value }))}
-                  />
-                </div>
-                <Button
-                  className="w-full"
-                  disabled={isSubmitting}
-                  onClick={() => handleSubmit("/api/auth/login", loginData)}
+                <form
+                  className="space-y-4"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    handleSubmit("/api/auth/login", loginData);
+                  }}
                 >
-                  {isSubmitting ? "Signing in..." : "Sign in"}
-                </Button>
+                  <div className="space-y-2">
+                    <Label htmlFor="login-email">Email</Label>
+                    <Input
+                      id="login-email"
+                      type="email"
+                      placeholder="patient@email.com"
+                      value={loginData.email}
+                      onChange={(event) => setLoginData((prev) => ({ ...prev, email: event.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="login-password">Password</Label>
+                    <Input
+                      id="login-password"
+                      type="password"
+                      placeholder="Enter your password"
+                      value={loginData.password}
+                      onChange={(event) => setLoginData((prev) => ({ ...prev, password: event.target.value }))}
+                    />
+                  </div>
+                  <Button className="w-full" disabled={isSubmitting} type="submit">
+                    {isSubmitting ? "Signing in..." : "Sign in"}
+                  </Button>
+                </form>
               </TabsContent>
 
               <TabsContent value="signup" className="mt-6 space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="signup-name">Full name</Label>
-                  <Input
-                    id="signup-name"
-                    type="text"
-                    placeholder="Jane Doe"
-                    value={signupData.name}
-                    onChange={(event) => setSignupData((prev) => ({ ...prev, name: event.target.value }))}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-email">Email</Label>
-                  <Input
-                    id="signup-email"
-                    type="email"
-                    placeholder="patient@email.com"
-                    value={signupData.email}
-                    onChange={(event) => setSignupData((prev) => ({ ...prev, email: event.target.value }))}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-password">Password</Label>
-                  <Input
-                    id="signup-password"
-                    type="password"
-                    placeholder="Minimum 8 characters"
-                    value={signupData.password}
-                    onChange={(event) => setSignupData((prev) => ({ ...prev, password: event.target.value }))}
-                  />
-                </div>
-                <Button
-                  className="w-full"
-                  disabled={isSubmitting}
-                  onClick={() => handleSubmit("/api/auth/signup", signupData)}
+                <form
+                  className="space-y-4"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    handleSubmit("/api/auth/signup", signupData);
+                  }}
                 >
-                  {isSubmitting ? "Creating account..." : "Create account"}
-                </Button>
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-name">Full name</Label>
+                    <Input
+                      id="signup-name"
+                      type="text"
+                      placeholder="Jane Doe"
+                      value={signupData.name}
+                      onChange={(event) => setSignupData((prev) => ({ ...prev, name: event.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-email">Email</Label>
+                    <Input
+                      id="signup-email"
+                      type="email"
+                      placeholder="patient@email.com"
+                      value={signupData.email}
+                      onChange={(event) => setSignupData((prev) => ({ ...prev, email: event.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-password">Password</Label>
+                    <Input
+                      id="signup-password"
+                      type="password"
+                      placeholder="Minimum 8 characters"
+                      value={signupData.password}
+                      onChange={(event) => setSignupData((prev) => ({ ...prev, password: event.target.value }))}
+                    />
+                  </div>
+                  <Button className="w-full" disabled={isSubmitting} type="submit">
+                    {isSubmitting ? "Creating account..." : "Create account"}
+                  </Button>
+                </form>
               </TabsContent>
             </Tabs>
           </CardContent>
