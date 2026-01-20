@@ -42,6 +42,9 @@ const serializeAppointment = (appointment: Appointment) => ({
   createdAt: appointment.createdAt instanceof Date ? appointment.createdAt.toISOString() : appointment.createdAt,
 });
 
+const resolveAppointmentId = (appointmentId: string) =>
+  ObjectId.isValid(appointmentId) ? new ObjectId(appointmentId) : appointmentId;
+
 export const handleCreateAppointment = async (req: Request, res: Response) => {
   const payload = parseRequestBody(req.body);
   const { date, slot, specialization, clinicId, notes, patientName, patientEmail, doctorName } = payload ?? {};
@@ -230,5 +233,144 @@ export const handleListAppointmentsForUser = async (req: Request, res: Response)
   } catch (error) {
     console.error("Appointment list error", error);
     res.status(500).json({ error: "Failed to load appointments" });
+  }
+};
+
+export const handleRescheduleAppointment = async (req: Request, res: Response) => {
+  if (!req.auth) {
+    return res.status(401).json({ error: "Authentication required." });
+  }
+
+  const appointmentId = req.params.id;
+  const payload = parseRequestBody(req.body);
+  const { date, slot, reason } = payload ?? {};
+
+  if (!date || !slot || !reason) {
+    return res.status(400).json({ error: "Missing required fields" });
+  }
+
+  const dateObj = new Date(date);
+  if (Number.isNaN(dateObj.getTime())) {
+    return res.status(400).json({ error: "Invalid appointment date" });
+  }
+
+  try {
+    const appointments = await getAppointmentsCollection();
+    const appointmentLookup = resolveAppointmentId(appointmentId);
+    const appointment = await appointments.findOne({ _id: appointmentLookup });
+
+    if (!appointment || appointment.patientId !== req.auth.id) {
+      return res.status(404).json({ error: "Appointment not found" });
+    }
+
+    const dateKey = dateObj.toISOString().split("T")[0];
+    const conflict = await appointments.findOne({
+      dateKey,
+      slot,
+      clinicId: appointment.clinicId,
+    });
+
+    if (conflict && String(conflict._id) !== String(appointment._id)) {
+      return res.status(409).json({ error: "Slot already booked" });
+    }
+
+    await appointments.updateOne(
+      { _id: appointmentLookup },
+      {
+        $set: {
+          date: dateObj.toISOString(),
+          dateKey,
+          slot,
+        },
+      },
+    );
+
+    const patients = await getPatientsCollection();
+    const patientLookupId = ObjectId.isValid(req.auth.id) ? new ObjectId(req.auth.id) : req.auth.id;
+    const patient = await patients.findOne({ _id: patientLookupId });
+    if (patient?.appointments) {
+      const updatedAppointments = patient.appointments.map((summary) =>
+        summary.appointmentId === appointmentId
+          ? {
+              ...summary,
+              date: dateObj.toISOString(),
+              slot: String(slot),
+            }
+          : summary,
+      );
+      await patients.updateOne(
+        { _id: patientLookupId },
+        {
+          $set: {
+            appointments: updatedAppointments,
+          },
+        },
+      );
+    }
+
+    res.json({
+      success: true,
+      appointment: serializeAppointment({
+        ...appointment,
+        date: dateObj.toISOString(),
+        dateKey,
+        slot: String(slot),
+      }),
+      message: "Appointment rescheduled successfully",
+    });
+  } catch (error) {
+    console.error("Appointment reschedule error", error);
+    res.status(500).json({ error: "Failed to reschedule appointment" });
+  }
+};
+
+export const handleCancelAppointment = async (req: Request, res: Response) => {
+  if (!req.auth) {
+    return res.status(401).json({ error: "Authentication required." });
+  }
+
+  const appointmentId = req.params.id;
+  const payload = parseRequestBody(req.body);
+  const { reason } = payload ?? {};
+
+  if (!reason) {
+    return res.status(400).json({ error: "Cancellation reason is required" });
+  }
+
+  try {
+    const appointments = await getAppointmentsCollection();
+    const appointmentLookup = resolveAppointmentId(appointmentId);
+    const appointment = await appointments.findOne({ _id: appointmentLookup });
+
+    if (!appointment || appointment.patientId !== req.auth.id) {
+      return res.status(404).json({ error: "Appointment not found" });
+    }
+
+    await appointments.deleteOne({ _id: appointmentLookup });
+
+    const patients = await getPatientsCollection();
+    const patientLookupId = ObjectId.isValid(req.auth.id) ? new ObjectId(req.auth.id) : req.auth.id;
+    const patient = await patients.findOne({ _id: patientLookupId });
+    if (patient?.appointments) {
+      const updatedAppointments = patient.appointments.filter(
+        (summary) => summary.appointmentId !== appointmentId,
+      );
+      await patients.updateOne(
+        { _id: patientLookupId },
+        {
+          $set: {
+            appointments: updatedAppointments,
+          },
+        },
+      );
+    }
+
+    res.json({
+      success: true,
+      message: "Appointment cancelled successfully",
+    });
+  } catch (error) {
+    console.error("Appointment cancellation error", error);
+    res.status(500).json({ error: "Failed to cancel appointment" });
   }
 };

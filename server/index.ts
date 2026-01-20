@@ -3,7 +3,13 @@ import express, { Express } from "express";
 import cors from "cors";
 import { handleDemo } from "./routes/demo";
 import { handleAvailability } from "./routes/availability";
-import { handleCreateAppointment, handleListAppointments, handleListAppointmentsForUser } from "./routes/appointment";
+import {
+  handleCancelAppointment,
+  handleCreateAppointment,
+  handleListAppointments,
+  handleListAppointmentsForUser,
+  handleRescheduleAppointment,
+} from "./routes/appointment";
 import docDaisyRouter from "./routes/docdaisy";
 import healthRouter from "./routes/health";
 import {
@@ -62,6 +68,8 @@ export async function createServer(): Promise<Express> {
   app.get("/api/demo", handleDemo);
   app.get("/api/availability", handleAvailability);
   app.post("/api/appointments", requireAuth, handleCreateAppointment);
+  app.patch("/api/appointments/:id/reschedule", requireAuth, handleRescheduleAppointment);
+  app.patch("/api/appointments/:id/cancel", requireAuth, handleCancelAppointment);
   app.get("/api/appointments", handleListAppointments);
   app.get("/api/appointments/me", requireAuth, handleListAppointmentsForUser);
   app.post("/api/auth/signup", handleSignup);
