@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { ObjectId } from "mongodb";
-import { getAppointmentsCollection } from "../db";
-import { Appointment } from "../types";
+import { getAppointmentsCollection, getPatientsCollection } from "../db";
+import { Appointment, PatientAppointmentSummary } from "../types";
 
 const generateBookingId = () =>
   `DNM-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
@@ -23,7 +23,7 @@ export const handleCreateAppointment = async (req: Request, res: Response) => {
     return res.status(401).json({ error: "Authentication required." });
   }
 
-  if (!date || !slot || !specialization) {
+  if (!date || !slot || !specialization || !clinicId) {
     return res.status(400).json({ error: "Missing required fields" });
   }
 
@@ -32,7 +32,7 @@ export const handleCreateAppointment = async (req: Request, res: Response) => {
     return res.status(400).json({ error: "Invalid appointment date" });
   }
 
-  const clinicKey = clinicId || "global";
+  const clinicKey = clinicId;
   const dateKey = dateObj.toISOString().split("T")[0];
 
   try {
@@ -61,10 +61,30 @@ export const handleCreateAppointment = async (req: Request, res: Response) => {
     };
 
     const result = await appointments.insertOne(record);
+    const appointmentId = result.insertedId?.toString?.() ?? generateBookingId();
+
+    const patients = await getPatientsCollection();
+    const patientAppointment: PatientAppointmentSummary = {
+      appointmentId,
+      date: record.date,
+      slot: record.slot,
+      specialization: record.specialization,
+      doctorName: record.doctorName,
+      clinicId: record.clinicId,
+      createdAt: record.createdAt,
+    };
+
+    const patientLookupId = ObjectId.isValid(req.auth.id) ? new ObjectId(req.auth.id) : req.auth.id;
+    await patients.updateOne(
+      { _id: patientLookupId },
+      {
+        $push: { appointments: patientAppointment },
+      },
+    );
 
     res.status(201).json({
       success: true,
-      id: result.insertedId?.toString?.() ?? generateBookingId(),
+      id: appointmentId,
       message: "Appointment booked successfully",
     });
   } catch (error) {

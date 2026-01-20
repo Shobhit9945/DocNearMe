@@ -13,10 +13,21 @@ export interface Appointment {
   createdAt: Date;
 }
 
+export interface PatientAppointmentSummary {
+  appointmentId: string;
+  date: string;
+  slot: string;
+  specialization: string;
+  doctorName?: string;
+  clinicId: string;
+  createdAt: Date;
+}
+
 export interface PatientUser {
   _id?: unknown;
   name: string;
   email: string;
   passwordHash: string;
+  appointments?: PatientAppointmentSummary[];
   createdAt: Date;
 }

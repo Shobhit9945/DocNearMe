@@ -96,6 +96,32 @@ class InMemoryCollection<T extends Record<string, unknown>> {
     this.items.push({ ...doc, _id });
     return { insertedId: _id };
   }
+
+  async updateOne(filter: Record<string, unknown>, update: Record<string, unknown>) {
+    const item = this.items.find((entry) => matches(entry, filter));
+    if (!item) {
+      return { matchedCount: 0, modifiedCount: 0 };
+    }
+
+    if (update.$set && typeof update.$set === "object") {
+      Object.entries(update.$set as Record<string, unknown>).forEach(([key, value]) => {
+        (item as Record<string, unknown>)[key] = value;
+      });
+    }
+
+    if (update.$push && typeof update.$push === "object") {
+      Object.entries(update.$push as Record<string, unknown>).forEach(([key, value]) => {
+        const existing = (item as Record<string, unknown>)[key];
+        if (Array.isArray(existing)) {
+          existing.push(value);
+        } else {
+          (item as Record<string, unknown>)[key] = [value];
+        }
+      });
+    }
+
+    return { matchedCount: 1, modifiedCount: 1 };
+  }
 }
 
 export type InMemoryDb = {

@@ -92,6 +92,7 @@ export const handleSignup: RequestHandler = async (req, res, next) => {
       name: payload.name,
       email: normalizedEmail,
       passwordHash,
+      appointments: [],
       createdAt: new Date(),
     };
 
