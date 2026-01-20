@@ -30,7 +30,15 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { CLINICS } from "@/lib/clinics";
 import { matchSpecialization, SPECIALIZATION_OPTIONS } from "@/lib/specializations";
-import type { AppointmentCreateRequest, AppointmentCreateResponse, AppointmentListResponse } from "@shared/api";
+import type {
+  AppointmentCancelRequest,
+  AppointmentCancelResponse,
+  AppointmentCreateRequest,
+  AppointmentCreateResponse,
+  AppointmentListResponse,
+  AppointmentRescheduleRequest,
+  AppointmentRescheduleResponse,
+} from "@shared/api";
 import { toast } from "@/components/ui/use-toast";
 
 const TOKEN_KEY = "docnearme_patient_token";
@@ -71,6 +79,7 @@ type UpcomingAppointment = {
   specialization: string;
   date: string;
   time: string;
+  dateISO: string;
   clinic: string;
   type: string;
   clinicId: string;
@@ -200,7 +209,10 @@ export default function Appointment() {
   const [actionAppointment, setActionAppointment] = useState<UpcomingAppointment | null>(null);
   const [actionType, setActionType] = useState<"reschedule" | "cancel" | null>(null);
   const [actionReason, setActionReason] = useState("");
+  const [actionDate, setActionDate] = useState<Date | undefined>();
+  const [actionSlot, setActionSlot] = useState<string | undefined>();
   const [actionError, setActionError] = useState<string | null>(null);
+  const [isActionSubmitting, setIsActionSubmitting] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<{
     name?: string;
     email?: string;
@@ -317,6 +329,23 @@ export default function Appointment() {
 
   const timeSlots = slotsData || [];
 
+  const actionClinicId = actionAppointment?.clinicId ?? "";
+  const { data: actionSlotsData, isLoading: isLoadingActionSlots } = useQuery({
+    queryKey: ["availability", actionDate?.toISOString(), actionClinicId, "action"],
+    queryFn: async () => {
+      if (!actionDate || !actionClinicId) return [];
+      const res = await fetch(
+        `/api/availability?date=${actionDate.toISOString()}&clinicId=${actionClinicId}`
+      );
+      if (!res.ok) throw new Error("Failed to fetch slots");
+      const data = await res.json();
+      return data.slots as string[];
+    },
+    enabled: actionType === "reschedule" && !!actionDate && !!actionClinicId,
+  });
+
+  const actionSlots = actionSlotsData || [];
+
   const { data: appointmentsData, isLoading: isLoadingAppointments, refetch: refetchAppointments } = useQuery({
     queryKey: ["appointments", "me", authSession?.token],
     enabled: isAuthenticated,
@@ -429,6 +458,7 @@ export default function Appointment() {
         specialization: appointment.specialization,
         date: formatDateLabel(new Date(appointment.date)),
         time: appointment.slot,
+        dateISO: appointment.date,
         clinic: clinicName,
         type: "In-person",
         clinicId: appointment.clinicId,
@@ -563,6 +593,8 @@ export default function Appointment() {
     setActionAppointment(appointment);
     setActionType(type);
     setActionReason("");
+    setActionDate(new Date(appointment.dateISO));
+    setActionSlot(appointment.time);
     setActionError(null);
   };
 
@@ -570,10 +602,12 @@ export default function Appointment() {
     setActionAppointment(null);
     setActionType(null);
     setActionReason("");
+    setActionDate(undefined);
+    setActionSlot(undefined);
     setActionError(null);
   };
 
-  const handleSubmitAction = () => {
+  const handleSubmitAction = async () => {
     const trimmedReason = actionReason.trim();
     if (!trimmedReason) {
       setActionError("Please provide a reason before submitting.");
@@ -582,11 +616,69 @@ export default function Appointment() {
 
     if (!actionAppointment || !actionType) return;
 
-    toast({
-      title: actionType === "cancel" ? "Cancellation request sent" : "Reschedule request sent",
-      description: `We received your ${actionType} request for ${actionAppointment.doctor}.`,
-    });
-    handleCloseAction();
+    if (actionType === "reschedule") {
+      if (!actionDate || !actionSlot) {
+        setActionError("Please choose a new date and time.");
+        return;
+      }
+    }
+
+    setIsActionSubmitting(true);
+
+    try {
+      if (actionType === "cancel") {
+        const payload: AppointmentCancelRequest = { reason: trimmedReason };
+        const response = await fetch(`/api/appointments/${actionAppointment.id}/cancel`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${authSession?.token}`,
+          },
+          body: JSON.stringify(payload),
+        });
+
+        const data = (await response.json()) as AppointmentCancelResponse | { error?: string };
+        if (!response.ok) {
+          throw new Error("error" in data && data.error ? data.error : "Unable to cancel appointment.");
+        }
+
+        toast({
+          title: "Appointment cancelled",
+          description: `Your appointment with ${actionAppointment.doctor} has been cancelled.`,
+        });
+      } else {
+        const payload: AppointmentRescheduleRequest = {
+          date: actionDate!.toISOString(),
+          slot: actionSlot!,
+          reason: trimmedReason,
+        };
+        const response = await fetch(`/api/appointments/${actionAppointment.id}/reschedule`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${authSession?.token}`,
+          },
+          body: JSON.stringify(payload),
+        });
+
+        const data = (await response.json()) as AppointmentRescheduleResponse | { error?: string };
+        if (!response.ok) {
+          throw new Error("error" in data && data.error ? data.error : "Unable to reschedule appointment.");
+        }
+
+        toast({
+          title: "Appointment rescheduled",
+          description: `Your appointment with ${actionAppointment.doctor} has been moved to ${actionDate?.toLocaleDateString()} at ${actionSlot}.`,
+        });
+      }
+
+      await refetchAppointments();
+      handleCloseAction();
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "Unable to update appointment.");
+    } finally {
+      setIsActionSubmitting(false);
+    }
   };
 
   const handleAddToGoogleCalendar = () => {
@@ -964,7 +1056,7 @@ export default function Appointment() {
               <DialogDescription>
                 {actionAppointment
                   ? `Please share a reason for your ${
-                      actionType === "cancel" ? "cancellation" : "reschedule request"
+                      actionType === "cancel" ? "cancellation" : "reschedule"
                     } for ${actionAppointment.doctor}.`
                   : "Please share a reason for this request."}
               </DialogDescription>
@@ -985,6 +1077,70 @@ export default function Appointment() {
               />
               {actionError ? <p className="text-sm text-rose-500">{actionError}</p> : null}
             </div>
+            {actionType === "reschedule" ? (
+              <div className="space-y-4">
+                <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                  <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold mb-2">
+                    New date
+                  </p>
+                  <div className="flex justify-center">
+                    <Calendar
+                      mode="single"
+                      selected={actionDate}
+                      onSelect={(date) => {
+                        setActionDate(date);
+                        setActionSlot(undefined);
+                        if (actionError) setActionError(null);
+                      }}
+                      className="rounded-md border shadow-sm"
+                      disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                    />
+                  </div>
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                  <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold mb-2">
+                    New time
+                  </p>
+                  {!actionDate ? (
+                    <div className="text-center py-8 text-slate-500 bg-slate-50 rounded-xl">
+                      <CalendarClock className="w-8 h-8 mx-auto mb-2 text-slate-400" />
+                      <p className="font-medium">Select a date to view slots</p>
+                    </div>
+                  ) : isLoadingActionSlots ? (
+                    <div className="flex items-center justify-center py-8 text-slate-500">
+                      <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                      Loading slots...
+                    </div>
+                  ) : actionSlots.length > 0 ? (
+                    <div className="grid grid-cols-2 gap-2 max-h-[220px] overflow-y-auto pr-1">
+                      {actionSlots.map((slot) => (
+                        <button
+                          key={slot}
+                          onClick={() => {
+                            setActionSlot(slot);
+                            if (actionError) setActionError(null);
+                          }}
+                          className={cn(
+                            "rounded-xl border px-3 py-2 text-sm font-semibold transition-all text-center",
+                            actionSlot === slot
+                              ? "border-[#0089FF] bg-[#0089FF] text-white shadow-md"
+                              : "border-slate-200 bg-white text-slate-700 hover:border-[#0089FF] hover:bg-[#0089FF]/5"
+                          )}
+                        >
+                          {slot}
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-slate-500 bg-slate-50 rounded-xl">
+                      <CalendarClock className="w-8 h-8 mx-auto mb-2 text-slate-400" />
+                      <p className="font-medium">No slots available</p>
+                      <p className="text-sm">Please select another date</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : null}
             <DialogFooter>
               <button
                 onClick={handleCloseAction}
@@ -994,9 +1150,14 @@ export default function Appointment() {
               </button>
               <button
                 onClick={handleSubmitAction}
-                className="rounded-full bg-[#0089FF] px-5 py-2 text-sm font-semibold text-white hover:bg-[#0077E6]"
+                className="rounded-full bg-[#0089FF] px-5 py-2 text-sm font-semibold text-white hover:bg-[#0077E6] disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={isActionSubmitting}
               >
-                Submit request
+                {isActionSubmitting
+                  ? "Updating..."
+                  : actionType === "cancel"
+                    ? "Cancel appointment"
+                    : "Reschedule appointment"}
               </button>
             </DialogFooter>
           </DialogContent>

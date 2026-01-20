@@ -25,9 +25,6 @@ export default function Clinics() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [showFilters, setShowFilters] = useState(false);
-  const [facilityType, setFacilityType] = useState<"all" | "Hospital" | "Clinic">(
-    "all"
-  );
   const [minRating, setMinRating] = useState(0);
   const { currentLocation, locationError, isFetchingLocation } = useLiveLocation();
   const { t } = useTranslation();
@@ -64,12 +61,11 @@ export default function Clinics() {
           const normalized = matchSpecialization(spec) ?? spec;
           return normalized.toLowerCase() === selectedSpecialization.toLowerCase();
         });
-        const facilityMatch = facilityType === "all" || clinic.type === facilityType;
         const ratingMatch = clinic.rating >= minRating;
 
-        return specializationMatch && facilityMatch && ratingMatch;
+        return specializationMatch && ratingMatch;
       }),
-    [selectedSpecialization, facilityType, minRating]
+    [selectedSpecialization, minRating]
   );
 
   const selectedLabel =
@@ -90,7 +86,7 @@ export default function Clinics() {
     <PageScaffold contentClassName="pb-28 lg:pb-12">
       <header className="bg-white px-4 pt-10 pb-4 border-b border-gray-100 shadow-sm lg:px-10 lg:rounded-t-3xl lg:border-none lg:shadow-none">
         <div className="flex flex-col gap-3">
-          <p className="text-xs uppercase tracking-[0.2em] text-slate-400">{t("Clinics & Hospitals")}</p>
+          <p className="text-xs uppercase tracking-[0.2em] text-slate-400">{t("Clinics")}</p>
           <h1 className="text-3xl font-bold text-[#002D55] flex items-center gap-3">
             <Building2 className="w-8 h-8 text-[#0089FF]" /> {t("Discover care for")} {selectedLabel}
           </h1>
@@ -143,7 +139,7 @@ export default function Clinics() {
             </div>
 
             <div
-              className={`${showFilters ? "grid" : "hidden lg:grid"} grid-cols-1 gap-4 border-t border-slate-100 px-4 py-4 sm:grid-cols-2 lg:grid-cols-3 lg:px-6 lg:py-6`}
+              className={`${showFilters ? "grid" : "hidden lg:grid"} grid-cols-1 gap-4 border-t border-slate-100 px-4 py-4 sm:grid-cols-2 lg:grid-cols-2 lg:px-6 lg:py-6`}
             >
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-slate-700" htmlFor="specialization">
@@ -161,25 +157,6 @@ export default function Clinics() {
                       </option>
                     ))}
                   </select>
-                </div>
-
-                <div className="space-y-2">
-                  <p className="text-sm font-semibold text-slate-700">{t("Facility type")}</p>
-                  <div className="flex flex-wrap gap-2">
-                    {["all", "Hospital", "Clinic"].map((type) => (
-                      <button
-                        key={type}
-                        onClick={() => setFacilityType(type as typeof facilityType)}
-                        className={`rounded-full border px-4 py-2 text-sm font-semibold transition-all ${
-                          facilityType === type
-                            ? "border-[#3A12DB] bg-[#E5DEFF] text-[#3A12DB] shadow-sm shadow-[#3A12DB]/20"
-                            : "border-slate-200 bg-slate-50 text-slate-600 hover:border-[#D4EBFF]"
-                        }`}
-                      >
-                        {type === "all" ? t("All") : t(type)}
-                      </button>
-                    ))}
-                  </div>
                 </div>
 
                 <div className="space-y-2">
@@ -221,7 +198,6 @@ export default function Clinics() {
                     <div className="flex flex-1 flex-col gap-4 p-5">
                       <div className="flex flex-wrap items-start justify-between gap-3">
                         <div>
-                          <p className="text-xs uppercase tracking-wide text-slate-400">{clinic.type}</p>
                           <h3 className="text-xl font-semibold text-[#002D55]">{clinic.name}</h3>
                         </div>
                         <div className="flex items-center gap-1 rounded-full bg-[#FFF3C8] px-3 py-1 text-sm font-semibold text-[#B06B00]">

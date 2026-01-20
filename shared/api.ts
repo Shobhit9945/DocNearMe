@@ -40,6 +40,27 @@ export interface AppointmentCreateResponse {
   message: string;
 }
 
+export interface AppointmentRescheduleRequest {
+  date: string;
+  slot: string;
+  reason: string;
+}
+
+export interface AppointmentRescheduleResponse {
+  success: boolean;
+  appointment: AppointmentResponseItem;
+  message: string;
+}
+
+export interface AppointmentCancelRequest {
+  reason: string;
+}
+
+export interface AppointmentCancelResponse {
+  success: boolean;
+  message: string;
+}
+
 export interface AppointmentListResponse {
   appointments: AppointmentResponseItem[];
 }
