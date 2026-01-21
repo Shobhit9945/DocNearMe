@@ -5,8 +5,9 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { TranslationProvider } from "@/lib/i18n";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { createRoot } from "react-dom/client";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
 import AdminBookings from "./pages/AdminBookings";
 import Appointment from "./pages/Appointment";
 import Clinics from "./pages/Clinics";
@@ -19,6 +20,14 @@ import Profile from "./pages/Profile";
 import Search from "./pages/Search";
 
 const queryClient = new QueryClient();
+
+declare global {
+  interface Window {
+    umami?: {
+      track: (event?: string | Record<string, unknown>, data?: Record<string, unknown>) => void;
+    };
+  }
+}
 
 const routes = [
   { path: "/", element: <Index /> },
@@ -33,6 +42,22 @@ const routes = [
   { path: "/admin/bookings", element: <AdminBookings /> },
 ] as const;
 
+const TrackPageView = () => {
+  const location = useLocation();
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    window.umami?.track({
+      url: `${location.pathname}${location.search}`,
+    });
+  }, [location.pathname, location.search]);
+
+  return null;
+};
+
 const App = () => (
   <TranslationProvider>
     <QueryClientProvider client={queryClient}>
@@ -40,6 +65,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
+          <TrackPageView />
           <Routes>
             {routes.map((route) => (
               <Route key={route.path} path={route.path} element={route.element} />
