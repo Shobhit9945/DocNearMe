@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { BottomNav } from "@/components/BottomNav";
 import { DocDaisyBanner } from "@/components/DocDaisyBanner";
 import { PageScaffold } from "@/components/PageScaffold";
@@ -26,8 +26,17 @@ export default function Clinics() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [showFilters, setShowFilters] = useState(false);
   const [minRating, setMinRating] = useState(0);
-  const { currentLocation, locationError, isFetchingLocation } = useLiveLocation();
+  const {
+    currentLocation,
+    locationError,
+    isFetchingLocation,
+    manualLocation,
+    setManualLocation,
+    clearManualLocation,
+  } = useLiveLocation();
   const { t } = useTranslation();
+  const [isEditingLocation, setIsEditingLocation] = useState(false);
+  const [manualLocationInput, setManualLocationInput] = useState(manualLocation ?? "");
 
   const specializationParam = searchParams.get("specialization");
   const normalizedSpecialization = specializationParam
@@ -72,10 +81,20 @@ export default function Clinics() {
     availableSpecializations.find((spec) => spec.id === selectedSpecialization)?.label ?? selectedSpecialization;
 
   const locationStatus = useMemo(() => {
+    if (manualLocation) return "Manual address";
     if (isFetchingLocation) return "Fetching your location...";
     if (locationError) return locationError;
     return "Updated a moment ago";
-  }, [isFetchingLocation, locationError]);
+  }, [isFetchingLocation, locationError, manualLocation]);
+
+  useEffect(() => {
+    setManualLocationInput(manualLocation ?? "");
+  }, [manualLocation]);
+
+  const handleManualLocationSave = () => {
+    setManualLocation(manualLocationInput);
+    setIsEditingLocation(false);
+  };
 
   const handleSpecializationChange = (specialization: string) => {
     setSearchParams({ specialization });
@@ -103,6 +122,50 @@ export default function Clinics() {
                 {currentLocation}
               </p>
               <p className={`text-xs ${locationError ? "text-red-500" : "text-slate-600"}`}>{t(locationStatus)}</p>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                {manualLocation && (
+                  <span className="rounded-full bg-white/70 px-2.5 py-1 text-[11px] font-semibold text-[#1648CE]">
+                    {t("Manual address")}
+                  </span>
+                )}
+                <button
+                  type="button"
+                  className="text-xs font-semibold text-[#0089FF] hover:text-[#0077E6]"
+                  onClick={() => setIsEditingLocation(true)}
+                >
+                  {manualLocation ? t("Edit address") : t("Enter address manually")}
+                </button>
+                {manualLocation && (
+                  <button
+                    type="button"
+                    className="text-xs font-semibold text-slate-500 hover:text-slate-700"
+                    onClick={() => {
+                      clearManualLocation();
+                      setIsEditingLocation(false);
+                    }}
+                  >
+                    {t("Use GPS instead")}
+                  </button>
+                )}
+              </div>
+              {isEditingLocation && (
+                <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+                  <input
+                    type="text"
+                    value={manualLocationInput}
+                    onChange={(event) => setManualLocationInput(event.target.value)}
+                    placeholder={t("Type your address")}
+                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-[#0089FF] focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleManualLocationSave}
+                    className="rounded-xl bg-[#002D55] px-4 py-2 text-xs font-semibold text-white hover:bg-[#003366]"
+                  >
+                    {t("Save")}
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -111,36 +174,28 @@ export default function Clinics() {
       <main className="flex-1 px-4 pt-6 lg:px-12 lg:pt-12">
         <div className="lg:grid lg:grid-cols-[3fr_1.05fr] lg:gap-12">
           <section className="space-y-6">
-            <div className="rounded-3xl border border-[#D4EBFF] bg-gradient-to-br from-white to-[#E4F2FF] p-6 shadow-sm lg:p-10">
-              <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+            <div className="rounded-3xl border border-[#D4EBFF] bg-white p-6 shadow-sm lg:p-8">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div className="space-y-2">
                   <p className="text-sm font-semibold text-[#002D55]">{selectedLabel} {t("specialists near you")}</p>
                   <h2 className="text-2xl font-bold text-[#002D55]">
                     {clinics.length} {t("care centers available in Beppu")}
                   </h2>
-                  <p className="text-sm text-slate-600">{t("Refined by DocDaisy and your latest filters.")}</p>
+                  <p className="text-sm text-slate-600">{t("Filter by specialization and rating to narrow the list.")}</p>
                 </div>
-                <div className="rounded-2xl bg-white/80 p-4 text-sm text-slate-700 shadow-sm max-w-sm">
-                  <p className="font-semibold text-[#002D55]">DocDaisy insights</p>
-                  <p className="mt-1 text-sm text-slate-600">
-                    Use the filters below to refine specialists around your live location before starting a search.
-                  </p>
-                </div>
+                <button
+                  onClick={() => setShowFilters((prev) => !prev)}
+                  className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-3 py-2 text-sm font-semibold text-[#002D55] hover:border-[#3A12DB] hover:text-[#3A12DB] lg:hidden"
+                >
+                  <Filter className="w-4 h-4" /> {showFilters ? "Hide" : "Show"} filters
+                </button>
               </div>
-            </div>
 
-            <div className="flex flex-wrap gap-2">
-              <button
-                onClick={() => setShowFilters((prev) => !prev)}
-                className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-3 py-2 text-sm font-semibold text-[#002D55] hover:border-[#3A12DB] hover:text-[#3A12DB] lg:hidden"
+              <div
+                className={`${
+                  showFilters ? "grid" : "hidden lg:grid"
+                } mt-4 grid-cols-1 gap-4 border-t border-slate-100 pt-4 sm:grid-cols-2 lg:grid-cols-2`}
               >
-                <Filter className="w-4 h-4" /> {showFilters ? "Hide" : "Show"} filters
-              </button>
-            </div>
-
-            <div
-              className={`${showFilters ? "grid" : "hidden lg:grid"} grid-cols-1 gap-4 border-t border-slate-100 px-4 py-4 sm:grid-cols-2 lg:grid-cols-2 lg:px-6 lg:py-6`}
-            >
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-slate-700" htmlFor="specialization">
                     {t("Specialization")}
@@ -181,6 +236,7 @@ export default function Clinics() {
                   <p className="text-xs text-slate-500">{t("Drag to prioritise higher-rated doctors.")}</p>
                 </div>
               </div>
+            </div>
 
             <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-3">
               {clinics.map((clinic) => {
