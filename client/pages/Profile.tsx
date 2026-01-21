@@ -18,29 +18,42 @@ export default function Profile() {
   const [preferredLanguage, setPreferredLanguage] = useState("Japanese");
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [profileSaved, setProfileSaved] = useState(false);
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+
+  const loadProfileFromStorage = () => {
+    const storedProfile = localStorage.getItem("docnearme_profile");
+    if (!storedProfile) {
+      setProfileEmail("");
+      setProfilePhone("");
+      setProfileAddress("");
+      setEmergencyContact("");
+      setPreferredLanguage("Japanese");
+      setNotificationsEnabled(true);
+      return;
+    }
+
+    const parsed = JSON.parse(storedProfile) as {
+      email?: string;
+      phone?: string;
+      address?: string;
+      emergencyContact?: string;
+      preferredLanguage?: string;
+      notificationsEnabled?: boolean;
+    };
+    setProfileEmail(parsed.email ?? "");
+    setProfilePhone(parsed.phone ?? "");
+    setProfileAddress(parsed.address ?? "");
+    setEmergencyContact(parsed.emergencyContact ?? "");
+    setPreferredLanguage(parsed.preferredLanguage ?? "Japanese");
+    setNotificationsEnabled(parsed.notificationsEnabled ?? true);
+  };
 
   useEffect(() => {
     const storedName = localStorage.getItem("docnearme_user_name");
     if (storedName) {
       setUserName(storedName);
     }
-    const storedProfile = localStorage.getItem("docnearme_profile");
-    if (storedProfile) {
-      const parsed = JSON.parse(storedProfile) as {
-        email?: string;
-        phone?: string;
-        address?: string;
-        emergencyContact?: string;
-        preferredLanguage?: string;
-        notificationsEnabled?: boolean;
-      };
-      setProfileEmail(parsed.email ?? "");
-      setProfilePhone(parsed.phone ?? "");
-      setProfileAddress(parsed.address ?? "");
-      setEmergencyContact(parsed.emergencyContact ?? "");
-      setPreferredLanguage(parsed.preferredLanguage ?? "Japanese");
-      setNotificationsEnabled(parsed.notificationsEnabled ?? true);
-    }
+    loadProfileFromStorage();
   }, []);
 
   const handleLogout = () => {
@@ -63,7 +76,14 @@ export default function Profile() {
       })
     );
     setProfileSaved(true);
+    setIsEditingProfile(false);
     window.setTimeout(() => setProfileSaved(false), 2000);
+  };
+
+  const handleProfileCancel = () => {
+    loadProfileFromStorage();
+    setIsEditingProfile(false);
+    setProfileSaved(false);
   };
 
   return (
@@ -119,14 +139,29 @@ export default function Profile() {
           </section>
 
           <section className="flex-1 rounded-[24px] border border-slate-200 bg-white p-8 shadow-sm">
-            <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#0089FF]/10">
-                <User className="w-6 h-6 text-[#0089FF]" />
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#0089FF]/10">
+                  <User className="w-6 h-6 text-[#0089FF]" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-[#002D55]">{t("Profile details")}</h2>
+                  <p className="text-sm text-[#556070]">{t("Update your contact and care preferences.")}</p>
+                </div>
               </div>
-              <div>
-                <h2 className="text-xl font-bold text-[#002D55]">{t("Profile details")}</h2>
-                <p className="text-sm text-[#556070]">{t("Update your contact and care preferences.")}</p>
-              </div>
+              {!isEditingProfile && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="border-[#0089FF] text-[#0089FF] hover:bg-[#E8F3FF]"
+                  onClick={() => {
+                    setIsEditingProfile(true);
+                    setProfileSaved(false);
+                  }}
+                >
+                  {t("Edit info")}
+                </Button>
+              )}
             </div>
             <div className="mt-6 grid gap-4">
               <div>
@@ -139,6 +174,7 @@ export default function Profile() {
                   onChange={(event) => setProfileEmail(event.target.value)}
                   placeholder="you@example.com"
                   className="mt-2"
+                  disabled={!isEditingProfile}
                 />
               </div>
               <div>
@@ -151,6 +187,7 @@ export default function Profile() {
                   onChange={(event) => setProfilePhone(event.target.value)}
                   placeholder="+81 90 0000 0000"
                   className="mt-2"
+                  disabled={!isEditingProfile}
                 />
               </div>
               <div>
@@ -163,6 +200,7 @@ export default function Profile() {
                   onChange={(event) => setProfileAddress(event.target.value)}
                   placeholder="Chiyoda-ku, Tokyo"
                   className="mt-2"
+                  disabled={!isEditingProfile}
                 />
               </div>
               <div>
@@ -175,6 +213,7 @@ export default function Profile() {
                   onChange={(event) => setEmergencyContact(event.target.value)}
                   placeholder="Name + phone"
                   className="mt-2"
+                  disabled={!isEditingProfile}
                 />
               </div>
               <div className="grid gap-2">
@@ -190,8 +229,9 @@ export default function Profile() {
                         preferredLanguage === language
                           ? "border-[#0089FF] bg-[#0089FF]/10 text-[#1648CE]"
                           : "border-slate-200 text-slate-500 hover:border-[#0089FF]/40"
-                      }`}
+                      } ${!isEditingProfile ? "cursor-not-allowed opacity-60" : ""}`}
                       onClick={() => setPreferredLanguage(language)}
+                      disabled={!isEditingProfile}
                     >
                       {t(language)}
                     </button>
@@ -204,14 +244,22 @@ export default function Profile() {
                   checked={notificationsEnabled}
                   onChange={(event) => setNotificationsEnabled(event.target.checked)}
                   className="h-4 w-4 rounded border-slate-300 text-[#0089FF] focus:ring-[#0089FF]"
+                  disabled={!isEditingProfile}
                 />
                 {t("Send me appointment reminders and care tips.")}
               </label>
             </div>
             <div className="mt-6 flex flex-wrap items-center gap-3">
-              <Button type="button" className="bg-[#0089FF] hover:bg-[#0077E6]" onClick={handleProfileSave}>
-                {t("Save profile")}
-              </Button>
+              {isEditingProfile && (
+                <>
+                  <Button type="button" className="bg-[#0089FF] hover:bg-[#0077E6]" onClick={handleProfileSave}>
+                    {t("Save profile")}
+                  </Button>
+                  <Button type="button" variant="ghost" onClick={handleProfileCancel}>
+                    {t("Cancel")}
+                  </Button>
+                </>
+              )}
               {profileSaved && <span className="text-sm text-emerald-600">{t("Profile saved.")}</span>}
             </div>
           </section>

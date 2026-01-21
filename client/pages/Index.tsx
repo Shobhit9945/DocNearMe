@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Activity, Ambulance, ClipboardList, Navigation } from "lucide-react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
@@ -65,14 +65,33 @@ type QuickAction = {
 
 const Index: React.FC = () => {
   const navigate = useNavigate();
-  const { currentLocation, locationError, isFetchingLocation } = useLiveLocation();
+  const {
+    currentLocation,
+    locationError,
+    isFetchingLocation,
+    manualLocation,
+    setManualLocation,
+    clearManualLocation,
+  } = useLiveLocation();
   const { t } = useTranslation();
+  const [isEditingLocation, setIsEditingLocation] = useState(false);
+  const [manualLocationInput, setManualLocationInput] = useState(manualLocation ?? "");
 
   const locationStatus = useMemo(() => {
+    if (manualLocation) return "Manual address";
     if (isFetchingLocation) return "Fetching your location...";
     if (locationError) return locationError;
     return "Updated a moment ago";
-  }, [isFetchingLocation, locationError]);
+  }, [isFetchingLocation, locationError, manualLocation]);
+
+  useEffect(() => {
+    setManualLocationInput(manualLocation ?? "");
+  }, [manualLocation]);
+
+  const handleManualLocationSave = () => {
+    setManualLocation(manualLocationInput);
+    setIsEditingLocation(false);
+  };
 
   const quickActions: QuickAction[] = [
     {
@@ -124,6 +143,50 @@ const Index: React.FC = () => {
               <p className={`text-xs mt-1 ${locationError ? "text-red-500" : "text-slate-500"}`}>
                 {t(locationStatus)}
               </p>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                {manualLocation && (
+                  <span className="rounded-full bg-[#E8F3FF] px-2.5 py-1 text-[11px] font-semibold text-[#1648CE]">
+                    {t("Manual address")}
+                  </span>
+                )}
+                <button
+                  type="button"
+                  className="text-xs font-semibold text-[#0089FF] hover:text-[#0077E6]"
+                  onClick={() => setIsEditingLocation(true)}
+                >
+                  {manualLocation ? t("Edit address") : t("Enter address manually")}
+                </button>
+                {manualLocation && (
+                  <button
+                    type="button"
+                    className="text-xs font-semibold text-slate-500 hover:text-slate-700"
+                    onClick={() => {
+                      clearManualLocation();
+                      setIsEditingLocation(false);
+                    }}
+                  >
+                    {t("Use GPS instead")}
+                  </button>
+                )}
+              </div>
+              {isEditingLocation && (
+                <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+                  <input
+                    type="text"
+                    value={manualLocationInput}
+                    onChange={(event) => setManualLocationInput(event.target.value)}
+                    placeholder={t("Type your address")}
+                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-[#0089FF] focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleManualLocationSave}
+                    className="rounded-xl bg-[#002D55] px-4 py-2 text-xs font-semibold text-white hover:bg-[#003366]"
+                  >
+                    {t("Save")}
+                  </button>
+                </div>
+              )}
             </div>
           </div>
           <img src="/dnm.png" alt="DocNearMe Logo" className="w-14 h-14 object-contain self-start" />
@@ -148,7 +211,7 @@ const Index: React.FC = () => {
                       className="bg-white text-[#002D55] text-sm font-semibold px-6 py-3 rounded-[12px] border border-[#002D55] hover:bg-[#F0F6FF] transition-colors"
                       onClick={() => navigate("/patient-auth")}
                     >
-                      {t("Patient Login")}
+                      {t("Login")}
                     </button>
                     <p className="text-xs text-slate-500">{t("Plan, book and manage visits in seconds.")}</p>
                   </div>

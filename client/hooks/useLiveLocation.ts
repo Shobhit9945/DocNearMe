@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 export const DEFAULT_ADDRESS =
   "AP House 5, Ritsumeikan APU, Jumonjibaru 1-5, Beppu City, Oita 874-0011";
 const GEOCODING_PROXY_BASE = "/api/google-maps/geocode";
+const MANUAL_LOCATION_KEY = "docnearme_manual_location";
 
 type GeocodingResponse = {
   status?: string;
@@ -114,14 +115,28 @@ type LiveLocationState = {
   currentLocation: string;
   locationError: string;
   isFetchingLocation: boolean;
+  manualLocation: string | null;
+  setManualLocation: (location: string) => void;
+  clearManualLocation: () => void;
 };
 
 export const useLiveLocation = (): LiveLocationState => {
   const [currentLocation, setCurrentLocation] = useState("Fetching real-time location...");
   const [locationError, setLocationError] = useState("");
   const [isFetchingLocation, setIsFetchingLocation] = useState(true);
+  const [manualLocation, setManualLocationState] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    return localStorage.getItem(MANUAL_LOCATION_KEY);
+  });
 
   useEffect(() => {
+    if (manualLocation) {
+      setCurrentLocation(manualLocation);
+      setLocationError("");
+      setIsFetchingLocation(false);
+      return;
+    }
+
     if (!("geolocation" in navigator)) {
       setLocationError("Geolocation not supported by this browser.");
       setCurrentLocation(DEFAULT_ADDRESS);
@@ -161,7 +176,30 @@ export const useLiveLocation = (): LiveLocationState => {
       },
       { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
     );
-  }, []);
+  }, [manualLocation]);
 
-  return { currentLocation, locationError, isFetchingLocation };
+  const setManualLocation = (location: string) => {
+    const trimmed = location.trim();
+    if (!trimmed) return;
+    localStorage.setItem(MANUAL_LOCATION_KEY, trimmed);
+    setManualLocationState(trimmed);
+    setCurrentLocation(trimmed);
+    setLocationError("");
+    setIsFetchingLocation(false);
+  };
+
+  const clearManualLocation = () => {
+    localStorage.removeItem(MANUAL_LOCATION_KEY);
+    setManualLocationState(null);
+    setIsFetchingLocation(true);
+  };
+
+  return {
+    currentLocation,
+    locationError,
+    isFetchingLocation,
+    manualLocation,
+    setManualLocation,
+    clearManualLocation,
+  };
 };
