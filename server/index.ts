@@ -28,6 +28,13 @@ import {
   handleListMedicalRecords,
   handleUploadMedicalRecord,
 } from "./routes/medical-records";
+import {
+  handleCreateClinicReview,
+  handleDeleteClinicReview,
+  handleListClinicReviews,
+  handleUpdateClinicReview,
+} from "./routes/clinic-reviews";
+import { handleGeocode, handlePlaceAutocomplete, handlePlaceDetails } from "./routes/google-maps";
 
 export async function createServer(): Promise<Express> {
   const app = express();
@@ -85,6 +92,13 @@ export async function createServer(): Promise<Express> {
   app.get("/api/medical-records", requireAuth, handleListMedicalRecords);
   app.post("/api/medical-records", requireAuth, handleUploadMedicalRecord);
   app.delete("/api/medical-records/:id", requireAuth, handleDeleteMedicalRecord);
+  app.get("/api/clinics/:clinicId/reviews", handleListClinicReviews);
+  app.post("/api/clinics/:clinicId/reviews", handleCreateClinicReview);
+  app.patch("/api/clinics/:clinicId/reviews/:reviewId", handleUpdateClinicReview);
+  app.delete("/api/clinics/:clinicId/reviews/:reviewId", handleDeleteClinicReview);
+  app.get("/api/google-maps/geocode", handleGeocode);
+  app.get("/api/google-maps/places/autocomplete", handlePlaceAutocomplete);
+  app.get("/api/google-maps/places/details", handlePlaceDetails);
   app.use("/api/docdaisy", docDaisyRouter);
   app.use("/api/health", healthRouter);
 

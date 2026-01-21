@@ -63,3 +63,13 @@ export interface MedicalConsent {
   ipAddress?: string;
   userAgent?: string;
 }
+
+export interface ClinicReview {
+  _id?: unknown;
+  clinicId: string;
+  author: string;
+  rating: number;
+  comment: string;
+  createdAt: Date;
+  updatedAt?: Date;
+}

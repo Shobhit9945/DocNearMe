@@ -1,7 +1,7 @@
 // server/db.ts
 import "dotenv/config";
 import { MongoClient, Db, Collection, ObjectId } from "mongodb";
-import { Appointment, EmailOtp, MedicalConsent, MedicalRecord, PatientUser } from "./types";
+import { Appointment, ClinicReview, EmailOtp, MedicalConsent, MedicalRecord, PatientUser } from "./types";
 
 const uri = process.env.MONGODB_URI ?? process.env.MONGODB_API_URL ?? process.env.VITE_MONGODB_API_URL;
 const dbName = process.env.MONGODB_DB_NAME ?? process.env.MONGODB_DATABASE ?? "patients";
@@ -141,6 +141,7 @@ export type InMemoryDb = {
     emailOtps: InMemoryCollection<EmailOtp>;
     medicalRecords: InMemoryCollection<MedicalRecord>;
     medicalConsents: InMemoryCollection<MedicalConsent>;
+    clinicReviews: InMemoryCollection<ClinicReview>;
   };
 };
 
@@ -152,6 +153,7 @@ const inMemoryDb: InMemoryDb = {
     emailOtps: new InMemoryCollection<EmailOtp>([]),
     medicalRecords: new InMemoryCollection<MedicalRecord>([]),
     medicalConsents: new InMemoryCollection<MedicalConsent>([]),
+    clinicReviews: new InMemoryCollection<ClinicReview>([]),
   },
 };
 
@@ -159,7 +161,7 @@ export const isMemoryDb = (db: Db | InMemoryDb): db is InMemoryDb => (db as InMe
 
 const getCollection = <T>(
   db: Db | InMemoryDb,
-  name: "appointments" | "patients" | "emailOtps" | "medicalRecords" | "medicalConsents",
+  name: "appointments" | "patients" | "emailOtps" | "medicalRecords" | "medicalConsents" | "clinicReviews",
 ) => (isMemoryDb(db) ? db.collections[name] : db.collection<T>(name));
 
 // Short, serverless-friendly timeouts. Keep pools tiny.
@@ -183,6 +185,7 @@ async function prepareOnce(db: Db | InMemoryDb) {
   const emailOtps = getCollection<EmailOtp>(db, "emailOtps");
   const medicalRecords = getCollection<MedicalRecord>(db, "medicalRecords");
   const medicalConsents = getCollection<MedicalConsent>(db, "medicalConsents");
+  const clinicReviews = getCollection<ClinicReview>(db, "clinicReviews");
 
   // Run in parallel, but only once per warm container
   await Promise.all([
@@ -192,6 +195,7 @@ async function prepareOnce(db: Db | InMemoryDb) {
     emailOtps.createIndex({ expiresAt: 1 }),
     medicalRecords.createIndex({ patientId: 1, createdAt: -1 }),
     medicalConsents.createIndex({ patientId: 1, consentVersion: 1 }, { unique: true }),
+    clinicReviews.createIndex({ clinicId: 1, createdAt: -1 }),
   ]);
 
   cache.prepared = true;
@@ -295,4 +299,13 @@ export async function getMedicalConsentsCollection(): Promise<
   return getCollection<MedicalConsent>(db, "medicalConsents") as
     | Collection<MedicalConsent>
     | InMemoryCollection<MedicalConsent>;
+}
+
+export async function getClinicReviewsCollection(): Promise<
+  Collection<ClinicReview> | InMemoryCollection<ClinicReview>
+> {
+  const db = await connectToDatabase();
+  return getCollection<ClinicReview>(db, "clinicReviews") as
+    | Collection<ClinicReview>
+    | InMemoryCollection<ClinicReview>;
 }

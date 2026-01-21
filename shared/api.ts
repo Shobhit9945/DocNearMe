@@ -166,3 +166,44 @@ export interface MedicalConsentResponse {
 export interface MedicalRecordDeleteResponse {
   success: boolean;
 }
+
+export interface ClinicReview {
+  id: string;
+  clinicId: string;
+  author: string;
+  rating: number;
+  comment: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface ClinicReviewListResponse {
+  reviews: ClinicReview[];
+  averageRating: number;
+}
+
+export interface ClinicReviewCreateRequest {
+  author: string;
+  rating: number;
+  comment: string;
+}
+
+export interface ClinicReviewCreateResponse {
+  success: boolean;
+  review: ClinicReview;
+}
+
+export interface ClinicReviewUpdateRequest {
+  author: string;
+  rating: number;
+  comment: string;
+}
+
+export interface ClinicReviewUpdateResponse {
+  success: boolean;
+  review: ClinicReview;
+}
+
+export interface ClinicReviewDeleteResponse {
+  success: boolean;
+}

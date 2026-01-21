@@ -11,6 +11,7 @@ import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
 import AdminBookings from "./pages/AdminBookings";
 import Appointment from "./pages/Appointment";
 import Clinics from "./pages/Clinics";
+import ClinicDetail from "./pages/ClinicDetail";
 import DocDaisy from "./pages/DocDaisy";
 import Index from "./pages/Index";
 import MedicalRecords from "./pages/MedicalRecords";
@@ -34,6 +35,7 @@ const routes = [
   { path: "/home", element: <Index /> },
   { path: "/search", element: <Search /> },
   { path: "/clinics", element: <Clinics /> },
+  { path: "/clinics/:clinicId", element: <ClinicDetail /> },
   { path: "/appointment", element: <Appointment /> },
   { path: "/medical-records", element: <MedicalRecords /> },
   { path: "/profile", element: <Profile /> },

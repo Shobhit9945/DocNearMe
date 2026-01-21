@@ -6,6 +6,7 @@ import { BottomNav } from "@/components/BottomNav";
 import { DocDaisyBanner } from "@/components/DocDaisyBanner";
 import { PageScaffold } from "@/components/PageScaffold";
 import { useLiveLocation } from "@/hooks/useLiveLocation";
+import { useAddressSearch } from "@/hooks/useAddressSearch";
 import { useTranslation } from "@/lib/i18n";
 
 const VIEW_APPOINTMENTS_ICON = (
@@ -76,6 +77,16 @@ const Index: React.FC = () => {
   const { t } = useTranslation();
   const [isEditingLocation, setIsEditingLocation] = useState(false);
   const [manualLocationInput, setManualLocationInput] = useState(manualLocation ?? "");
+  const [manualLocationError, setManualLocationError] = useState("");
+  const [isResolvingAddress, setIsResolvingAddress] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const {
+    suggestions,
+    isLoading: isSuggesting,
+    error: suggestionError,
+    fetchPlaceDetails,
+    geocodeAddress,
+  } = useAddressSearch(manualLocationInput);
 
   const locationStatus = useMemo(() => {
     if (manualLocation) return "Manual address";
@@ -88,9 +99,43 @@ const Index: React.FC = () => {
     setManualLocationInput(manualLocation ?? "");
   }, [manualLocation]);
 
-  const handleManualLocationSave = () => {
-    setManualLocation(manualLocationInput);
-    setIsEditingLocation(false);
+  const handleManualLocationSave = async () => {
+    const trimmed = manualLocationInput.trim();
+    if (!trimmed) return;
+    setIsResolvingAddress(true);
+    setManualLocationError("");
+
+    try {
+      const resolvedAddress = await geocodeAddress(trimmed);
+      setManualLocation(resolvedAddress);
+      setManualLocationInput(resolvedAddress);
+      setIsEditingLocation(false);
+      setShowSuggestions(false);
+    } catch (error) {
+      setManualLocationError(
+        error instanceof Error ? error.message : "Unable to verify this address. Try again.",
+      );
+    } finally {
+      setIsResolvingAddress(false);
+    }
+  };
+
+  const handleSuggestionSelect = async (placeId: string) => {
+    setIsResolvingAddress(true);
+    setManualLocationError("");
+    try {
+      const resolvedAddress = await fetchPlaceDetails(placeId);
+      setManualLocation(resolvedAddress);
+      setManualLocationInput(resolvedAddress);
+      setIsEditingLocation(false);
+      setShowSuggestions(false);
+    } catch (error) {
+      setManualLocationError(
+        error instanceof Error ? error.message : "Unable to verify this address. Try again.",
+      );
+    } finally {
+      setIsResolvingAddress(false);
+    }
   };
 
   const quickActions: QuickAction[] = [
@@ -175,17 +220,50 @@ const Index: React.FC = () => {
                     type="text"
                     value={manualLocationInput}
                     onChange={(event) => setManualLocationInput(event.target.value)}
+                    onFocus={() => setShowSuggestions(true)}
                     placeholder={t("Type your address")}
                     className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-[#0089FF] focus:outline-none"
                   />
                   <button
                     type="button"
                     onClick={handleManualLocationSave}
-                    className="rounded-xl bg-[#002D55] px-4 py-2 text-xs font-semibold text-white hover:bg-[#003366]"
+                    disabled={isResolvingAddress}
+                    className="rounded-xl bg-[#002D55] px-4 py-2 text-xs font-semibold text-white hover:bg-[#003366] disabled:cursor-not-allowed disabled:opacity-70"
                   >
-                    {t("Save")}
+                    {isResolvingAddress ? t("Searching...") : t("Save")}
                   </button>
                 </div>
+              )}
+              {isEditingLocation && showSuggestions && (
+                <div className="mt-2 w-full rounded-xl border border-slate-200 bg-white shadow-lg">
+                  {isSuggesting && (
+                    <p className="px-3 py-2 text-xs text-slate-500">{t("Searching address results...")}</p>
+                  )}
+                  {!isSuggesting && suggestionError && (
+                    <p className="px-3 py-2 text-xs text-red-500">{suggestionError}</p>
+                  )}
+                  {!isSuggesting && !suggestionError && suggestions.length === 0 && manualLocationInput.trim() && (
+                    <p className="px-3 py-2 text-xs text-slate-500">{t("No matching addresses yet.")}</p>
+                  )}
+                  {!isSuggesting && suggestions.length > 0 && (
+                    <ul className="max-h-52 overflow-y-auto py-1 text-sm text-slate-700">
+                      {suggestions.map((suggestion) => (
+                        <li key={suggestion.placeId}>
+                          <button
+                            type="button"
+                            onClick={() => handleSuggestionSelect(suggestion.placeId)}
+                            className="w-full px-3 py-2 text-left hover:bg-[#F1F5FF]"
+                          >
+                            {suggestion.description}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
+              {manualLocationError && (
+                <p className="mt-2 text-xs text-red-500">{manualLocationError}</p>
               )}
             </div>
           </div>
