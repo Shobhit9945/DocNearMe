@@ -146,6 +146,15 @@ export interface MedicalRecordUploadResponse {
   record: MedicalRecordResponseItem;
 }
 
+export interface MedicalRecordRenameRequest {
+  name: string;
+}
+
+export interface MedicalRecordRenameResponse {
+  success: boolean;
+  record: MedicalRecordResponseItem;
+}
+
 export interface MedicalConsentStatusResponse {
   hasConsented: boolean;
   consentedAt?: string;

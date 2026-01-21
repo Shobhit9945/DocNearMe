@@ -1,15 +1,17 @@
 import type { ChangeEvent } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ShieldCheck, UploadCloud, FileText, Eye, Trash2 } from "lucide-react";
+import { ShieldCheck, UploadCloud, FileText, Eye, Trash2, Pencil, Check, X } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
 import { PageScaffold } from "@/components/PageScaffold";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useTranslation } from "@/lib/i18n";
 import type {
   MedicalConsentRequest,
   MedicalConsentResponse,
   MedicalConsentStatusResponse,
   MedicalRecordListResponse,
+  MedicalRecordRenameResponse,
   MedicalRecordResponseItem,
   MedicalRecordDeleteResponse,
   MedicalRecordUploadRequest,
@@ -82,8 +84,11 @@ export default function MedicalRecords() {
   const [consentStatus, setConsentStatus] = useState<MedicalConsentStatusResponse | null>(null);
   const [consentChecked, setConsentChecked] = useState(false);
   const [isConsentSubmitting, setIsConsentSubmitting] = useState(false);
+  const [editingRecordId, setEditingRecordId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+  const [isRenaming, setIsRenaming] = useState(false);
 
-  const token = localStorage.getItem(TOKEN_KEY);
+  const token = localStorage.getItem(TOKEN_KEY)?.trim();
   const email = localStorage.getItem(EMAIL_KEY) ?? undefined;
 
   const recordsCountLabel = useMemo(() => {
@@ -104,6 +109,9 @@ export default function MedicalRecords() {
       });
       const data = (await response.json()) as MedicalRecordListResponse;
       if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error("Please sign in again to access your records.");
+        }
         throw new Error("Unable to load records.");
       }
       setRecords(data.records ?? []);
@@ -121,6 +129,9 @@ export default function MedicalRecords() {
       });
       const data = (await response.json()) as MedicalConsentStatusResponse;
       if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error("Please sign in again to access your consent status.");
+        }
         throw new Error("Unable to load consent status.");
       }
       setConsentStatus(data);
@@ -174,6 +185,9 @@ export default function MedicalRecords() {
       });
       const data = (await response.json()) as MedicalRecordUploadResponse;
       if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error("Please sign in again to upload records.");
+        }
         throw new Error("Unable to store the encrypted record.");
       }
       setRecords((prev) => [data.record, ...prev]);
@@ -241,6 +255,9 @@ export default function MedicalRecords() {
       });
       const data = (await response.json()) as MedicalRecordDeleteResponse;
       if (!response.ok || !data.success) {
+        if (response.status === 401) {
+          throw new Error("Please sign in again to manage your records.");
+        }
         throw new Error("Unable to delete record.");
       }
       setRecords((prev) => prev.filter((record) => record.id !== recordId));
@@ -250,7 +267,59 @@ export default function MedicalRecords() {
       }
       setInfoMessage(t("Record deleted."));
     } catch (error) {
-      setErrorMessage(t("Unable to delete record right now."));
+      setErrorMessage(error instanceof Error ? error.message : t("Unable to delete record right now."));
+    }
+  };
+
+  const handleRenameStart = (record: MedicalRecordResponseItem) => {
+    setEditingRecordId(record.id);
+    setRenameValue(record.name);
+    setErrorMessage(null);
+    setInfoMessage(null);
+  };
+
+  const handleRenameCancel = () => {
+    setEditingRecordId(null);
+    setRenameValue("");
+  };
+
+  const handleRenameSave = async (recordId: string) => {
+    if (!token) {
+      setErrorMessage(t("Please sign in to rename your records."));
+      return;
+    }
+    const trimmedName = renameValue.trim();
+    if (!trimmedName) {
+      setErrorMessage(t("Please enter a file name."));
+      return;
+    }
+    setErrorMessage(null);
+    setInfoMessage(null);
+    setIsRenaming(true);
+    try {
+      const response = await fetch(`/api/medical-records/${recordId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ name: trimmedName }),
+      });
+      const data = (await response.json()) as MedicalRecordRenameResponse;
+      if (!response.ok || !data.success) {
+        if (response.status === 401) {
+          throw new Error("Please sign in again to rename your records.");
+        }
+        throw new Error("Unable to rename record.");
+      }
+      setRecords((prev) => prev.map((record) => (record.id === recordId ? data.record : record)));
+      setEditingRecordId(null);
+      setRenameValue("");
+      setInfoMessage(t("Record renamed."));
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : t("Unable to rename record right now."));
+    } finally {
+      setIsRenaming(false);
     }
   };
 
@@ -274,6 +343,9 @@ export default function MedicalRecords() {
       });
       const data = (await response.json()) as MedicalConsentResponse;
       if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error("Please sign in again to save consent.");
+        }
         throw new Error("Unable to save consent.");
       }
       setConsentStatus({
@@ -400,7 +472,32 @@ export default function MedicalRecords() {
                       <FileText className="h-5 w-5 text-[#0089FF]" />
                     </div>
                     <div>
-                      <p className="text-sm font-semibold text-slate-700">{record.name}</p>
+                      {editingRecordId === record.id ? (
+                        <div className="space-y-2">
+                          <Input
+                            value={renameValue}
+                            onChange={(event) => setRenameValue(event.target.value)}
+                            className="h-8 text-sm"
+                          />
+                          <div className="flex items-center gap-2">
+                            <Button
+                              type="button"
+                              size="sm"
+                              className="gap-2 bg-[#0089FF] hover:bg-[#0077E6]"
+                              disabled={isRenaming}
+                              onClick={() => void handleRenameSave(record.id)}
+                            >
+                              <Check className="h-4 w-4" />
+                              {isRenaming ? t("Saving...") : t("Save")}
+                            </Button>
+                            <Button type="button" size="sm" variant="ghost" onClick={handleRenameCancel}>
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-sm font-semibold text-slate-700">{record.name}</p>
+                      )}
                       <p className="text-xs text-slate-500">
                         {new Date(record.createdAt).toLocaleDateString()} · {(record.size / 1024).toFixed(1)} KB
                       </p>
@@ -417,6 +514,17 @@ export default function MedicalRecords() {
                       <Eye className="h-4 w-4" />
                       {t("View")}
                     </Button>
+                    {editingRecordId !== record.id && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        className="text-slate-600 hover:text-[#1648CE] hover:bg-[#E8F3FF]"
+                        onClick={() => handleRenameStart(record)}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    )}
                     <Button
                       type="button"
                       size="sm"

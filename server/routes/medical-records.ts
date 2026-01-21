@@ -8,6 +8,7 @@ const CONSENT_TEXT =
   "I consent to the secure storage of my encrypted medical records on DocNearMe servers. " +
   "I understand the files are encrypted in my browser and only I can decrypt them.";
 const MAX_UPLOAD_SIZE_BYTES = 8 * 1024 * 1024;
+const MAX_RECORD_NAME_LENGTH = 120;
 
 const parseRequestBody = (body: unknown): Record<string, unknown> => {
   if (body instanceof Buffer) {
@@ -217,6 +218,43 @@ export const handleDeleteMedicalRecord = async (req: Request, res: Response) => 
   } catch (error) {
     console.error("Medical record deletion failed", error);
     return res.status(500).json({ error: "Failed to delete medical record." });
+  }
+};
+
+export const handleRenameMedicalRecord = async (req: Request, res: Response) => {
+  if (!req.auth) {
+    return res.status(401).json({ error: "Authentication required." });
+  }
+
+  const recordId = req.params.id;
+  if (!recordId) {
+    return res.status(400).json({ error: "Missing record id." });
+  }
+
+  const payload = parseRequestBody(req.body);
+  const name = typeof payload.name === "string" ? payload.name.trim() : "";
+  if (!name) {
+    return res.status(400).json({ error: "Record name is required." });
+  }
+  if (name.length > MAX_RECORD_NAME_LENGTH) {
+    return res.status(400).json({ error: "Record name is too long." });
+  }
+
+  try {
+    const records = await getMedicalRecordsCollection();
+    const lookupId = ObjectId.isValid(recordId) ? new ObjectId(recordId) : recordId;
+    const existing = await records.findOne({ _id: lookupId, patientId: req.auth.id });
+
+    if (!existing) {
+      return res.status(404).json({ error: "Record not found." });
+    }
+
+    await records.updateOne({ _id: lookupId, patientId: req.auth.id }, { $set: { name } });
+
+    return res.json({ success: true, record: serializeRecord({ ...existing, name }) });
+  } catch (error) {
+    console.error("Medical record rename failed", error);
+    return res.status(500).json({ error: "Failed to rename medical record." });
   }
 };
 
