@@ -10,13 +10,15 @@ interface PageScaffoldProps {
 
 export function PageScaffold({ children, contentClassName }: PageScaffoldProps) {
   return (
-    <div className="min-h-screen bg-[#EAF1FF]">
-      <div className="mx-auto w-full lg:max-w-7xl lg:px-8 lg:py-12">
-        <div className="lg:grid lg:grid-cols-[280px_1fr] lg:gap-10">
-          <DesktopNav />
+    <div className="min-h-screen bg-[#FAFAFE]">
+      <div className="w-full">
+        <div className="lg:grid lg:grid-cols-[280px_1fr] min-h-screen">
+          <div className="hidden lg:block">
+            <DesktopNav />
+          </div>
           <div
             className={cn(
-              "relative flex flex-col bg-[#FAFAFE] min-h-screen lg:min-h-[80vh] lg:rounded-3xl lg:shadow-2xl",
+              "relative flex flex-col bg-[#FAFAFE] min-h-screen lg:pr-8",
               contentClassName
             )}
           >

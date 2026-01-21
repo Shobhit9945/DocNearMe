@@ -17,37 +17,37 @@ export function DesktopNav() {
   const { t } = useTranslation();
 
   return (
-    <div className="sticky top-10 hidden lg:flex">
-      <div className="w-full max-w-xs rounded-3xl bg-white/90 p-6 shadow-2xl ring-1 ring-black/5">
-        <div className="flex items-center gap-3 mb-8">
-          <img src="/dnm.png" alt="DocNearMe" className="w-12 h-12 object-contain" />
-          <div>
-            <p className="text-xs uppercase tracking-wide text-slate-400">{t("DocNearMe")}</p>
-            <p className="text-lg font-semibold text-slate-900">{t("DocNearMe")}</p>
-          </div>
+    <div className="sticky top-0 hidden h-screen w-full flex-col border-r border-slate-200 bg-white p-6 lg:flex">
+      <div className="flex items-center gap-3 mb-8">
+        <img src="/dnm.png" alt="DocNearMe" className="w-12 h-12 object-contain" />
+        <div>
+          <p className="text-xs uppercase tracking-wide text-slate-400">{t("DocNearMe")}</p>
+          <p className="text-lg font-semibold text-slate-900">{t("DocNearMe")}</p>
         </div>
-        <nav className="space-y-2">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = location.pathname === item.path;
-            return (
-              <Link
-                key={item.path}
-                to={item.path}
-                className={cn(
-                  "flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition-all",
-                  isActive
-                    ? "bg-[#E5EEFF] text-[#1648CE] shadow-sm"
-                    : "text-slate-500 hover:text-slate-800 hover:bg-slate-50"
-                )}
-              >
-                <Icon className="w-5 h-5" />
-                {t(item.label)}
-              </Link>
-            );
-          })}
-        </nav>
-        <div className="mt-8 rounded-2xl bg-gradient-to-br from-[#1648CE] to-[#0089FF] p-4 text-white">
+      </div>
+      <nav className="space-y-2">
+        {navItems.map((item) => {
+          const Icon = item.icon;
+          const isActive = location.pathname === item.path;
+          return (
+            <Link
+              key={item.path}
+              to={item.path}
+              className={cn(
+                "flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition-all",
+                isActive
+                  ? "bg-[#E5EEFF] text-[#1648CE] shadow-sm"
+                  : "text-slate-500 hover:text-slate-800 hover:bg-slate-50"
+              )}
+            >
+              <Icon className="w-5 h-5" />
+              {t(item.label)}
+            </Link>
+          );
+        })}
+      </nav>
+      <div className="mt-auto">
+        <div className="rounded-2xl bg-gradient-to-br from-[#1648CE] to-[#0089FF] p-4 text-white">
           <div className="flex items-center gap-3">
             <MessageSquare className="w-6 h-6" />
             <div>
