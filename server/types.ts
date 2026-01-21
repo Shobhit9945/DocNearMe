@@ -10,7 +10,17 @@ export interface Appointment {
   patientId?: string;
   patientName?: string;
   patientEmail?: string;
+  sharedRecord?: SharedMedicalRecord;
   createdAt: Date;
+}
+
+export interface SharedMedicalRecord {
+  recordId: string;
+  name: string;
+  type: string;
+  size: number;
+  iv: string;
+  data: string;
 }
 
 export interface PatientAppointmentSummary {
@@ -62,6 +72,18 @@ export interface MedicalConsent {
   consentedAt: Date;
   ipAddress?: string;
   userAgent?: string;
+}
+
+export interface MedicalRecordKey {
+  _id?: unknown;
+  patientId: string;
+  wrappedKey: string;
+  salt: string;
+  iv: string;
+  iterations: number;
+  kdf: "PBKDF2";
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface ClinicReview {

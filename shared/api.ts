@@ -32,6 +32,7 @@ export interface AppointmentCreateRequest {
   notes?: string;
   patientName?: string;
   patientEmail?: string;
+  sharedRecord?: SharedMedicalRecord;
 }
 
 export interface AppointmentCreateResponse {
@@ -63,6 +64,15 @@ export interface AppointmentCancelResponse {
 
 export interface AppointmentListResponse {
   appointments: AppointmentResponseItem[];
+}
+
+export interface SharedMedicalRecord {
+  recordId: string;
+  name: string;
+  type: string;
+  size: number;
+  iv: string;
+  data: string;
 }
 
 export interface SignupRequest {
@@ -181,6 +191,26 @@ export interface MedicalConsentResponse {
 
 export interface MedicalRecordDeleteResponse {
   success: boolean;
+}
+
+export interface MedicalRecordKeyPayload {
+  wrappedKey: string;
+  salt: string;
+  iv: string;
+  iterations: number;
+  kdf: "PBKDF2";
+}
+
+export interface MedicalRecordKeyResponse {
+  hasKey: boolean;
+  key?: MedicalRecordKeyPayload;
+}
+
+export type MedicalRecordKeyUpsertRequest = MedicalRecordKeyPayload;
+
+export interface MedicalRecordKeyUpsertResponse {
+  success: boolean;
+  updatedAt: string;
 }
 
 export interface ClinicReview {

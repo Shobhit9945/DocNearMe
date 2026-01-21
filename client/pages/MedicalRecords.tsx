@@ -18,6 +18,9 @@ import type {
   MedicalRecordDeleteResponse,
   MedicalRecordUploadRequest,
   MedicalRecordUploadResponse,
+  MedicalRecordKeyResponse,
+  MedicalRecordKeyUpsertRequest,
+  MedicalRecordKeyUpsertResponse,
 } from "@shared/api";
 import { useNavigate } from "react-router-dom";
 
@@ -40,6 +43,9 @@ const CONSENT_TEXT =
   "I consent to the secure storage of my encrypted medical records on DocNearMe servers. " +
   "I understand the files are encrypted in my browser and only I can decrypt them.";
 const MAX_UPLOAD_SIZE_BYTES = 8 * 1024 * 1024;
+const KEY_DERIVATION_ITERATIONS = 210_000;
+const KEY_DERIVATION_SALT_BYTES = 16;
+const KEY_DERIVATION_IV_BYTES = 12;
 
 const arrayBufferToBase64 = (buffer: ArrayBuffer) => {
   const bytes = new Uint8Array(buffer);
@@ -57,6 +63,48 @@ const base64ToArrayBuffer = (base64: string) => {
     bytes[index] = binary.charCodeAt(index);
   }
   return bytes.buffer;
+};
+
+const deriveEncryptionKey = async (password: string, salt: ArrayBuffer, iterations: number) => {
+  const baseKey = await window.crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(password),
+    "PBKDF2",
+    false,
+    ["deriveKey"]
+  );
+  return window.crypto.subtle.deriveKey(
+    { name: "PBKDF2", salt: new Uint8Array(salt), iterations, hash: "SHA-256" },
+    baseKey,
+    { name: "AES-GCM", length: 256 },
+    false,
+    ["encrypt", "decrypt"]
+  );
+};
+
+const wrapVaultKey = async (key: CryptoKey, password: string): Promise<MedicalRecordKeyUpsertRequest> => {
+  const rawKey = await window.crypto.subtle.exportKey("raw", key);
+  const salt = window.crypto.getRandomValues(new Uint8Array(KEY_DERIVATION_SALT_BYTES));
+  const iv = window.crypto.getRandomValues(new Uint8Array(KEY_DERIVATION_IV_BYTES));
+  const kek = await deriveEncryptionKey(password, salt.buffer, KEY_DERIVATION_ITERATIONS);
+  const wrapped = await window.crypto.subtle.encrypt({ name: "AES-GCM", iv }, kek, rawKey);
+  return {
+    wrappedKey: arrayBufferToBase64(wrapped),
+    salt: arrayBufferToBase64(salt.buffer),
+    iv: arrayBufferToBase64(iv.buffer),
+    iterations: KEY_DERIVATION_ITERATIONS,
+    kdf: "PBKDF2",
+  };
+};
+
+const unwrapVaultKey = async (payload: MedicalRecordKeyUpsertRequest, password: string) => {
+  const kek = await deriveEncryptionKey(password, base64ToArrayBuffer(payload.salt), payload.iterations);
+  const decrypted = await window.crypto.subtle.decrypt(
+    { name: "AES-GCM", iv: new Uint8Array(base64ToArrayBuffer(payload.iv)) },
+    kek,
+    base64ToArrayBuffer(payload.wrappedKey)
+  );
+  return window.crypto.subtle.importKey("raw", decrypted, "AES-GCM", true, ["encrypt", "decrypt"]);
 };
 
 const getKeyStorageKey = (email?: string) =>
@@ -94,6 +142,12 @@ export default function MedicalRecords() {
   const [editingRecordId, setEditingRecordId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const [isRenaming, setIsRenaming] = useState(false);
+  const [vaultKeyStatus, setVaultKeyStatus] = useState<MedicalRecordKeyResponse | null>(null);
+  const [vaultPassword, setVaultPassword] = useState("");
+  const [vaultMessage, setVaultMessage] = useState<string | null>(null);
+  const [vaultError, setVaultError] = useState<string | null>(null);
+  const [isVaultSubmitting, setIsVaultSubmitting] = useState(false);
+  const [hasLocalKey, setHasLocalKey] = useState(false);
 
   const token = localStorage.getItem(TOKEN_KEY)?.trim();
   const email = localStorage.getItem(EMAIL_KEY) ?? undefined;
@@ -107,6 +161,10 @@ export default function MedicalRecords() {
     if (!previewRecord) return;
     return () => URL.revokeObjectURL(previewRecord.url);
   }, [previewRecord]);
+
+  useEffect(() => {
+    setHasLocalKey(Boolean(localStorage.getItem(getKeyStorageKey(email))));
+  }, [email]);
 
   const refreshRecords = async (authToken: string) => {
     setIsLoading(true);
@@ -147,10 +205,26 @@ export default function MedicalRecords() {
     }
   };
 
+  const refreshVaultKeyStatus = async (authToken: string) => {
+    try {
+      const response = await fetch("/api/medical-records/key", {
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
+      const data = (await response.json()) as MedicalRecordKeyResponse;
+      if (!response.ok) {
+        throw new Error("Unable to load vault key status.");
+      }
+      setVaultKeyStatus(data);
+    } catch {
+      setVaultKeyStatus({ hasKey: false });
+    }
+  };
+
   useEffect(() => {
     if (!token) return;
     void refreshConsentStatus(token);
     void refreshRecords(token);
+    void refreshVaultKeyStatus(token);
   }, [token]);
 
   const handleUpload = async (file: File) => {
@@ -166,12 +240,19 @@ export default function MedicalRecords() {
       setErrorMessage(t("Please provide consent before uploading medical records."));
       return;
     }
+    if (vaultKeyStatus?.hasKey && !hasLocalKey) {
+      setErrorMessage(t("Unlock your vault on this device before uploading new records."));
+      return;
+    }
     setErrorMessage(null);
     setInfoMessage(null);
     setIsEncrypting(true);
     setIsUploading(true);
     try {
       const key = await getOrCreateKey(email);
+      if (!hasLocalKey) {
+        setHasLocalKey(true);
+      }
       const buffer = await file.arrayBuffer();
       const iv = window.crypto.getRandomValues(new Uint8Array(12));
       const encrypted = await window.crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, buffer);
@@ -249,6 +330,9 @@ export default function MedicalRecords() {
       if (!token) {
         throw new Error("Please sign in again to access your records.");
       }
+      if (vaultKeyStatus?.hasKey && !hasLocalKey) {
+        throw new Error("Unlock your vault on this device to view encrypted records.");
+      }
       const key = await getOrCreateKey(email);
       let detail: MedicalRecordDetail | null = null;
       if (record.iv && record.data) {
@@ -273,9 +357,11 @@ export default function MedicalRecords() {
       }
       setPreviewRecord({ id: record.id, name: record.name, type: record.type, url });
     } catch (error) {
-      setErrorMessage(
-        t("Unable to decrypt this file on this device. Make sure you're using the same browser.")
-      );
+      const message =
+        error instanceof Error && error.message
+          ? error.message
+          : "Unable to decrypt this file on this device. Make sure you're using the same browser.";
+      setErrorMessage(t(message));
     }
   };
 
@@ -397,6 +483,72 @@ export default function MedicalRecords() {
     }
   };
 
+  const handleVaultUnlock = async () => {
+    if (!token || !vaultKeyStatus?.hasKey || !vaultKeyStatus.key) return;
+    if (!vaultPassword.trim()) {
+      setVaultError(t("Please enter your account password to unlock the vault."));
+      return;
+    }
+    setVaultError(null);
+    setVaultMessage(null);
+    setIsVaultSubmitting(true);
+    try {
+      const key = await unwrapVaultKey(vaultKeyStatus.key, vaultPassword);
+      const rawKey = await window.crypto.subtle.exportKey("raw", key);
+      localStorage.setItem(getKeyStorageKey(email), arrayBufferToBase64(rawKey));
+      setHasLocalKey(true);
+      setVaultMessage(t("Vault unlocked on this device."));
+      setVaultPassword("");
+    } catch (error) {
+      setVaultError(t("Unable to unlock the vault. Please check your password."));
+    } finally {
+      setIsVaultSubmitting(false);
+    }
+  };
+
+  const handleVaultSync = async () => {
+    if (!token) return;
+    if (!vaultPassword.trim()) {
+      setVaultError(t("Please enter your account password to secure the vault."));
+      return;
+    }
+    if (!hasLocalKey) {
+      setVaultError(t("Upload or unlock a record first to create your vault key."));
+      return;
+    }
+    setVaultError(null);
+    setVaultMessage(null);
+    setIsVaultSubmitting(true);
+    try {
+      const key = await getOrCreateKey(email);
+      const payload = await wrapVaultKey(key, vaultPassword);
+      const response = await fetch("/api/medical-records/key", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+      const data = (await response.json()) as MedicalRecordKeyUpsertResponse;
+      if (!response.ok || !data.success) {
+        throw new Error("Unable to sync vault key.");
+      }
+      setVaultKeyStatus({ hasKey: true, key: payload });
+      setVaultMessage(t("Vault access synced to your account."));
+      setVaultPassword("");
+    } catch (error) {
+      setVaultError(t("Unable to sync vault access. Please try again."));
+    } finally {
+      setIsVaultSubmitting(false);
+    }
+  };
+
+  const hasServerKey = Boolean(vaultKeyStatus?.hasKey);
+  const needsUnlock = hasServerKey && !hasLocalKey;
+  const canSync = hasLocalKey && !hasServerKey;
+  const isSynced = hasLocalKey && hasServerKey;
+
   return (
     <PageScaffold contentClassName="pb-28 lg:pb-12">
       <header className="bg-white px-4 pt-10 pb-4 border-b border-gray-100 shadow-sm lg:px-10 lg:rounded-t-3xl lg:border-none lg:shadow-none">
@@ -485,6 +637,62 @@ export default function MedicalRecords() {
                 )}
               </p>
             </div>
+            {token && (
+              <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-600">
+                <p className="font-semibold text-slate-700">{t("Vault access across devices")}</p>
+                <p className="mt-2">
+                  {t(
+                    "Secure your vault with your account password so you can decrypt records on any signed-in browser."
+                  )}
+                </p>
+                <div className="mt-4 space-y-3">
+                  <Input
+                    type="password"
+                    placeholder={t("Enter your account password")}
+                    value={vaultPassword}
+                    onChange={(event) => setVaultPassword(event.target.value)}
+                    className="h-10"
+                  />
+                  {vaultError && <p className="text-xs text-red-500">{vaultError}</p>}
+                  {vaultMessage && <p className="text-xs text-emerald-600">{vaultMessage}</p>}
+                  {needsUnlock && (
+                    <Button
+                      type="button"
+                      className="bg-[#0089FF] hover:bg-[#0077E6]"
+                      onClick={handleVaultUnlock}
+                      disabled={isVaultSubmitting}
+                    >
+                      {isVaultSubmitting ? t("Unlocking...") : t("Unlock vault on this device")}
+                    </Button>
+                  )}
+                  {canSync && (
+                    <Button
+                      type="button"
+                      className="bg-[#0089FF] hover:bg-[#0077E6]"
+                      onClick={handleVaultSync}
+                      disabled={isVaultSubmitting}
+                    >
+                      {isVaultSubmitting ? t("Syncing...") : t("Enable access on other devices")}
+                    </Button>
+                  )}
+                  {isSynced && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleVaultSync}
+                      disabled={isVaultSubmitting}
+                    >
+                      {isVaultSubmitting ? t("Updating...") : t("Update vault password")}
+                    </Button>
+                  )}
+                  {!hasLocalKey && !hasServerKey && (
+                    <p className="text-xs text-slate-500">
+                      {t("Upload a record first to create your vault key, then enable access here.")}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
           </section>
 
           <section className="rounded-[24px] border border-slate-200 bg-white p-6 shadow-sm lg:p-8">

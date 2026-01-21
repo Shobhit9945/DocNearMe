@@ -39,6 +39,9 @@ import type {
   AppointmentListResponse,
   AppointmentRescheduleRequest,
   AppointmentRescheduleResponse,
+  MedicalRecordDetail,
+  MedicalRecordListResponse,
+  SharedMedicalRecord,
 } from "@shared/api";
 import { toast } from "@/components/ui/use-toast";
 
@@ -107,7 +110,10 @@ export default function Appointment() {
   const [notes, setNotes] = useState("");
   const [patientName, setPatientName] = useState("");
   const [patientEmail, setPatientEmail] = useState("");
-  const [medicalRecord, setMedicalRecord] = useState<File | null>(null);
+  const [selectedVaultRecordId, setSelectedVaultRecordId] = useState("");
+  const [selectedVaultRecord, setSelectedVaultRecord] = useState<MedicalRecordDetail | null>(null);
+  const [vaultRecordError, setVaultRecordError] = useState<string | null>(null);
+  const [isVaultRecordLoading, setIsVaultRecordLoading] = useState(false);
   const [intakeReason, setIntakeReason] = useState("");
   const [intakeConsent, setIntakeConsent] = useState(false);
   const [intakeAllergies, setIntakeAllergies] = useState("");
@@ -269,6 +275,24 @@ export default function Appointment() {
     },
   });
 
+  const { data: vaultRecordsData, isLoading: isLoadingVaultRecords } = useQuery({
+    queryKey: ["medical-records", authSession?.token],
+    enabled: isAuthenticated,
+    queryFn: async () => {
+      const res = await fetch("/api/medical-records", {
+        headers: {
+          Authorization: `Bearer ${authSession?.token}`,
+        },
+      });
+      if (!res.ok) {
+        throw new Error("Unable to load medical records");
+      }
+      return (await res.json()) as MedicalRecordListResponse;
+    },
+  });
+
+  const vaultRecords = vaultRecordsData?.records ?? [];
+
   useEffect(() => {
     if (normalizedParam) {
       setSelectedSpecialization(normalizedParam);
@@ -325,6 +349,41 @@ export default function Appointment() {
   useEffect(() => {
     setSelectedSlot(undefined);
   }, [selectedClinicId]);
+
+  useEffect(() => {
+    if (!selectedVaultRecordId) {
+      setSelectedVaultRecord(null);
+      setVaultRecordError(null);
+      return;
+    }
+    if (!authSession?.token) {
+      setVaultRecordError("Please sign in to access your vault records.");
+      return;
+    }
+    setIsVaultRecordLoading(true);
+    setVaultRecordError(null);
+    void fetch(`/api/medical-records/${selectedVaultRecordId}`, {
+      headers: {
+        Authorization: `Bearer ${authSession.token}`,
+      },
+    })
+      .then(async (res) => {
+        if (!res.ok) {
+          throw new Error("Unable to load the selected medical record.");
+        }
+        return (await res.json()) as { record: MedicalRecordDetail };
+      })
+      .then((data) => {
+        setSelectedVaultRecord(data.record);
+      })
+      .catch((error) => {
+        setSelectedVaultRecord(null);
+        setVaultRecordError(error instanceof Error ? error.message : "Unable to load medical record.");
+      })
+      .finally(() => {
+        setIsVaultRecordLoading(false);
+      });
+  }, [authSession?.token, selectedVaultRecordId]);
 
   const calendarEvent: CalendarEvent | null = useMemo(() => {
     if (!selectedDate || !selectedSlot) return null;
@@ -436,6 +495,16 @@ export default function Appointment() {
     setIsBooking(true);
     const doctorLabel = doctorDisplayName;
     const clinicKey = selectedClinicId;
+    const sharedRecordPayload: SharedMedicalRecord | undefined = selectedVaultRecord
+      ? {
+          recordId: selectedVaultRecord.id,
+          name: selectedVaultRecord.name,
+          type: selectedVaultRecord.type,
+          size: selectedVaultRecord.size,
+          iv: selectedVaultRecord.iv,
+          data: selectedVaultRecord.data,
+        }
+      : undefined;
     const payload: AppointmentCreateRequest = {
       date: selectedDate.toISOString(),
       slot: selectedSlot,
@@ -445,6 +514,7 @@ export default function Appointment() {
       notes,
       patientName: trimmedName,
       patientEmail: trimmedEmail,
+      sharedRecord: sharedRecordPayload,
     };
 
     try {
@@ -1399,16 +1469,47 @@ export default function Appointment() {
                   <label className="text-xs uppercase tracking-wide text-slate-500 font-semibold block" htmlFor="medical-record">
                     Previous medical records (optional)
                   </label>
-                  <Input
-                    id="medical-record"
-                    type="file"
-                    accept=".pdf,image/*"
-                    onChange={(e) => setMedicalRecord(e.target.files?.[0] ?? null)}
-                    className="h-auto py-2"
-                  />
-                  {medicalRecord ? (
-                    <p className="text-sm text-slate-600">Selected: {medicalRecord.name}</p>
-                  ) : null}
+                  {!isAuthenticated ? (
+                    <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">
+                      Sign in to pick a record from your encrypted vault.
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <select
+                        id="medical-record"
+                        value={selectedVaultRecordId}
+                        onChange={(event) => setSelectedVaultRecordId(event.target.value)}
+                        className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:border-[#0089FF] focus:outline-none focus:ring-2 focus:ring-[#0089FF]/20"
+                      >
+                        <option value="">No record selected</option>
+                        {vaultRecords.map((record) => (
+                          <option key={record.id} value={record.id}>
+                            {record.name}
+                          </option>
+                        ))}
+                      </select>
+                      {isLoadingVaultRecords && (
+                        <p className="text-xs text-slate-500">Loading vault records...</p>
+                      )}
+                      {isVaultRecordLoading && (
+                        <p className="text-xs text-slate-500">Preparing encrypted record...</p>
+                      )}
+                      {vaultRecordError && <p className="text-xs text-red-500">{vaultRecordError}</p>}
+                      {selectedVaultRecord ? (
+                        <p className="text-sm text-slate-600">Selected: {selectedVaultRecord.name}</p>
+                      ) : null}
+                      <p className="text-xs text-slate-500">
+                        We'll send an encrypted copy to the clinic. DocNearMe cannot read your file.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => navigate("/medical-records")}
+                        className="text-xs font-semibold text-[#0089FF] hover:underline"
+                      >
+                        Manage vault
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {FORM_REQUIRED_CLINICS.has(selectedClinicId) ? (
@@ -1524,7 +1625,7 @@ export default function Appointment() {
                   <div>
                     <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Medical record</p>
                     <p className="text-sm text-slate-800 font-medium">
-                      {medicalRecord ? medicalRecord.name : "None uploaded"}
+                      {selectedVaultRecord ? selectedVaultRecord.name : "None selected"}
                     </p>
                   </div>
                 </div>
@@ -1545,6 +1646,7 @@ export default function Appointment() {
                   !selectedSlot ||
                   isBooking ||
                   !isAuthenticated ||
+                  (selectedVaultRecordId && (!selectedVaultRecord || isVaultRecordLoading)) ||
                   (FORM_REQUIRED_CLINICS.has(selectedClinicId) && (!intakeConsent || !intakeReason))
                 }
                 className={`w-full text-white text-base font-bold px-6 py-4 rounded-xl shadow-lg transition-all ${!selectedClinicId || !selectedDate || !selectedSlot || isBooking || !isAuthenticated || (FORM_REQUIRED_CLINICS.has(selectedClinicId) && (!intakeConsent || !intakeReason))
