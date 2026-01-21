@@ -96,13 +96,20 @@ export const handler = async (event: NetlifyEvent, context: any) => {
     // e.g. https://generativelanguage.googleapis.com/v1beta/models/<model>:generateContent
     targetApiUrl = "https://generativelanguage.googleapis.com/v1beta/models";
     apiKey = process.env.GEMINI_API_KEY || "";
-  } else if (normalizedPath.startsWith("google-maps/geocode")) {
-    // Direct geocoding route: maps geocode JSON endpoint
-    targetApiUrl = "https://maps.googleapis.com/maps/api/geocode/json";
-    apiKey = process.env.GOOGLE_MAPS_API_KEY || "";
   } else if (normalizedPath.startsWith("google-maps")) {
-    // Generic maps base (could be extended for other maps endpoints)
-    targetApiUrl = "https://maps.googleapis.com/maps/api";
+    const googleMapsRoutes: Record<string, string> = {
+      "google-maps/geocode": "https://maps.googleapis.com/maps/api/geocode/json",
+      "google-maps/places/autocomplete": "https://maps.googleapis.com/maps/api/place/autocomplete/json",
+      "google-maps/places/details": "https://maps.googleapis.com/maps/api/place/details/json",
+    };
+
+    const mappedUrl = googleMapsRoutes[normalizedPath];
+    if (mappedUrl) {
+      targetApiUrl = mappedUrl;
+    } else {
+      const suffix = normalizedPath.replace(/^google-maps\/?/, "");
+      targetApiUrl = `https://maps.googleapis.com/maps/api/${suffix}`;
+    }
     apiKey = process.env.GOOGLE_MAPS_API_KEY || "";
   }
 
