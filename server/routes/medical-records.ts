@@ -35,14 +35,18 @@ const parseRequestBody = (body: unknown): Record<string, unknown> => {
   }
 };
 
-const serializeRecord = (record: MedicalRecord) => ({
+const serializeRecordSummary = (record: MedicalRecord) => ({
   id: record._id ? (record._id instanceof ObjectId ? record._id.toString() : String(record._id)) : "",
   name: record.name,
   type: record.type,
   size: record.size,
+  createdAt: record.createdAt instanceof Date ? record.createdAt.toISOString() : record.createdAt,
+});
+
+const serializeRecordDetail = (record: MedicalRecord) => ({
+  ...serializeRecordSummary(record),
   iv: record.iv,
   data: record.data,
-  createdAt: record.createdAt instanceof Date ? record.createdAt.toISOString() : record.createdAt,
 });
 
 export const handleGetMedicalConsent = async (req: Request, res: Response) => {
@@ -130,11 +134,37 @@ export const handleListMedicalRecords = async (req: Request, res: Response) => {
       .toArray();
 
     return res.json({
-      records: data.map(serializeRecord),
+      records: data.map(serializeRecordSummary),
     });
   } catch (error) {
     console.error("Medical records fetch failed", error);
     return res.status(500).json({ error: "Failed to load medical records." });
+  }
+};
+
+export const handleGetMedicalRecord = async (req: Request, res: Response) => {
+  if (!req.auth) {
+    return res.status(401).json({ error: "Authentication required." });
+  }
+
+  const recordId = req.params.id;
+  if (!recordId) {
+    return res.status(400).json({ error: "Missing record id." });
+  }
+
+  try {
+    const records = await getMedicalRecordsCollection();
+    const lookupId = ObjectId.isValid(recordId) ? new ObjectId(recordId) : recordId;
+    const record = await records.findOne({ _id: lookupId, patientId: req.auth.id });
+
+    if (!record) {
+      return res.status(404).json({ error: "Record not found." });
+    }
+
+    return res.json({ record: serializeRecordDetail(record) });
+  } catch (error) {
+    console.error("Medical record fetch failed", error);
+    return res.status(500).json({ error: "Failed to load medical record." });
   }
 };
 
@@ -187,7 +217,7 @@ export const handleUploadMedicalRecord = async (req: Request, res: Response) => 
 
     return res.status(201).json({
       success: true,
-      record: serializeRecord({ ...record, _id: result.insertedId }),
+      record: serializeRecordDetail({ ...record, _id: result.insertedId }),
     });
   } catch (error) {
     console.error("Medical record upload failed", error);
@@ -251,7 +281,7 @@ export const handleRenameMedicalRecord = async (req: Request, res: Response) => 
 
     await records.updateOne({ _id: lookupId, patientId: req.auth.id }, { $set: { name } });
 
-    return res.json({ success: true, record: serializeRecord({ ...existing, name }) });
+    return res.json({ success: true, record: serializeRecordSummary({ ...existing, name }) });
   } catch (error) {
     console.error("Medical record rename failed", error);
     return res.status(500).json({ error: "Failed to rename medical record." });

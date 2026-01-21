@@ -10,9 +10,11 @@ import type {
   MedicalConsentRequest,
   MedicalConsentResponse,
   MedicalConsentStatusResponse,
+  MedicalRecordDetail,
+  MedicalRecordFetchResponse,
   MedicalRecordListResponse,
   MedicalRecordRenameResponse,
-  MedicalRecordResponseItem,
+  MedicalRecordSummary,
   MedicalRecordDeleteResponse,
   MedicalRecordUploadRequest,
   MedicalRecordUploadResponse,
@@ -24,6 +26,11 @@ type PreviewRecord = {
   name: string;
   type: string;
   url: string;
+};
+
+type MedicalRecordListItem = MedicalRecordSummary & {
+  iv?: string;
+  data?: string;
 };
 
 const TOKEN_KEY = "docnearme_patient_token";
@@ -74,7 +81,7 @@ export default function MedicalRecords() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const [records, setRecords] = useState<MedicalRecordResponseItem[]>([]);
+  const [records, setRecords] = useState<MedicalRecordListItem[]>([]);
   const [previewRecord, setPreviewRecord] = useState<PreviewRecord | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
@@ -205,6 +212,20 @@ export default function MedicalRecords() {
     }
   };
 
+  const fetchRecordDetail = async (recordId: string, authToken: string) => {
+    const response = await fetch(`/api/medical-records/${recordId}`, {
+      headers: { Authorization: `Bearer ${authToken}` },
+    });
+    const data = (await response.json()) as MedicalRecordFetchResponse;
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error("Please sign in again to access your records.");
+      }
+      throw new Error("Unable to load this record.");
+    }
+    return data.record;
+  };
+
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -222,14 +243,28 @@ export default function MedicalRecords() {
     void handleUpload(file);
   };
 
-  const handleView = async (record: MedicalRecordResponseItem) => {
+  const handleView = async (record: MedicalRecordListItem) => {
     setErrorMessage(null);
     try {
+      if (!token) {
+        throw new Error("Please sign in again to access your records.");
+      }
       const key = await getOrCreateKey(email);
+      let detail: MedicalRecordDetail | null = null;
+      if (record.iv && record.data) {
+        detail = record as MedicalRecordDetail;
+      } else {
+        detail = await fetchRecordDetail(record.id, token);
+        setRecords((prev) =>
+          prev.map((item) =>
+            item.id === detail?.id ? { ...item, iv: detail.iv, data: detail.data } : item
+          )
+        );
+      }
       const decrypted = await window.crypto.subtle.decrypt(
-        { name: "AES-GCM", iv: new Uint8Array(base64ToArrayBuffer(record.iv)) },
+        { name: "AES-GCM", iv: new Uint8Array(base64ToArrayBuffer(detail.iv)) },
         key,
-        base64ToArrayBuffer(record.data)
+        base64ToArrayBuffer(detail.data)
       );
       const blob = new Blob([decrypted], { type: record.type });
       const url = URL.createObjectURL(blob);
@@ -271,7 +306,7 @@ export default function MedicalRecords() {
     }
   };
 
-  const handleRenameStart = (record: MedicalRecordResponseItem) => {
+  const handleRenameStart = (record: MedicalRecordListItem) => {
     setEditingRecordId(record.id);
     setRenameValue(record.name);
     setErrorMessage(null);
