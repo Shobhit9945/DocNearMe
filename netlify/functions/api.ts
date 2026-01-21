@@ -161,10 +161,23 @@ export const handler = async (event: NetlifyEvent, context: any) => {
   try {
     // Build forwarding URL: include original query string parameters if present
     const url = new URL(targetApiUrl);
-    if (event.queryStringParameters) {
-      for (const [k, v] of Object.entries(event.queryStringParameters)) {
-        if (v != null) url.searchParams.set(k, v);
+    const rawQueryParams = event.queryStringParameters ?? {};
+    const queryParams = { ...rawQueryParams };
+
+    if (normalizedPath.startsWith("google-maps")) {
+      if ("placeId" in queryParams && !("place_id" in queryParams)) {
+        queryParams.place_id = queryParams.placeId;
+        delete queryParams.placeId;
       }
+
+      if ("sessionToken" in queryParams && !("sessiontoken" in queryParams)) {
+        queryParams.sessiontoken = queryParams.sessionToken;
+        delete queryParams.sessionToken;
+      }
+    }
+
+    for (const [k, v] of Object.entries(queryParams)) {
+      if (v != null) url.searchParams.set(k, v);
     }
 
     // For Google-style APIs (generative language + maps) we must pass the API key as a `key` query parameter
