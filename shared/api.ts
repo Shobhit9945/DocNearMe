@@ -119,18 +119,25 @@ export interface ResetPasswordResponse {
   message: string;
 }
 
-export interface MedicalRecordResponseItem {
+export interface MedicalRecordSummary {
   id: string;
   name: string;
   type: string;
   size: number;
-  iv: string;
-  data: string;
   createdAt: string;
 }
 
+export interface MedicalRecordDetail extends MedicalRecordSummary {
+  iv: string;
+  data: string;
+}
+
 export interface MedicalRecordListResponse {
-  records: MedicalRecordResponseItem[];
+  records: MedicalRecordSummary[];
+}
+
+export interface MedicalRecordFetchResponse {
+  record: MedicalRecordDetail;
 }
 
 export interface MedicalRecordUploadRequest {
@@ -143,7 +150,7 @@ export interface MedicalRecordUploadRequest {
 
 export interface MedicalRecordUploadResponse {
   success: boolean;
-  record: MedicalRecordResponseItem;
+  record: MedicalRecordDetail;
 }
 
 export interface MedicalRecordRenameRequest {
@@ -152,7 +159,7 @@ export interface MedicalRecordRenameRequest {
 
 export interface MedicalRecordRenameResponse {
   success: boolean;
-  record: MedicalRecordResponseItem;
+  record: MedicalRecordSummary;
 }
 
 export interface MedicalConsentStatusResponse {

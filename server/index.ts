@@ -25,6 +25,7 @@ import {
   handleCreateMedicalConsent,
   handleDeleteMedicalRecord,
   handleGetMedicalConsent,
+  handleGetMedicalRecord,
   handleListMedicalRecords,
   handleRenameMedicalRecord,
   handleUploadMedicalRecord,
@@ -91,6 +92,7 @@ export async function createServer(): Promise<Express> {
   app.get("/api/medical-records/consent", requireAuth, handleGetMedicalConsent);
   app.post("/api/medical-records/consent", requireAuth, handleCreateMedicalConsent);
   app.get("/api/medical-records", requireAuth, handleListMedicalRecords);
+  app.get("/api/medical-records/:id", requireAuth, handleGetMedicalRecord);
   app.post("/api/medical-records", requireAuth, handleUploadMedicalRecord);
   app.delete("/api/medical-records/:id", requireAuth, handleDeleteMedicalRecord);
   app.patch("/api/medical-records/:id", requireAuth, handleRenameMedicalRecord);
