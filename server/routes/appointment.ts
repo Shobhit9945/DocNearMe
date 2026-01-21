@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { ObjectId } from "mongodb";
 import { getAppointmentsCollection, getPatientsCollection } from "../db";
-import { Appointment, PatientAppointmentSummary } from "../types";
+import { Appointment, PatientAppointmentSummary, SharedMedicalRecord } from "../types";
 import { sendEmail } from "../services/mailer";
 
 const parseRequestBody = (body: unknown): Record<string, unknown> => {
@@ -32,13 +32,41 @@ const parseRequestBody = (body: unknown): Record<string, unknown> => {
 const generateBookingId = () =>
   `DNM-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
 
+const MAX_RECORD_SIZE_BYTES = 8 * 1024 * 1024;
+
+const parseSharedRecord = (value: unknown): SharedMedicalRecord | null => {
+  if (!value || typeof value !== "object") return null;
+  const payload = value as Record<string, unknown>;
+  const recordId = typeof payload.recordId === "string" ? payload.recordId : "";
+  const name = typeof payload.name === "string" ? payload.name : "";
+  const type = typeof payload.type === "string" ? payload.type : "";
+  const size = typeof payload.size === "number" ? payload.size : Number(payload.size);
+  const iv = typeof payload.iv === "string" ? payload.iv : "";
+  const data = typeof payload.data === "string" ? payload.data : "";
+
+  if (!recordId || !name || !type || !iv || !data) return null;
+  if (!type.startsWith("image/") && type !== "application/pdf") return null;
+  if (Number.isNaN(size) || size <= 0 || size > MAX_RECORD_SIZE_BYTES) return null;
+
+  return { recordId, name, type, size, iv, data };
+};
+
 const serializeAppointment = (appointment: Appointment) => ({
-  ...appointment,
   _id: appointment._id
     ? appointment._id instanceof ObjectId
       ? appointment._id.toString()
       : String(appointment._id)
     : "",
+  date: appointment.date,
+  dateKey: appointment.dateKey,
+  slot: appointment.slot,
+  specialization: appointment.specialization,
+  doctorName: appointment.doctorName,
+  clinicId: appointment.clinicId,
+  notes: appointment.notes,
+  patientId: appointment.patientId,
+  patientName: appointment.patientName,
+  patientEmail: appointment.patientEmail,
   createdAt: appointment.createdAt instanceof Date ? appointment.createdAt.toISOString() : appointment.createdAt,
 });
 
@@ -47,7 +75,9 @@ const resolveAppointmentId = (appointmentId: string) =>
 
 export const handleCreateAppointment = async (req: Request, res: Response) => {
   const payload = parseRequestBody(req.body);
-  const { date, slot, specialization, clinicId, notes, patientName, patientEmail, doctorName } = payload ?? {};
+  const { date, slot, specialization, clinicId, notes, patientName, patientEmail, doctorName, sharedRecord } =
+    payload ?? {};
+  const sharedRecordPayload = parseSharedRecord(sharedRecord);
 
   if (!req.auth) {
     return res.status(401).json({ error: "Authentication required." });
@@ -55,6 +85,10 @@ export const handleCreateAppointment = async (req: Request, res: Response) => {
 
   if (!date || !slot || !specialization || !clinicId) {
     return res.status(400).json({ error: "Missing required fields" });
+  }
+
+  if ((sharedRecord !== undefined && sharedRecord !== null) && !sharedRecordPayload) {
+    return res.status(400).json({ error: "Invalid shared medical record." });
   }
 
   const dateObj = new Date(date);
@@ -87,6 +121,7 @@ export const handleCreateAppointment = async (req: Request, res: Response) => {
       patientId: req.auth.id,
       patientName: patientName?.trim() || req.auth.name,
       patientEmail: patientEmail?.trim() || req.auth.email,
+      sharedRecord: sharedRecordPayload ?? undefined,
       createdAt: new Date(),
     };
 

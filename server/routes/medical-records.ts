@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { ObjectId } from "mongodb";
-import { getMedicalConsentsCollection, getMedicalRecordsCollection } from "../db";
-import { MedicalConsent, MedicalRecord } from "../types";
+import { getMedicalConsentsCollection, getMedicalRecordKeysCollection, getMedicalRecordsCollection } from "../db";
+import { MedicalConsent, MedicalRecord, MedicalRecordKey } from "../types";
 
 const CONSENT_VERSION = "2024-09-01";
 const CONSENT_TEXT =
@@ -9,6 +9,9 @@ const CONSENT_TEXT =
   "I understand the files are encrypted in my browser and only I can decrypt them.";
 const MAX_UPLOAD_SIZE_BYTES = 8 * 1024 * 1024;
 const MAX_RECORD_NAME_LENGTH = 120;
+const MAX_KEY_PART_LENGTH = 4096;
+const MIN_KEY_DERIVATION_ITERATIONS = 100_000;
+const MAX_KEY_DERIVATION_ITERATIONS = 1_000_000;
 
 const parseRequestBody = (body: unknown): Record<string, unknown> => {
   if (body instanceof Buffer) {
@@ -47,6 +50,14 @@ const serializeRecordDetail = (record: MedicalRecord) => ({
   ...serializeRecordSummary(record),
   iv: record.iv,
   data: record.data,
+});
+
+const serializeKeyPayload = (record: MedicalRecordKey) => ({
+  wrappedKey: record.wrappedKey,
+  salt: record.salt,
+  iv: record.iv,
+  iterations: record.iterations,
+  kdf: record.kdf,
 });
 
 export const handleGetMedicalConsent = async (req: Request, res: Response) => {
@@ -285,6 +296,97 @@ export const handleRenameMedicalRecord = async (req: Request, res: Response) => 
   } catch (error) {
     console.error("Medical record rename failed", error);
     return res.status(500).json({ error: "Failed to rename medical record." });
+  }
+};
+
+export const handleGetMedicalRecordKey = async (req: Request, res: Response) => {
+  if (!req.auth) {
+    return res.status(401).json({ error: "Authentication required." });
+  }
+
+  try {
+    const keys = await getMedicalRecordKeysCollection();
+    const key = await keys.findOne({ patientId: req.auth.id });
+
+    if (!key) {
+      return res.json({ hasKey: false });
+    }
+
+    return res.json({ hasKey: true, key: serializeKeyPayload(key) });
+  } catch (error) {
+    console.error("Medical record key lookup failed", error);
+    return res.status(500).json({ error: "Failed to load medical record key." });
+  }
+};
+
+export const handleUpsertMedicalRecordKey = async (req: Request, res: Response) => {
+  if (!req.auth) {
+    return res.status(401).json({ error: "Authentication required." });
+  }
+
+  const payload = parseRequestBody(req.body);
+  const wrappedKey = typeof payload.wrappedKey === "string" ? payload.wrappedKey : "";
+  const salt = typeof payload.salt === "string" ? payload.salt : "";
+  const iv = typeof payload.iv === "string" ? payload.iv : "";
+  const iterations = typeof payload.iterations === "number" ? payload.iterations : Number(payload.iterations);
+  const kdf = payload.kdf === "PBKDF2" ? "PBKDF2" : "";
+
+  if (!wrappedKey || !salt || !iv || !kdf) {
+    return res.status(400).json({ error: "Missing required fields." });
+  }
+
+  if (
+    wrappedKey.length > MAX_KEY_PART_LENGTH ||
+    salt.length > MAX_KEY_PART_LENGTH ||
+    iv.length > MAX_KEY_PART_LENGTH
+  ) {
+    return res.status(400).json({ error: "Key material is too large." });
+  }
+
+  if (Number.isNaN(iterations)) {
+    return res.status(400).json({ error: "Invalid iterations value." });
+  }
+
+  if (iterations < MIN_KEY_DERIVATION_ITERATIONS || iterations > MAX_KEY_DERIVATION_ITERATIONS) {
+    return res.status(400).json({ error: "Iterations value out of range." });
+  }
+
+  try {
+    const keys = await getMedicalRecordKeysCollection();
+    const existing = await keys.findOne({ patientId: req.auth.id });
+
+    if (existing) {
+      await keys.updateOne(
+        { patientId: req.auth.id },
+        {
+          $set: {
+            wrappedKey,
+            salt,
+            iv,
+            iterations,
+            kdf: "PBKDF2",
+            updatedAt: new Date(),
+          },
+        },
+      );
+    } else {
+      const record: MedicalRecordKey = {
+        patientId: req.auth.id,
+        wrappedKey,
+        salt,
+        iv,
+        iterations,
+        kdf: "PBKDF2",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      await keys.insertOne(record);
+    }
+
+    return res.status(201).json({ success: true, updatedAt: new Date().toISOString() });
+  } catch (error) {
+    console.error("Medical record key upsert failed", error);
+    return res.status(500).json({ error: "Failed to store medical record key." });
   }
 };
 
