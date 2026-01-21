@@ -56,6 +56,12 @@ export default function Profile() {
     loadProfileFromStorage();
   }, []);
 
+  useEffect(() => {
+    if (!userName) {
+      setIsEditingProfile(false);
+    }
+  }, [userName]);
+
   const handleLogout = () => {
     localStorage.removeItem("docnearme_patient_token");
     localStorage.removeItem("docnearme_user_name");
@@ -123,9 +129,6 @@ export default function Profile() {
                 <span className="px-3 py-1 bg-[#F5FAFF] text-[#1648CE] rounded-full text-xs font-semibold">
                   {t("Public access")}
                 </span>
-                <p className="text-sm text-slate-600">
-                  {t("Book appointments without an account, or sign in to save your profile details.")}
-                </p>
                 <Button
                   type="button"
                   size="sm"
@@ -149,7 +152,7 @@ export default function Profile() {
                   <p className="text-sm text-[#556070]">{t("Update your contact and care preferences.")}</p>
                 </div>
               </div>
-              {!isEditingProfile && (
+              {!isEditingProfile && userName && (
                 <Button
                   type="button"
                   variant="outline"
