@@ -11,6 +11,8 @@ export default function Profile() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [userName, setUserName] = useState<string | null>(null);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [profileName, setProfileName] = useState("");
   const [profileEmail, setProfileEmail] = useState("");
   const [profilePhone, setProfilePhone] = useState("");
   const [profileAddress, setProfileAddress] = useState("");
@@ -22,8 +24,11 @@ export default function Profile() {
 
   const loadProfileFromStorage = () => {
     const storedProfile = localStorage.getItem("docnearme_profile");
+    const storedName = localStorage.getItem("docnearme_user_name") ?? "";
+    const storedEmail = localStorage.getItem("docnearme_user_email") ?? "";
     if (!storedProfile) {
-      setProfileEmail("");
+      setProfileName(storedName);
+      setProfileEmail(storedEmail);
       setProfilePhone("");
       setProfileAddress("");
       setEmergencyContact("");
@@ -33,6 +38,7 @@ export default function Profile() {
     }
 
     const parsed = JSON.parse(storedProfile) as {
+      name?: string;
       email?: string;
       phone?: string;
       address?: string;
@@ -40,7 +46,8 @@ export default function Profile() {
       preferredLanguage?: string;
       notificationsEnabled?: boolean;
     };
-    setProfileEmail(parsed.email ?? "");
+    setProfileName(parsed.name ?? storedName);
+    setProfileEmail(parsed.email ?? storedEmail);
     setProfilePhone(parsed.phone ?? "");
     setProfileAddress(parsed.address ?? "");
     setEmergencyContact(parsed.emergencyContact ?? "");
@@ -50,8 +57,15 @@ export default function Profile() {
 
   useEffect(() => {
     const storedName = localStorage.getItem("docnearme_user_name");
+    const storedEmail = localStorage.getItem("docnearme_user_email");
     if (storedName) {
       setUserName(storedName);
+    }
+    if (storedEmail) {
+      setUserEmail(storedEmail);
+      if (!profileEmail) {
+        setProfileEmail(storedEmail);
+      }
     }
     loadProfileFromStorage();
   }, []);
@@ -65,14 +79,21 @@ export default function Profile() {
   const handleLogout = () => {
     localStorage.removeItem("docnearme_patient_token");
     localStorage.removeItem("docnearme_user_name");
+    localStorage.removeItem("docnearme_user_email");
     setUserName(null);
+    setUserEmail(null);
     navigate("/");
   };
 
   const handleProfileSave = () => {
+    localStorage.setItem("docnearme_user_name", profileName);
+    localStorage.setItem("docnearme_user_email", profileEmail);
+    setUserName(profileName);
+    setUserEmail(profileEmail);
     localStorage.setItem(
       "docnearme_profile",
       JSON.stringify({
+        name: profileName,
         email: profileEmail,
         phone: profilePhone,
         address: profileAddress,
@@ -122,6 +143,7 @@ export default function Profile() {
                 <p className="text-sm text-slate-600">
                   {userName ? t("You are signed in to DocNearMe.") : t("Sign in to personalize your profile.")}
                 </p>
+                {userEmail && <p className="text-sm text-slate-500">{userEmail}</p>}
               </div>
             </div>
             {!userName && (
@@ -152,7 +174,7 @@ export default function Profile() {
                   <p className="text-sm text-[#556070]">{t("Update your contact and care preferences.")}</p>
                 </div>
               </div>
-              {!isEditingProfile && userName && (
+              {!isEditingProfile && (userName || userEmail) && (
                 <Button
                   type="button"
                   variant="outline"
@@ -167,6 +189,19 @@ export default function Profile() {
               )}
             </div>
             <div className="mt-6 grid gap-4">
+              <div>
+                <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  {t("Full name")}
+                </label>
+                <Input
+                  type="text"
+                  value={profileName}
+                  onChange={(event) => setProfileName(event.target.value)}
+                  placeholder="Taro Tanaka"
+                  className="mt-2"
+                  disabled={!isEditingProfile}
+                />
+              </div>
               <div>
                 <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                   {t("Email address")}
