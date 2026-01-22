@@ -75,10 +75,21 @@ export interface SharedMedicalRecord {
   data: string;
 }
 
+export interface SignupPhotoPayload {
+  dataUrl: string;
+  fileName: string;
+  fileType: string;
+  size: number;
+}
+
 export interface SignupRequest {
   name: string;
   email: string;
   password: string;
+  dateOfBirth: string;
+  nationality: string;
+  residentStatus: string;
+  photo?: SignupPhotoPayload | null;
   consentAccepted: boolean;
 }
 
@@ -101,6 +112,15 @@ export interface AuthResponse {
 
 export interface RequestOtpRequest {
   email: string;
+}
+
+export interface CheckEmailRequest {
+  email: string;
+}
+
+export interface CheckEmailResponse {
+  exists: boolean;
+  message: string;
 }
 
 export interface VerifyOtpRequest {

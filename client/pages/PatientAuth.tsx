@@ -9,14 +9,18 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { PageScaffold } from "@/components/PageScaffold";
 import type {
   AuthResponse,
+  CheckEmailRequest,
+  CheckEmailResponse,
   OtpResponse,
   RequestOtpRequest,
   RequestPasswordResetRequest,
   ResetPasswordRequest,
   ResetPasswordResponse,
+  SignupPhotoPayload,
   VerifyOtpRequest,
 } from "@shared/api";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const TOKEN_KEY = "docnearme_patient_token";
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -29,7 +33,16 @@ type StatusState = {
 const initialStatus: StatusState = { type: "idle", message: "" };
 
 const PatientAuth = () => {
-  const [signupData, setSignupData] = useState({ name: "", email: "", password: "", consentAccepted: false });
+  const [signupData, setSignupData] = useState({
+    name: "",
+    email: "",
+    password: "",
+    dateOfBirth: "",
+    nationality: "",
+    residentStatus: "",
+    photo: null as SignupPhotoPayload | null,
+    consentAccepted: false,
+  });
   const [loginData, setLoginData] = useState({ email: "", password: "" });
   const [status, setStatus] = useState<StatusState>(initialStatus);
   const [activeTab, setActiveTab] = useState<"login" | "signup">("login");
@@ -41,6 +54,10 @@ const PatientAuth = () => {
   const [otpLoading, setOtpLoading] = useState(false);
   const [otpCooldown, setOtpCooldown] = useState(0);
   const [otpSent, setOtpSent] = useState(false);
+  const [signupStep, setSignupStep] = useState<"email" | "otp" | "details">("email");
+  const [checkEmailLoading, setCheckEmailLoading] = useState(false);
+  const [emailAvailable, setEmailAvailable] = useState(false);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [resetOpen, setResetOpen] = useState(false);
   const [resetData, setResetData] = useState({ email: "", otp: "", password: "" });
   const [resetOtpCooldown, setResetOtpCooldown] = useState(0);
@@ -55,6 +72,18 @@ const PatientAuth = () => {
     const minutes = Math.floor(seconds / 60);
     const remaining = seconds % 60;
     return `${minutes}:${remaining.toString().padStart(2, "0")}`;
+  };
+  const resetOtpState = () => {
+    setOtpValue("");
+    setOtpEmail("");
+    setOtpVerified(false);
+    setOtpSent(false);
+    setOtpCooldown(0);
+  };
+  const resetSignupFlow = () => {
+    setSignupStep("email");
+    setEmailAvailable(false);
+    resetOtpState();
   };
 
   useEffect(() => {
@@ -73,14 +102,46 @@ const PatientAuth = () => {
     return () => window.clearInterval(interval);
   }, [resetOtpCooldown]);
 
+  useEffect(() => {
+    if (activeTab === "signup") {
+      resetSignupFlow();
+      setStatus(initialStatus);
+    }
+  }, [activeTab]);
+
   const validateSignup = () => {
     if (activeTab !== "signup") return true;
+    if (signupStep !== "details") {
+      setError("Please complete email verification before finishing signup.");
+      return false;
+    }
     if (signupData.name.trim().length < 2) {
       setError("Name must be at least 2 characters long.");
       return false;
     }
     if (!emailPattern.test(signupData.email)) {
       setError("Please enter a valid email address.");
+      return false;
+    }
+    if (!signupData.dateOfBirth) {
+      setError("Please provide your date of birth.");
+      return false;
+    }
+    const dobTimestamp = Date.parse(signupData.dateOfBirth);
+    if (Number.isNaN(dobTimestamp)) {
+      setError("Please provide a valid date of birth.");
+      return false;
+    }
+    if (dobTimestamp > Date.now()) {
+      setError("Date of birth cannot be in the future.");
+      return false;
+    }
+    if (signupData.nationality.trim().length < 2) {
+      setError("Please enter your nationality.");
+      return false;
+    }
+    if (signupData.residentStatus.trim().length < 2) {
+      setError("Please select your resident status.");
       return false;
     }
     if (signupData.password.length < 8) {
@@ -146,9 +207,9 @@ const PatientAuth = () => {
       setUser(data.user);
       setSuccess(`Welcome back, ${data.user.name}!`);
 
-      // Redirect to profile after a short delay
+      // Redirect after a short delay
       setTimeout(() => {
-         navigate("/profile");
+        navigate(endpoint === "/api/auth/signup" ? "/" : "/profile");
       }, 1000);
     } catch (error) {
       setError(error instanceof Error ? error.message : "Network error. Please try again.");
@@ -157,9 +218,86 @@ const PatientAuth = () => {
     }
   };
 
+  const checkEmailAvailability = async () => {
+    if (!emailPattern.test(signupData.email)) {
+      setError("Please enter a valid email address.");
+      return;
+    }
+
+    setCheckEmailLoading(true);
+    setStatus(initialStatus);
+
+    try {
+      const payload: CheckEmailRequest = { email: signupData.email };
+      const response = await fetch("/api/auth/check-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = (await response.json()) as CheckEmailResponse;
+      if (!response.ok) {
+        setError(data.message || "Unable to verify email availability.");
+        return;
+      }
+
+      if (data.exists) {
+        setEmailAvailable(false);
+        setSignupStep("email");
+        setError(data.message);
+        return;
+      }
+
+      setEmailAvailable(true);
+      setSignupStep("otp");
+      setSuccess(data.message);
+      await requestOtp();
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Network error. Please try again.");
+    } finally {
+      setCheckEmailLoading(false);
+    }
+  };
+
+  const handlePhotoChange = (file: File | null) => {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setError("Please upload an image file for your profile photo.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setError("Profile photos must be under 5MB.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const dataUrl = typeof reader.result === "string" ? reader.result : "";
+      if (!dataUrl) {
+        setError("Unable to read the selected photo. Please try another image.");
+        return;
+      }
+      setSignupData((prev) => ({
+        ...prev,
+        photo: {
+          dataUrl,
+          fileName: file.name,
+          fileType: file.type,
+          size: file.size,
+        },
+      }));
+      setPhotoPreview(dataUrl);
+    };
+    reader.readAsDataURL(file);
+  };
+
   const requestOtp = async () => {
     if (otpCooldown > 0) {
       setError(`Please wait ${formatCountdown(otpCooldown)} before requesting another code.`);
+      return;
+    }
+    if (!emailAvailable) {
+      setError("Please confirm your email availability before requesting a verification code.");
       return;
     }
     if (!emailPattern.test(signupData.email)) {
@@ -222,6 +360,7 @@ const PatientAuth = () => {
 
       setOtpVerified(true);
       setOtpEmail(signupData.email);
+      setSignupStep("details");
       setSuccess(data.message);
     } catch (error) {
       setError(error instanceof Error ? error.message : "Network error. Please try again.");
@@ -475,105 +614,263 @@ const PatientAuth = () => {
                     handleSubmit("/api/auth/signup", signupData);
                   }}
                 >
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-name">Full name</Label>
-                    <Input
-                      id="signup-name"
-                      type="text"
-                      placeholder="Jane Doe"
-                      value={signupData.name}
-                      onChange={(event) => setSignupData((prev) => ({ ...prev, name: event.target.value }))}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-email">Email</Label>
-                    <Input
-                      id="signup-email"
-                      type="email"
-                      placeholder="patient@email.com"
-                      value={signupData.email}
-                      onChange={(event) => {
-                        const nextEmail = event.target.value;
-                        setSignupData((prev) => ({ ...prev, email: nextEmail }));
-                        if (otpEmail && nextEmail.toLowerCase() !== otpEmail.toLowerCase()) {
-                          setOtpVerified(false);
-                          setOtpValue("");
-                          setOtpSent(false);
-                          setOtpCooldown(0);
-                        }
-                      }}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Verification code</Label>
-                    <InputOTP maxLength={6} value={otpValue} onChange={setOtpValue}>
-                      <InputOTPGroup>
-                        {Array.from({ length: 6 }).map((_, index) => (
-                          <InputOTPSlot key={index} index={index} />
-                        ))}
-                      </InputOTPGroup>
-                    </InputOTP>
-                    <div className="flex flex-wrap gap-2">
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        disabled={otpLoading || otpCooldown > 0}
-                        onClick={requestOtp}
-                      >
-                        {otpLoading ? "Sending..." : "Send OTP"}
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        disabled={!otpSent || otpLoading || otpCooldown > 0}
-                        onClick={requestOtp}
-                      >
-                        {otpLoading
-                          ? "Sending..."
-                          : otpCooldown > 0
-                            ? `Resend in ${formatCountdown(otpCooldown)}`
-                            : "Resend OTP"}
-                      </Button>
-                      <Button type="button" disabled={otpLoading || otpValue.length < 6} onClick={verifyOtpCode}>
-                        {otpLoading ? "Verifying..." : "Verify OTP"}
-                      </Button>
-                      {otpVerified && (
-                        <span className="text-sm font-medium text-emerald-600">Email verified</span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-password">Password</Label>
-                    <Input
-                      id="signup-password"
-                      type="password"
-                      placeholder="Minimum 8 characters"
-                      value={signupData.password}
-                      onChange={(event) => setSignupData((prev) => ({ ...prev, password: event.target.value }))}
-                    />
-                  </div>
-                  <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50/80 p-4 text-sm text-slate-600">
-                    <p className="font-semibold text-slate-900">Consent for medical data handling (Japan APPI)</p>
+                  <div className="rounded-lg border border-slate-200 bg-slate-50/80 p-4 text-sm text-slate-600">
+                    <p className="font-semibold text-slate-900">Signup progress</p>
                     <p>
-                      I consent to DocNearMe collecting, using, and securely storing my personal information,
-                      including health-related data, in compliance with Japan&apos;s Act on the Protection of Personal
-                      Information (APPI), for account creation, care coordination, and secure service delivery.
+                      Step{" "}
+                      {signupStep === "email" ? "1" : signupStep === "otp" ? "2" : "3"} of 3:{" "}
+                      {signupStep === "email"
+                        ? "Confirm your email"
+                        : signupStep === "otp"
+                          ? "Verify your email"
+                          : "Complete your profile"}
                     </p>
-                    <label className="flex items-start gap-2">
-                      <input
-                        type="checkbox"
-                        className="mt-1"
-                        checked={signupData.consentAccepted}
-                        onChange={(event) =>
-                          setSignupData((prev) => ({ ...prev, consentAccepted: event.target.checked }))
-                        }
-                      />
-                      <span>I agree and provide my explicit consent.</span>
-                    </label>
                   </div>
-                  <Button className="w-full" disabled={isSubmitting} type="submit">
-                    {isSubmitting ? "Creating account..." : "Create account"}
-                  </Button>
+
+                  {signupStep === "email" && (
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="signup-email">Email</Label>
+                        <Input
+                          id="signup-email"
+                          type="email"
+                          placeholder="patient@email.com"
+                          value={signupData.email}
+                          onChange={(event) => {
+                            const nextEmail = event.target.value;
+                            setSignupData((prev) => ({ ...prev, email: nextEmail }));
+                            resetSignupFlow();
+                            setStatus(initialStatus);
+                          }}
+                        />
+                        <p className="text-xs text-slate-500">
+                          We&apos;ll check if the email is already registered before sending the verification code.
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        className="w-full"
+                        disabled={checkEmailLoading}
+                        onClick={checkEmailAvailability}
+                      >
+                        {checkEmailLoading ? "Checking..." : "Check email"}
+                      </Button>
+                    </div>
+                  )}
+
+                  {signupStep === "otp" && (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-semibold text-slate-900">Verify your email</p>
+                          <p className="text-xs text-slate-500">{signupData.email}</p>
+                        </div>
+                        <Button type="button" variant="link" className="px-0 text-[#0089FF]" onClick={resetSignupFlow}>
+                          Change email
+                        </Button>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Verification code</Label>
+                        <InputOTP maxLength={6} value={otpValue} onChange={setOtpValue}>
+                          <InputOTPGroup>
+                            {Array.from({ length: 6 }).map((_, index) => (
+                              <InputOTPSlot key={index} index={index} />
+                            ))}
+                          </InputOTPGroup>
+                        </InputOTP>
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            disabled={otpLoading || otpCooldown > 0}
+                            onClick={requestOtp}
+                          >
+                            {otpLoading ? "Sending..." : "Send OTP"}
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            disabled={!otpSent || otpLoading || otpCooldown > 0}
+                            onClick={requestOtp}
+                          >
+                            {otpLoading
+                              ? "Sending..."
+                              : otpCooldown > 0
+                                ? `Resend in ${formatCountdown(otpCooldown)}`
+                                : "Resend OTP"}
+                          </Button>
+                          <Button type="button" disabled={otpLoading || otpValue.length < 6} onClick={verifyOtpCode}>
+                            {otpLoading ? "Verifying..." : "Verify OTP"}
+                          </Button>
+                          {otpVerified && (
+                            <span className="text-sm font-medium text-emerald-600">Email verified</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {signupStep === "details" && (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50/80 p-4">
+                        <div>
+                          <p className="text-sm font-semibold text-slate-900">Email verified</p>
+                          <p className="text-xs text-slate-500">{signupData.email}</p>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="link"
+                          className="px-0 text-[#0089FF]"
+                          onClick={() => setSignupStep("otp")}
+                        >
+                          Back to verification
+                        </Button>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="signup-name">Full name</Label>
+                        <Input
+                          id="signup-name"
+                          type="text"
+                          placeholder="Jane Doe"
+                          value={signupData.name}
+                          onChange={(event) => setSignupData((prev) => ({ ...prev, name: event.target.value }))}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="signup-dob">Date of birth</Label>
+                        <Input
+                          id="signup-dob"
+                          type="date"
+                          value={signupData.dateOfBirth}
+                          onChange={(event) =>
+                            setSignupData((prev) => ({ ...prev, dateOfBirth: event.target.value }))
+                          }
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="signup-nationality">Nationality</Label>
+                        <Input
+                          id="signup-nationality"
+                          type="text"
+                          placeholder="e.g. Japanese"
+                          value={signupData.nationality}
+                          onChange={(event) =>
+                            setSignupData((prev) => ({ ...prev, nationality: event.target.value }))
+                          }
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Resident status</Label>
+                        <Select
+                          value={signupData.residentStatus}
+                          onValueChange={(value) => setSignupData((prev) => ({ ...prev, residentStatus: value }))}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select your resident status" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="tourist">Tourist</SelectItem>
+                            <SelectItem value="foreign-resident">Foreign resident</SelectItem>
+                            <SelectItem value="permanent-resident">Permanent resident</SelectItem>
+                            <SelectItem value="citizen">Citizen</SelectItem>
+                            <SelectItem value="student">Student</SelectItem>
+                            <SelectItem value="other">Other</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <p className="text-xs text-slate-500">
+                          This helps us determine future options like linking a phone number.
+                        </p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Profile photo (optional)</Label>
+                        <div className="space-y-3 rounded-lg border border-dashed border-slate-200 p-4">
+                          <div className="flex flex-wrap gap-2">
+                            <Button asChild type="button" variant="secondary">
+                              <label htmlFor="signup-photo-upload">Upload from gallery</label>
+                            </Button>
+                            <Button asChild type="button" variant="secondary">
+                              <label htmlFor="signup-photo-selfie">Take selfie</label>
+                            </Button>
+                            <input
+                              id="signup-photo-upload"
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={(event) => handlePhotoChange(event.target.files?.[0] ?? null)}
+                            />
+                            <input
+                              id="signup-photo-selfie"
+                              type="file"
+                              accept="image/*"
+                              capture="user"
+                              className="hidden"
+                              onChange={(event) => handlePhotoChange(event.target.files?.[0] ?? null)}
+                            />
+                          </div>
+                          {photoPreview ? (
+                            <div className="flex flex-wrap items-center gap-4">
+                              <img
+                                src={photoPreview}
+                                alt="Profile preview"
+                                className="h-20 w-20 rounded-lg object-cover"
+                              />
+                              <div className="text-xs text-slate-500">
+                                <p className="font-semibold text-slate-700">{signupData.photo?.fileName}</p>
+                                <p>{signupData.photo?.fileType}</p>
+                              </div>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                className="text-slate-500"
+                                onClick={() => {
+                                  setSignupData((prev) => ({ ...prev, photo: null }));
+                                  setPhotoPreview(null);
+                                }}
+                              >
+                                Remove
+                              </Button>
+                            </div>
+                          ) : (
+                            <p className="text-xs text-slate-500">Optional. Max size 5MB.</p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="signup-password">Password</Label>
+                        <Input
+                          id="signup-password"
+                          type="password"
+                          placeholder="Minimum 8 characters"
+                          value={signupData.password}
+                          onChange={(event) => setSignupData((prev) => ({ ...prev, password: event.target.value }))}
+                        />
+                      </div>
+                      <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50/80 p-4 text-sm text-slate-600">
+                        <p className="font-semibold text-slate-900">Consent for medical data handling (Japan APPI)</p>
+                        <p>
+                          I consent to DocNearMe collecting, using, and securely storing my personal information,
+                          including health-related data, in compliance with Japan&apos;s Act on the Protection of
+                          Personal Information (APPI), for account creation, care coordination, and secure service
+                          delivery.
+                        </p>
+                        <label className="flex items-start gap-2">
+                          <input
+                            type="checkbox"
+                            className="mt-1"
+                            checked={signupData.consentAccepted}
+                            onChange={(event) =>
+                              setSignupData((prev) => ({ ...prev, consentAccepted: event.target.checked }))
+                            }
+                          />
+                          <span>I agree and provide my explicit consent.</span>
+                        </label>
+                      </div>
+                      <Button className="w-full" disabled={isSubmitting} type="submit">
+                        {isSubmitting ? "Creating account..." : "Create account"}
+                      </Button>
+                    </div>
+                  )}
                 </form>
               </TabsContent>
             </Tabs>

@@ -38,6 +38,15 @@ export interface PatientUser {
   name: string;
   email: string;
   passwordHash: string;
+  dateOfBirth?: string;
+  nationality?: string;
+  residentStatus?: string;
+  photo?: {
+    dataUrl: string;
+    fileName: string;
+    fileType: string;
+    size: number;
+  } | null;
   appointments?: PatientAppointmentSummary[];
   createdAt: Date;
 }
