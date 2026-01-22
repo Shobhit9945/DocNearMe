@@ -14,6 +14,7 @@ import docDaisyRouter from "./routes/docdaisy";
 import healthRouter from "./routes/health";
 import {
   handleLogin,
+  handleCheckEmail,
   handleRequestOtp,
   handleRequestPasswordReset,
   handleResetPassword,
@@ -87,6 +88,7 @@ export async function createServer(): Promise<Express> {
   app.get("/api/appointments/me", requireAuth, handleListAppointmentsForUser);
   app.post("/api/auth/signup", handleSignup);
   app.post("/api/auth/login", handleLogin);
+  app.post("/api/auth/check-email", handleCheckEmail);
   app.post("/api/auth/request-otp", handleRequestOtp);
   app.post("/api/auth/verify-otp", handleVerifyOtp);
   app.post("/api/auth/request-password-reset", handleRequestPasswordReset);

@@ -7,6 +7,8 @@ import { getEmailOtpsCollection, getMedicalConsentsCollection, getPatientsCollec
 import { EmailOtp, MedicalConsent, PatientUser } from "../types";
 import {
   AuthResponse,
+  CheckEmailRequest,
+  CheckEmailResponse,
   LoginRequest,
   OtpResponse,
   RequestOtpRequest,
@@ -22,7 +24,22 @@ import { sendEmail } from "../services/mailer";
 const emailSchema = z.string().trim().toLowerCase().email().max(254);
 const passwordSchema = z.string().min(8).max(128);
 const nameSchema = z.string().trim().min(2).max(80);
+const dateOfBirthSchema = z
+  .string()
+  .trim()
+  .refine((value) => !Number.isNaN(Date.parse(value)), "Invalid date of birth.");
+const nationalitySchema = z.string().trim().min(2).max(80);
+const residentStatusSchema = z.string().trim().min(2).max(80);
 const consentAcceptedSchema = z.literal(true);
+const photoSchema = z
+  .object({
+    dataUrl: z.string().min(20),
+    fileName: z.string().trim().min(1).max(200),
+    fileType: z.string().trim().min(3).max(80),
+    size: z.number().int().positive().max(5 * 1024 * 1024),
+  })
+  .nullable()
+  .optional();
 
 const SIGNUP_CONSENT_VERSION = "signup-2024-09-01";
 const SIGNUP_CONSENT_TEXT =
@@ -34,6 +51,10 @@ const signupSchema = z.object({
   name: nameSchema,
   email: emailSchema,
   password: passwordSchema,
+  dateOfBirth: dateOfBirthSchema,
+  nationality: nationalitySchema,
+  residentStatus: residentStatusSchema,
+  photo: photoSchema,
   consentAccepted: consentAcceptedSchema,
 });
 
@@ -43,6 +64,10 @@ const loginSchema = z.object({
 });
 
 const requestOtpSchema = z.object({
+  email: emailSchema,
+});
+
+const checkEmailSchema = z.object({
   email: emailSchema,
 });
 
@@ -190,6 +215,29 @@ export const handleRequestOtp: RequestHandler = async (req, res, next) => {
   }
 };
 
+export const handleCheckEmail: RequestHandler = async (req, res, next) => {
+  try {
+    const payload = checkEmailSchema.parse(parseRequestBody(req.body)) as CheckEmailRequest;
+    const normalizedEmail = payload.email.toLowerCase();
+    const patients = await getPatientsCollection();
+    const existing = await patients.findOne({ email: normalizedEmail });
+
+    const response: CheckEmailResponse = existing
+      ? { exists: true, message: "An account with that email already exists." }
+      : { exists: false, message: "Email is available for signup." };
+
+    return res.status(200).json(response);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({
+        exists: false,
+        message: "Invalid email address.",
+      } satisfies CheckEmailResponse);
+    }
+    return next(error);
+  }
+};
+
 export const handleVerifyOtp: RequestHandler = async (req, res, next) => {
   try {
     const payload = verifyOtpSchema.parse(parseRequestBody(req.body)) as VerifyOtpRequest;
@@ -277,6 +325,10 @@ export const handleSignup: RequestHandler = async (req, res, next) => {
       name: payload.name,
       email: normalizedEmail,
       passwordHash,
+      dateOfBirth: payload.dateOfBirth,
+      nationality: payload.nationality,
+      residentStatus: payload.residentStatus,
+      photo: payload.photo ?? null,
       appointments: [],
       createdAt: new Date(),
     };
