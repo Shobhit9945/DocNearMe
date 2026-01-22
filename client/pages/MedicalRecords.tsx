@@ -107,7 +107,7 @@ const unwrapVaultKey = async (payload: MedicalRecordKeyUpsertRequest, password: 
   return window.crypto.subtle.importKey("raw", decrypted, "AES-GCM", true, ["encrypt", "decrypt"]);
 };
 
-const getKeyStorageKey = (email?: string) =>
+  const getKeyStorageKey = (email?: string) =>
   `docnearme_medical_records_key_${email ? email.toLowerCase() : "unknown"}`;
 
 const getOrCreateKey = async (email?: string) => {
@@ -165,6 +165,11 @@ export default function MedicalRecords() {
   useEffect(() => {
     setHasLocalKey(Boolean(localStorage.getItem(getKeyStorageKey(email))));
   }, [email]);
+
+  const clearLocalKey = () => {
+    localStorage.removeItem(getKeyStorageKey(email));
+    setHasLocalKey(false);
+  };
 
   const refreshRecords = async (authToken: string) => {
     setIsLoading(true);
@@ -357,6 +362,15 @@ export default function MedicalRecords() {
       }
       setPreviewRecord({ id: record.id, name: record.name, type: record.type, url });
     } catch (error) {
+      const isCryptoFailure =
+        error instanceof DOMException || (error instanceof Error && error.message.includes("operation-specific"));
+      if (isCryptoFailure && vaultKeyStatus?.hasKey) {
+        clearLocalKey();
+        setErrorMessage(
+          t("Unable to decrypt this file. Unlock your vault with your account password to sync this device.")
+        );
+        return;
+      }
       const message =
         error instanceof Error && error.message
           ? error.message
