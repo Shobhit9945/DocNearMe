@@ -6,6 +6,14 @@ import { PageScaffold } from "@/components/PageScaffold";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useTranslation } from "@/lib/i18n";
+import {
+  arrayBufferToBase64,
+  base64ToArrayBuffer,
+  getKeyStorageKey,
+  storeLocalVaultKey,
+  unwrapVaultKey,
+  wrapVaultKey,
+} from "@/lib/medicalVault";
 import type {
   MedicalConsentRequest,
   MedicalConsentResponse,
@@ -19,7 +27,6 @@ import type {
   MedicalRecordUploadRequest,
   MedicalRecordUploadResponse,
   MedicalRecordKeyResponse,
-  MedicalRecordKeyUpsertRequest,
   MedicalRecordKeyUpsertResponse,
 } from "@shared/api";
 import { useNavigate } from "react-router-dom";
@@ -43,73 +50,6 @@ const CONSENT_TEXT =
   "I consent to the secure storage of my encrypted medical records on DocNearMe servers. " +
   "I understand the files are encrypted in my browser and only I can decrypt them.";
 const MAX_UPLOAD_SIZE_BYTES = 8 * 1024 * 1024;
-const KEY_DERIVATION_ITERATIONS = 210_000;
-const KEY_DERIVATION_SALT_BYTES = 16;
-const KEY_DERIVATION_IV_BYTES = 12;
-
-const arrayBufferToBase64 = (buffer: ArrayBuffer) => {
-  const bytes = new Uint8Array(buffer);
-  let binary = "";
-  bytes.forEach((byte) => {
-    binary += String.fromCharCode(byte);
-  });
-  return window.btoa(binary);
-};
-
-const base64ToArrayBuffer = (base64: string) => {
-  const binary = window.atob(base64);
-  const bytes = new Uint8Array(binary.length);
-  for (let index = 0; index < binary.length; index += 1) {
-    bytes[index] = binary.charCodeAt(index);
-  }
-  return bytes.buffer;
-};
-
-const deriveEncryptionKey = async (password: string, salt: ArrayBuffer, iterations: number) => {
-  const baseKey = await window.crypto.subtle.importKey(
-    "raw",
-    new TextEncoder().encode(password),
-    "PBKDF2",
-    false,
-    ["deriveKey"]
-  );
-  return window.crypto.subtle.deriveKey(
-    { name: "PBKDF2", salt: new Uint8Array(salt), iterations, hash: "SHA-256" },
-    baseKey,
-    { name: "AES-GCM", length: 256 },
-    false,
-    ["encrypt", "decrypt"]
-  );
-};
-
-const wrapVaultKey = async (key: CryptoKey, password: string): Promise<MedicalRecordKeyUpsertRequest> => {
-  const rawKey = await window.crypto.subtle.exportKey("raw", key);
-  const salt = window.crypto.getRandomValues(new Uint8Array(KEY_DERIVATION_SALT_BYTES));
-  const iv = window.crypto.getRandomValues(new Uint8Array(KEY_DERIVATION_IV_BYTES));
-  const kek = await deriveEncryptionKey(password, salt.buffer, KEY_DERIVATION_ITERATIONS);
-  const wrapped = await window.crypto.subtle.encrypt({ name: "AES-GCM", iv }, kek, rawKey);
-  return {
-    wrappedKey: arrayBufferToBase64(wrapped),
-    salt: arrayBufferToBase64(salt.buffer),
-    iv: arrayBufferToBase64(iv.buffer),
-    iterations: KEY_DERIVATION_ITERATIONS,
-    kdf: "PBKDF2",
-  };
-};
-
-const unwrapVaultKey = async (payload: MedicalRecordKeyUpsertRequest, password: string) => {
-  const kek = await deriveEncryptionKey(password, base64ToArrayBuffer(payload.salt), payload.iterations);
-  const decrypted = await window.crypto.subtle.decrypt(
-    { name: "AES-GCM", iv: new Uint8Array(base64ToArrayBuffer(payload.iv)) },
-    kek,
-    base64ToArrayBuffer(payload.wrappedKey)
-  );
-  return window.crypto.subtle.importKey("raw", decrypted, "AES-GCM", true, ["encrypt", "decrypt"]);
-};
-
-  const getKeyStorageKey = (email?: string) =>
-  `docnearme_medical_records_key_${email ? email.toLowerCase() : "unknown"}`;
-
 const getOrCreateKey = async (email?: string) => {
   const storedKey = localStorage.getItem(getKeyStorageKey(email));
   if (storedKey) {
@@ -120,8 +60,7 @@ const getOrCreateKey = async (email?: string) => {
     "encrypt",
     "decrypt",
   ]);
-  const rawKey = await window.crypto.subtle.exportKey("raw", key);
-  localStorage.setItem(getKeyStorageKey(email), arrayBufferToBase64(rawKey));
+  await storeLocalVaultKey(email, key);
   return key;
 };
 
@@ -508,9 +447,9 @@ export default function MedicalRecords() {
     setIsVaultSubmitting(true);
     try {
       const key = await unwrapVaultKey(vaultKeyStatus.key, vaultPassword);
-      const rawKey = await window.crypto.subtle.exportKey("raw", key);
-      localStorage.setItem(getKeyStorageKey(email), arrayBufferToBase64(rawKey));
+      await storeLocalVaultKey(email, key);
       setHasLocalKey(true);
+      setErrorMessage(null);
       setVaultMessage(t("Vault unlocked on this device."));
       setVaultPassword("");
     } catch (error) {
