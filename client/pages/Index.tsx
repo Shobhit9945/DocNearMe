@@ -5,6 +5,16 @@ import { useNavigate } from "react-router-dom";
 import { BottomNav } from "@/components/BottomNav";
 import { DocDaisyBanner } from "@/components/DocDaisyBanner";
 import { PageScaffold } from "@/components/PageScaffold";
+import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from "@/components/ui/carousel";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { useLiveLocation } from "@/hooks/useLiveLocation";
 import { useAddressSearch } from "@/hooks/useAddressSearch";
 import { useTranslation } from "@/lib/i18n";
@@ -80,6 +90,8 @@ const Index: React.FC = () => {
   const [manualLocationError, setManualLocationError] = useState("");
   const [isResolvingAddress, setIsResolvingAddress] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+  const [carouselApi, setCarouselApi] = useState<CarouselApi | null>(null);
   const {
     suggestions,
     isLoading: isSuggesting,
@@ -98,6 +110,28 @@ const Index: React.FC = () => {
   useEffect(() => {
     setManualLocationInput(manualLocation ?? "");
   }, [manualLocation]);
+
+  useEffect(() => {
+    const hasSeenPrompt = window.localStorage.getItem("dnm_login_prompted");
+    if (!hasSeenPrompt) {
+      setShowLoginPrompt(true);
+      window.localStorage.setItem("dnm_login_prompted", "true");
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!carouselApi) return;
+
+    const interval = window.setInterval(() => {
+      if (carouselApi.canScrollNext()) {
+        carouselApi.scrollNext();
+      } else {
+        carouselApi.scrollTo(0);
+      }
+    }, 5000);
+
+    return () => window.clearInterval(interval);
+  }, [carouselApi]);
 
   const handleManualLocationSave = async () => {
     const trimmed = manualLocationInput.trim();
@@ -171,6 +205,35 @@ const Index: React.FC = () => {
       textClassName: "text-sm font-medium text-center",
     },
   ] as const;
+
+  const heroSlides = [
+    {
+      title: t("APPOINTMENT BOOKING NOW AT YOUR FINGERTIPS"),
+      headline: t("WITH DOCNEARME"),
+      description: t("Plan, book and manage visits in seconds."),
+      cta: t("Learn more"),
+      image:
+        "https://api.builder.io/api/v1/image/assets/TEMP/94dd9abcae8bb5e056848f9449decbaac63a2b5f?width=312",
+      accent: "from-[#FAFAFE] to-[#E1F6FF]",
+    },
+    {
+      title: t("YOUR HEALTH, YOUR SCHEDULE"),
+      headline: t("FAST CLINIC MATCHING"),
+      description: t("Find nearby clinics and specialists instantly."),
+      cta: t("Find clinics"),
+      image:
+        "https://api.builder.io/api/v1/image/assets/TEMP/efd1a0a0a615de8dfe2ff92c5e5efa34e4764d7a?width=584",
+      accent: "from-[#F4FAFF] to-[#DDF1FF]",
+    },
+    {
+      title: t("CARE THAT MOVES WITH YOU"),
+      headline: t("DOCDAISY SUPPORT"),
+      description: t("Ask questions and get guidance in real time."),
+      cta: t("Ask DocDaisy"),
+      image: "/dnm.png",
+      accent: "from-[#F9F7FF] to-[#E8E7FF]",
+    },
+  ];
 
   return (
     <PageScaffold contentClassName="pb-28 lg:pb-12">
@@ -274,33 +337,45 @@ const Index: React.FC = () => {
       <main className="flex-1 px-4 pt-4 lg:px-10 lg:pt-8">
         <div className="lg:grid lg:grid-cols-[2fr_1fr] lg:gap-8">
           <section className="space-y-5">
-            <div className="relative overflow-hidden rounded-[20px] border border-[#D4EBFF] bg-gradient-to-br from-[#FAFAFE] to-[#E1F6FF] p-5 shadow-[0_1px_14px_0_#DFE8EC] lg:p-8">
-              <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
-                <div className="flex-1 z-10">
-                  <p className="text-sm font-bold text-[#002D55]">
-                    {t("APPOINTMENT BOOKING NOW AT YOUR FINGERTIPS")}
-                  </p>
-                  <h1 className="text-2xl font-extrabold text-[#002D55] mt-2 mb-4">{t("WITH DOCNEARME")}</h1>
-                  <div className="flex flex-wrap items-center gap-3">
-                    <button className="bg-[#002D55] text-white text-sm font-semibold px-6 py-3 rounded-[12px] shadow-[0_3px_16px_0_rgba(15,39,74,0.10)] hover:bg-[#003366] transition-colors">
-                      {t("Learn more")}
-                    </button>
-                    <button
-                      className="bg-white text-[#002D55] text-sm font-semibold px-6 py-3 rounded-[12px] border border-[#002D55] hover:bg-[#F0F6FF] transition-colors"
-                      onClick={() => navigate("/patient-auth")}
+            <Carousel
+              setApi={setCarouselApi}
+              opts={{ loop: true }}
+              className="relative"
+            >
+              <CarouselContent>
+                {heroSlides.map((slide) => (
+                  <CarouselItem key={slide.headline}>
+                    <div
+                      className={`relative flex h-[180px] flex-col justify-between overflow-hidden rounded-[20px] border border-[#D4EBFF] bg-gradient-to-br ${slide.accent} p-4 shadow-[0_1px_14px_0_#DFE8EC] sm:h-[200px] sm:p-5 lg:h-[240px] lg:p-8`}
                     >
-                      {t("Login")}
-                    </button>
-                    <p className="text-xs text-slate-500">{t("Plan, book and manage visits in seconds.")}</p>
-                  </div>
-                </div>
-                <img
-                  src="https://api.builder.io/api/v1/image/assets/TEMP/94dd9abcae8bb5e056848f9449decbaac63a2b5f?width=312"
-                  alt="Doctors illustration"
-                  className="w-full max-w-[220px] object-contain"
-                />
-              </div>
-            </div>
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1">
+                          <p className="text-xs font-bold text-[#002D55] sm:text-sm">
+                            {slide.title}
+                          </p>
+                          <h1 className="text-lg font-extrabold text-[#002D55] mt-2 sm:text-2xl">
+                            {slide.headline}
+                          </h1>
+                          <p className="mt-2 text-xs text-slate-500 sm:text-sm">
+                            {slide.description}
+                          </p>
+                        </div>
+                        <img
+                          src={slide.image}
+                          alt={slide.headline}
+                          className="h-20 w-20 flex-shrink-0 object-contain sm:h-24 sm:w-24 lg:h-32 lg:w-32"
+                        />
+                      </div>
+                      <div className="mt-3 flex">
+                        <button className="bg-[#002D55] text-white text-xs font-semibold px-4 py-2 rounded-[12px] shadow-[0_3px_16px_0_rgba(15,39,74,0.10)] hover:bg-[#003366] transition-colors sm:text-sm">
+                          {slide.cta}
+                        </button>
+                      </div>
+                    </div>
+                  </CarouselItem>
+                ))}
+              </CarouselContent>
+            </Carousel>
 
             <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
               {quickActions.map((action) => (
@@ -357,6 +432,36 @@ const Index: React.FC = () => {
       <div className="lg:hidden">
         <BottomNav />
       </div>
+
+      <Dialog
+        open={showLoginPrompt}
+        onOpenChange={(open) => setShowLoginPrompt(open)}
+      >
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{t("Welcome to DocNearMe")}</DialogTitle>
+            <DialogDescription>
+              {t("Sign in to manage appointments, access records, and get updates.")}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-col gap-2 sm:flex-row sm:justify-end">
+            <Button
+              variant="outline"
+              onClick={() => setShowLoginPrompt(false)}
+            >
+              {t("Maybe later")}
+            </Button>
+            <Button
+              onClick={() => {
+                setShowLoginPrompt(false);
+                navigate("/patient-auth");
+              }}
+            >
+              {t("Login")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </PageScaffold>
   );
 };
