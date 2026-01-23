@@ -90,6 +90,7 @@ export default function Clinics() {
 
   const selectedLabel =
     availableSpecializations.find((spec) => spec.id === selectedSpecialization)?.label ?? selectedSpecialization;
+  const translatedSelectedLabel = t(selectedLabel);
 
   const locationStatus = useMemo(() => {
     if (manualLocation) return "Manual address";
@@ -157,7 +158,7 @@ export default function Clinics() {
         <div className="flex flex-col gap-3">
           <p className="text-xs uppercase tracking-[0.2em] text-slate-400">{t("Clinics")}</p>
           <h1 className="text-3xl font-bold text-[#002D55] flex items-center gap-3">
-            <Building2 className="w-8 h-8 text-[#0089FF]" /> {t("Discover care for")} {selectedLabel}
+            <Building2 className="w-8 h-8 text-[#0089FF]" /> {t("Discover care for")} {translatedSelectedLabel}
           </h1>
           <p className="text-sm text-slate-500">
             {clinics.length} {t("options in Beppu updated just now based on your specialty.")}
@@ -260,7 +261,7 @@ export default function Clinics() {
             <div className="rounded-3xl border border-[#D4EBFF] bg-white p-6 shadow-sm lg:p-8">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div className="space-y-2">
-                  <p className="text-sm font-semibold text-[#002D55]">{selectedLabel} {t("specialists near you")}</p>
+                  <p className="text-sm font-semibold text-[#002D55]">{translatedSelectedLabel} {t("specialists near you")}</p>
                   <h2 className="text-2xl font-bold text-[#002D55]">
                     {clinics.length} {t("care centers available in Beppu")}
                   </h2>
@@ -291,7 +292,7 @@ export default function Clinics() {
                   >
                     {availableSpecializations.map((spec) => (
                       <option key={spec.id} value={spec.id}>
-                        {spec.label}
+                        {t(spec.label)}
                       </option>
                     ))}
                   </select>
@@ -332,12 +333,12 @@ export default function Clinics() {
                     className="flex h-full flex-col overflow-hidden rounded-[28px] border border-slate-100 bg-white shadow-[0_10px_35px_rgba(21,47,81,0.05)]"
                   >
                     <div className="h-40 w-full overflow-hidden">
-                      <img src={clinic.image} alt={clinic.name} className="h-full w-full object-cover" />
+                      <img src={clinic.image} alt={t(clinic.name)} className="h-full w-full object-cover" />
                     </div>
                     <div className="flex flex-1 flex-col gap-4 p-5">
                       <div className="flex flex-wrap items-start justify-between gap-3">
                         <div>
-                          <h3 className="text-xl font-semibold text-[#002D55]">{clinic.name}</h3>
+                          <h3 className="text-xl font-semibold text-[#002D55]">{t(clinic.name)}</h3>
                         </div>
                         <div className="flex items-center gap-1 rounded-full bg-[#FFF3C8] px-3 py-1 text-sm font-semibold text-[#B06B00]">
                           <Star className="w-4 h-4" fill="#B06B00" /> {clinic.rating}
@@ -356,7 +357,7 @@ export default function Clinics() {
                       <div className="flex flex-wrap gap-2 text-xs font-semibold text-[#3A12DB]">
                         {visibleSpecializations.map((spec) => (
                           <span key={spec} className="rounded-full bg-[#F1EDFF] px-3 py-1">
-                            {spec}
+                            {t(spec)}
                           </span>
                         ))}
                         {remaining > 0 && (

@@ -31,6 +31,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { CLINICS } from "@/lib/clinics";
 import { DOCTORS, DoctorProfile } from "@/lib/doctors";
 import { matchSpecialization, SPECIALIZATION_OPTIONS } from "@/lib/specializations";
+import { useTranslation } from "@/lib/i18n";
 import type {
   AppointmentCancelRequest,
   AppointmentCancelResponse,
@@ -86,6 +87,7 @@ const FORM_REQUIRED_CLINICS = new Set(["noguchi", "harbor-womens", "beppu-medica
 
 export default function Appointment() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const specializationParam = searchParams.get("specialization") ?? "";
   const clinicId = searchParams.get("clinic");
@@ -698,7 +700,7 @@ export default function Appointment() {
           <div className="space-y-2">
             <h1 className="text-2xl font-bold text-slate-900">Appointment Confirmed!</h1>
             <p className="text-slate-600 max-w-md mx-auto">
-              Your appointment with {details.doctorName} has been successfully booked for {details.dateLabel} at {details.timeLabel}.
+              Your appointment with {t(details.doctorName)} has been successfully booked for {details.dateLabel} at {details.timeLabel}.
             </p>
           </div>
 
@@ -713,7 +715,7 @@ export default function Appointment() {
               <div className="grid gap-3 text-sm text-slate-700">
                 <div className="flex items-start justify-between gap-3">
                   <span className="text-slate-500">Clinic</span>
-                  <span className="font-medium text-slate-900">{details.clinicName}</span>
+                  <span className="font-medium text-slate-900">{t(details.clinicName)}</span>
                 </div>
                 <div className="flex items-start justify-between gap-3">
                   <span className="text-slate-500">Patient</span>
@@ -721,11 +723,11 @@ export default function Appointment() {
                 </div>
                 <div className="flex items-start justify-between gap-3">
                   <span className="text-slate-500">Doctor</span>
-                  <span className="font-medium text-slate-900">{details.doctorName}</span>
+                  <span className="font-medium text-slate-900">{t(details.doctorName)}</span>
                 </div>
                 <div className="flex items-start justify-between gap-3">
                   <span className="text-slate-500">Specialization</span>
-                  <span className="font-medium text-slate-900">{details.specialization}</span>
+                  <span className="font-medium text-slate-900">{t(details.specialization)}</span>
                 </div>
                 <div className="flex items-start justify-between gap-3">
                   <span className="text-slate-500">Date</span>
@@ -852,7 +854,7 @@ export default function Appointment() {
                             Next appointment
                           </p>
                           <p className="text-lg font-semibold text-slate-900">
-                            {appointment.doctor} · {appointment.specialization}
+                            {t(appointment.doctor)} · {t(appointment.specialization)}
                           </p>
                         </div>
 
@@ -863,7 +865,7 @@ export default function Appointment() {
                           </span>
                           <span className="flex items-center gap-2">
                             <MapPin className="h-4 w-4 text-[#0089FF]" />
-                            {appointment.clinic}
+                            {t(appointment.clinic)}
                           </span>
                           <span className="flex items-center gap-2">
                             <Stethoscope className="h-4 w-4 text-[#0089FF]" />
@@ -950,13 +952,13 @@ export default function Appointment() {
                   <div className="flex items-center justify-between gap-4">
                     <span className="text-slate-500">Doctor</span>
                     <span className="font-medium text-slate-900">
-                      {detailsAppointment.doctor}
+                      {t(detailsAppointment.doctor)}
                     </span>
                   </div>
                   <div className="flex items-center justify-between gap-4">
                     <span className="text-slate-500">Specialization</span>
                     <span className="font-medium text-slate-900">
-                      {detailsAppointment.specialization}
+                      {t(detailsAppointment.specialization)}
                     </span>
                   </div>
                   <div className="flex items-center justify-between gap-4">
@@ -974,7 +976,7 @@ export default function Appointment() {
                   <div className="flex items-center justify-between gap-4">
                     <span className="text-slate-500">Clinic</span>
                     <span className="font-medium text-slate-900">
-                      {detailsAppointment.clinic}
+                      {t(detailsAppointment.clinic)}
                     </span>
                   </div>
                   <div className="flex items-center justify-between gap-4">
@@ -1200,7 +1202,7 @@ export default function Appointment() {
                 >
                   {SPECIALIZATION_OPTIONS.map((spec) => (
                     <option key={spec.id} value={spec.id}>
-                      {spec.label}
+                      {t(spec.label)}
                     </option>
                   ))}
                 </select>
@@ -1223,7 +1225,7 @@ export default function Appointment() {
                   <option value="">Select a clinic</option>
                   {clinicsForSpecialization.map((clinic) => (
                     <option key={clinic.id} value={clinic.id}>
-                      {clinic.name}
+                      {t(clinic.name)}
                     </option>
                   ))}
                 </select>
@@ -1244,9 +1246,9 @@ export default function Appointment() {
                   Choose a provider from the selected clinic and specialization.
                 </p>
               </div>
-              {selectedDoctor ? (
+                {selectedDoctor ? (
                 <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full">
-                  Selected: {selectedDoctor.name}
+                  Selected: {t(selectedDoctor.name)}
                 </span>
               ) : null}
             </div>
@@ -1282,8 +1284,8 @@ export default function Appointment() {
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                    <p className="text-base font-semibold text-slate-900">{doctor.name}</p>
-                    <p className="text-sm text-slate-600">{doctor.specialization}</p>
+                    <p className="text-base font-semibold text-slate-900">{t(doctor.name)}</p>
+                    <p className="text-sm text-slate-600">{t(doctor.specialization)}</p>
                   </div>
                       <div className="flex items-center gap-1 text-sm font-semibold text-slate-700">
                         <Star className="h-4 w-4 text-amber-400" />
@@ -1296,7 +1298,7 @@ export default function Appointment() {
                           key={language}
                           className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600"
                         >
-                          {language}
+                          {t(language)}
                         </span>
                       ))}
                     </div>
@@ -1587,7 +1589,7 @@ export default function Appointment() {
                   <Stethoscope className="w-5 h-5 text-[#0089FF] mt-0.5 flex-shrink-0" />
                   <div>
                     <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Specialization</p>
-                    <p className="text-sm text-slate-800 font-medium">{selectedSpecialization}</p>
+                    <p className="text-sm text-slate-800 font-medium">{t(selectedSpecialization)}</p>
                   </div>
                 </div>
 
@@ -1596,7 +1598,7 @@ export default function Appointment() {
                   <div>
                     <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Doctor</p>
                     <p className="text-sm text-slate-800 font-medium">
-                      {doctorDisplayName}
+                      {t(doctorDisplayName)}
                     </p>
                   </div>
                 </div>
@@ -1616,7 +1618,7 @@ export default function Appointment() {
                   <MapPin className="w-5 h-5 text-[#0089FF] mt-0.5 flex-shrink-0" />
                   <div>
                     <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Clinic</p>
-                    <p className="text-sm text-slate-800 font-medium">{clinicLabel}</p>
+                    <p className="text-sm text-slate-800 font-medium">{t(clinicLabel)}</p>
                   </div>
                 </div>
 
