@@ -32,7 +32,7 @@ export default function ClinicDetail() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const clinic = CLINICS.find((entry) => entry.id === clinicId);
-  const { data: googlePlaceDetails, isLoading: isLoadingGoogle } = useGooglePlaceDetails(clinic?.googlePlaceId);
+  const { data: googlePlaceDetails } = useGooglePlaceDetails(clinic?.googlePlaceId);
   const [editingReviewId, setEditingReviewId] = useState<string | null>(null);
   const [reviewForm, setReviewForm] = useState(emptyReviewForm);
   const [formError, setFormError] = useState("");
@@ -398,7 +398,10 @@ export default function ClinicDetail() {
                       {t("Google Reviews")}
                     </h3>
                     <div className="space-y-4">
-                      {googlePlaceDetails.reviews.map((review, i) => (
+                      {googlePlaceDetails.reviews
+                        .slice()
+                        .sort((a, b) => b.time - a.time)
+                        .map((review, i) => (
                         <div key={i} className="rounded-2xl border border-slate-100 bg-white p-4">
                           <div className="flex items-start justify-between gap-3">
                             <div className="flex items-center gap-3">
@@ -429,12 +432,6 @@ export default function ClinicDetail() {
           </section>
 
           <aside className="space-y-4">
-            <div className="rounded-3xl border border-[#D4EBFF] bg-[#F5FAFF] p-6 text-sm text-slate-600">
-              <p className="font-semibold text-[#002D55]">{t("Need directions?")}</p>
-              <p className="mt-2 flex items-center gap-2">
-                <MapPin className="h-4 w-4 text-[#0089FF]" /> {clinic.location}
-              </p>
-            </div>
             <DocDaisyBanner variant="card" onClick={() => navigate("/docdaisy")} />
           </aside>
         </div>

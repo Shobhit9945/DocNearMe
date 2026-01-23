@@ -132,6 +132,7 @@ export const handlePlaceDetails: RequestHandler = async (req, res, next) => {
       key: getApiKey(),
       place_id: String(placeId),
       fields: "formatted_address,geometry,rating,user_ratings_total,reviews",
+      reviews_sort: "newest",
     });
 
     if (sessionToken) {
