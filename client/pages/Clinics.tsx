@@ -98,6 +98,11 @@ export default function Clinics() {
     return "Updated a moment ago";
   }, [isFetchingLocation, locationError, manualLocation]);
 
+  const locationLabel = useMemo(
+    () => (isFetchingLocation ? t("Fetching real-time location...") : currentLocation),
+    [currentLocation, isFetchingLocation, t]
+  );
+
   useEffect(() => {
     setManualLocationInput(manualLocation ?? "");
   }, [manualLocation]);
@@ -164,7 +169,7 @@ export default function Clinics() {
             <div className="space-y-0.5">
               <p className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide">{t("Live location")}</p>
               <p className={`text-sm font-semibold leading-tight ${locationError ? "text-red-500" : "text-[#002D55]"}`}>
-                {currentLocation}
+                {locationLabel}
               </p>
               <p className={`text-xs ${locationError ? "text-red-500" : "text-slate-600"}`}>{t(locationStatus)}</p>
               <div className="mt-2 flex flex-wrap items-center gap-2">
