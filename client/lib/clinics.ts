@@ -9,6 +9,7 @@ export type Clinic = {
   image: string;
   specializations: string[];
   nextAvailability: string;
+  googlePlaceId?: string;
 };
 
 export const CLINICS: Clinic[] = [
@@ -34,6 +35,7 @@ export const CLINICS: Clinic[] = [
       "Nephrology",
     ],
     nextAvailability: "Today, 4:30 PM",
+    googlePlaceId: "ChIJM0fLQOamRjURHBffbpcNZkE",
   },
   {
     id: "beppu-medical",
@@ -56,6 +58,7 @@ export const CLINICS: Clinic[] = [
       "Allergy & Immunology",
     ],
     nextAvailability: "Today, 6:10 PM",
+    googlePlaceId : "ChIJMwMNc4cdRDURX6Vpl9bGXS4"
   },
   {
     id: "oita-ent",
@@ -69,6 +72,7 @@ export const CLINICS: Clinic[] = [
       "https://images.unsplash.com/photo-1505751172876-fa1923c5c528?auto=format&fit=crop&w=800&q=80",
     specializations: ["ENT", "Otolaryngology", "Pulmonology"],
     nextAvailability: "Tomorrow, 10:00 AM",
+    googlePlaceId : "ChIJ34f2cpqjRjURkxVuzkU3RPw"
   },
   {
     id: "harbor-derma",

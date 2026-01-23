@@ -7,6 +7,8 @@ import { DocDaisyBanner } from "@/components/DocDaisyBanner";
 import { CLINICS } from "@/lib/clinics";
 import { DOCTORS } from "@/lib/doctors";
 import { useTranslation } from "@/lib/i18n";
+import { GoogleReviews } from "@/components/GoogleReviews";
+import { useGooglePlaceDetails } from "@/hooks/useGooglePlaceDetails";
 import { CalendarClock, MapPin, Pencil, Star, Trash, Users } from "lucide-react";
 import type {
   ClinicReview,
@@ -30,6 +32,7 @@ export default function ClinicDetail() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const clinic = CLINICS.find((entry) => entry.id === clinicId);
+  const { data: googlePlaceDetails, isLoading: isLoadingGoogle } = useGooglePlaceDetails(clinic?.googlePlaceId);
   const [editingReviewId, setEditingReviewId] = useState<string | null>(null);
   const [reviewForm, setReviewForm] = useState(emptyReviewForm);
   const [formError, setFormError] = useState("");
@@ -203,8 +206,12 @@ export default function ClinicDetail() {
               <MapPin className="h-4 w-4 text-[#0089FF]" /> {clinic.location}
             </p>
             <div className="flex flex-wrap items-center gap-4 text-sm text-slate-500">
-              <span className="flex items-center gap-1">
-                <Star className="h-4 w-4 text-[#B06B00]" fill="#B06B00" /> {averageRating.toFixed(1)}
+              <span className="flex items-center gap-1 text-[#B06B00]">
+                {clinic.googlePlaceId ? (
+                   <GoogleReviews placeId={clinic.googlePlaceId} fallbackRating={averageRating} />
+                ) : (
+                   <><Star className="h-4 w-4 text-[#B06B00]" fill="#B06B00" /> {averageRating.toFixed(1)}</>
+                )}
               </span>
               <span className="flex items-center gap-1">
                 <Users className="h-4 w-4 text-[#0089FF]" /> {clinic.patients}
@@ -380,6 +387,43 @@ export default function ClinicDetail() {
                     </div>
                   </div>
                 ))}
+
+                {/* Google Reviews */}
+                {googlePlaceDetails?.reviews && googlePlaceDetails.reviews.length > 0 && (
+                  <div className="mt-8 border-t border-slate-100 pt-6">
+                    <h3 className="mb-4 flex items-center gap-2 text-sm font-bold text-[#002D55]">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12.24 10.285V14.4h6.806c-.275 1.765-2.056 5.174-6.806 5.174-4.095 0-7.439-3.389-7.439-7.574s3.345-7.574 7.439-7.574c2.33 0 3.891.989 4.785 1.849l3.254-3.138C18.189 1.186 15.479 0 12.24 0c-6.635 0-12 5.365-12 12s5.365 12 12 12c6.926 0 11.52-4.869 11.52-11.726 0-.788-.085-1.39-.189-1.989H12.24z" />
+                      </svg>
+                      {t("Google Reviews")}
+                    </h3>
+                    <div className="space-y-4">
+                      {googlePlaceDetails.reviews.map((review, i) => (
+                        <div key={i} className="rounded-2xl border border-slate-100 bg-white p-4">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex items-center gap-3">
+                              {review.profile_photo_url && (
+                                <img
+                                  src={review.profile_photo_url}
+                                  alt={review.author_name}
+                                  className="h-8 w-8 rounded-full"
+                                />
+                              )}
+                              <div>
+                                <p className="text-sm font-semibold text-[#002D55]">{review.author_name}</p>
+                                <p className="text-xs text-slate-500">{review.relative_time_description}</p>
+                              </div>
+                            </div>
+                            <span className="flex items-center gap-1 text-xs font-semibold text-[#B06B00]">
+                              <Star className="h-3 w-3" fill="#B06B00" /> {review.rating}
+                            </span>
+                          </div>
+                          {review.text && <p className="mt-3 text-sm text-slate-600">{review.text}</p>}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </section>

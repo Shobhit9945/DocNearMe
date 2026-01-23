@@ -16,6 +16,7 @@ import { useAddressSearch } from "@/hooks/useAddressSearch";
 import { useTranslation } from "@/lib/i18n";
 import { CLINICS } from "@/lib/clinics";
 import { matchSpecialization, SPECIALIZATION_OPTIONS } from "@/lib/specializations";
+import { GoogleReviews } from "@/components/GoogleReviews";
 
 const BASE_SPECIALIZATIONS = SPECIALIZATION_OPTIONS.map(({ id, label }) => ({
   id,
@@ -341,7 +342,13 @@ export default function Clinics() {
                           <h3 className="text-xl font-semibold text-[#002D55]">{t(clinic.name)}</h3>
                         </div>
                         <div className="flex items-center gap-1 rounded-full bg-[#FFF3C8] px-3 py-1 text-sm font-semibold text-[#B06B00]">
-                          <Star className="w-4 h-4" fill="#B06B00" /> {clinic.rating}
+                          {clinic.googlePlaceId ? (
+                            <GoogleReviews placeId={clinic.googlePlaceId} fallbackRating={clinic.rating} />
+                          ) : (
+                            <>
+                              <Star className="w-4 h-4" fill="#B06B00" /> {clinic.rating}
+                            </>
+                          )}
                         </div>
                       </div>
 
