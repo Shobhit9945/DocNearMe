@@ -119,6 +119,11 @@ const Index: React.FC = () => {
     return "Updated a moment ago";
   }, [isFetchingLocation, locationError, manualLocation]);
 
+  const locationLabel = useMemo(
+    () => (isFetchingLocation ? t("Fetching real-time location...") : currentLocation),
+    [currentLocation, isFetchingLocation, t]
+  );
+
   useEffect(() => {
     setManualLocationInput(manualLocation ?? "");
   }, [manualLocation]);
@@ -319,7 +324,7 @@ const Index: React.FC = () => {
             <div>
               <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{t("Live location")}</p>
               <p className={`text-base font-bold leading-snug ${locationError ? "text-red-500" : "text-slate-900"}`}>
-                {currentLocation}
+                {locationLabel}
               </p>
               <p className={`text-xs mt-1 ${locationError ? "text-red-500" : "text-slate-500"}`}>
                 {t(locationStatus)}
@@ -484,7 +489,7 @@ const Index: React.FC = () => {
           <aside className="hidden lg:flex flex-col gap-5">
             <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
               <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Current location</p>
-              <p className="text-base font-bold text-slate-900 leading-snug">{currentLocation}</p>
+              <p className="text-base font-bold text-slate-900 leading-snug">{locationLabel}</p>
               {locationError ? (
                 <p className="text-sm text-red-500 mt-2">{locationError}</p>
               ) : (

@@ -65,7 +65,7 @@ const getOrCreateKey = async (email?: string) => {
 };
 
 export default function MedicalRecords() {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [records, setRecords] = useState<MedicalRecordListItem[]>([]);
@@ -93,8 +93,9 @@ export default function MedicalRecords() {
 
   const recordsCountLabel = useMemo(() => {
     if (records.length === 0) return t("No records uploaded yet.");
-    return t(`${records.length} encrypted record${records.length > 1 ? "s" : ""} stored in your account.`);
-  }, [records.length, t]);
+    if (language === "ja") return `${records.length}件の暗号化された記録がアカウントに保存されています。`;
+    return `${records.length} encrypted record${records.length > 1 ? "s" : ""} stored in your account.`;
+  }, [language, records.length, t]);
 
   useEffect(() => {
     if (!previewRecord) return;
