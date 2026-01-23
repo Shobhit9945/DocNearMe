@@ -17,7 +17,13 @@ export default function Search() {
 
   const normalizedQuery = query.trim().toLowerCase();
   const specializations = useMemo(
-    () => [{ id: "all", label: t("All specializations") }, ...SPECIALIZATION_OPTIONS],
+    () => [
+      { id: "all", label: t("All specializations") },
+      ...SPECIALIZATION_OPTIONS.map((specialization) => ({
+        ...specialization,
+        label: t(specialization.label),
+      })),
+    ],
     [t],
   );
 
@@ -152,9 +158,9 @@ export default function Search() {
                         >
                           <div className="flex items-start justify-between gap-3">
                             <div>
-                              <p className="text-lg font-semibold text-[#002D55]">{doctor.name}</p>
-                              <p className="text-sm text-slate-500">{doctor.specialization}</p>
-                              <p className="text-sm text-slate-500">{clinic?.name ?? t("Clinic")}</p>
+                              <p className="text-lg font-semibold text-[#002D55]">{t(doctor.name)}</p>
+                              <p className="text-sm text-slate-500">{t(doctor.specialization)}</p>
+                              <p className="text-sm text-slate-500">{clinic ? t(clinic.name) : t("Clinic")}</p>
                             </div>
                             <span className="flex items-center gap-1 rounded-full bg-[#FFF3C8] px-3 py-1 text-xs font-semibold text-[#B06B00]">
                               <Star className="h-4 w-4" fill="#B06B00" /> {doctor.rating.toFixed(1)}
@@ -163,7 +169,7 @@ export default function Search() {
                           <div className="mt-4 flex flex-wrap gap-2 text-xs font-semibold text-[#3A12DB]">
                             {doctor.languages.map((language) => (
                               <span key={language} className="rounded-full bg-[#F1EDFF] px-3 py-1">
-                                {language}
+                                {t(language)}
                               </span>
                             ))}
                           </div>
@@ -210,7 +216,7 @@ export default function Search() {
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div>
-                            <p className="text-lg font-semibold text-[#002D55]">{clinic.name}</p>
+                            <p className="text-lg font-semibold text-[#002D55]">{t(clinic.name)}</p>
                             <p className="text-sm text-slate-500">{clinic.location}</p>
                           </div>
                           <span className="flex items-center gap-1 rounded-full bg-[#FFF3C8] px-3 py-1 text-xs font-semibold text-[#B06B00]">
@@ -220,7 +226,7 @@ export default function Search() {
                         <div className="mt-3 flex flex-wrap gap-2 text-xs font-semibold text-[#3A12DB]">
                           {clinic.specializations.slice(0, 4).map((spec) => (
                             <span key={spec} className="rounded-full bg-[#F1EDFF] px-3 py-1">
-                              {spec}
+                              {t(spec)}
                             </span>
                           ))}
                         </div>
