@@ -9,7 +9,7 @@ const getApp = () => {
   // const params = new URLSearchParams(window.location.search);
   
   // PRODUCTION: This will only start the clinic app if the ACTUAL URL starts with 'clinic.'
-  // Example: clinic.docnearme.com, clinic.docnearme.jp
+  // Example: clinic.docnearme.jp
   if (hostname.startsWith('clinic.')) {
      return <ClinicApp />;
   }
