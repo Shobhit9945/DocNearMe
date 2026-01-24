@@ -127,7 +127,7 @@ export default function Search() {
         <p className="text-sm text-slate-500 mt-2">{t("specialists, clinics and hospitals nearby.")}</p>
       </header>
 
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 pt-6 lg:px-10 lg:pt-10">
+      <main className="mx-auto w-full max-w-4xl flex-1 px-4 pt-6 lg:px-8 lg:pt-10">
         <div className="flex flex-col gap-6 lg:flex-row">
           <section className="flex-1 space-y-6">
             <div className="rounded-[24px] border border-slate-100 bg-white p-6 shadow-sm lg:p-8">
@@ -141,8 +141,8 @@ export default function Search() {
                 <div className="inline-flex rounded-full bg-[#E8F3FF] px-4 py-2 text-xs font-semibold text-[#1648CE]">
                   {visibleDoctors.length + visibleClinics.length} {t("matches")}
                 </div>
-              </div>
-              <div className="mt-5 grid gap-4 lg:grid-cols-[2fr_1fr_1fr_1fr]">
+                </div>
+              <div className="mt-5 grid gap-4 lg:grid-cols-2 xl:grid-cols-[2fr_1fr_1fr_1fr]">
                 <label className="flex flex-col gap-2 text-sm font-semibold text-slate-700">
                   {t("Search term")}
                   <div className="relative">
@@ -381,7 +381,7 @@ export default function Search() {
             </div>
           </section>
 
-          <aside className="hidden lg:flex lg:w-1/3 flex-col gap-4">
+          <aside className="hidden lg:flex lg:w-[260px] xl:w-[300px] flex-col gap-4">
             <div className="rounded-2xl bg-white p-6 shadow-sm border border-slate-100">
               <div className="flex items-center gap-2 text-sm font-semibold text-[#002D55]">
                 <Stethoscope className="h-4 w-4 text-[#0089FF]" /> {t("Search tips")}
