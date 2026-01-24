@@ -60,6 +60,7 @@ export async function createServer(): Promise<Express> {
     "https://docnearby.netlify.app", 
     "https://docnearme.jp",
     "https://www.docnearme.jp",
+    "https://clinic.docnearme.jp",
     "http://localhost:5173", 
     "http://localhost:3000",
     "http://0.0.0.0:3000",
