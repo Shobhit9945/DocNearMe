@@ -28,8 +28,7 @@ import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { CLINICS } from "@/lib/clinics";
-import { DOCTORS, DoctorProfile } from "@/lib/doctors";
+import { useAllDoctors, useClinics } from "@/lib/clinic-data";
 import { matchSpecialization, SPECIALIZATION_OPTIONS } from "@/lib/specializations";
 import { useTranslation } from "@/lib/i18n";
 import type {
@@ -40,6 +39,7 @@ import type {
   AppointmentListResponse,
   AppointmentRescheduleRequest,
   AppointmentRescheduleResponse,
+  ClinicDoctor,
   MedicalRecordDetail,
   MedicalRecordListResponse,
   SharedMedicalRecord,
@@ -128,6 +128,10 @@ export default function Appointment() {
   const [actionSlot, setActionSlot] = useState<string | undefined>();
   const [actionError, setActionError] = useState<string | null>(null);
   const [isActionSubmitting, setIsActionSubmitting] = useState(false);
+  const { data: clinicsData } = useClinics();
+  const { data: doctorsData } = useAllDoctors();
+  const clinics = clinicsData?.clinics ?? [];
+  const doctors = doctorsData?.doctors ?? [];
   const [fieldErrors, setFieldErrors] = useState<{
     name?: string;
     email?: string;
@@ -169,34 +173,34 @@ export default function Appointment() {
     });
   }, []);
 
-  const selectedClinic = CLINICS.find((clinic) => clinic.id === selectedClinicId) ?? null;
+  const selectedClinic = clinics.find((clinic) => clinic.id === selectedClinicId) ?? null;
   const clinicLabel = selectedClinic ? selectedClinic.name : "Select a clinic";
   const isAuthenticated = Boolean(authSession?.token);
 
   const clinicsForSpecialization = useMemo(
     () =>
-      CLINICS.filter((clinic) =>
+      clinics.filter((clinic) =>
         clinic.specializations.some((spec) => {
           const normalized = matchSpecialization(spec) ?? spec;
           return normalized.toLowerCase() === selectedSpecialization.toLowerCase();
         })
       ),
-    [selectedSpecialization]
+    [clinics, selectedSpecialization]
   );
 
   const doctorsForSelection = useMemo(() => {
     if (!selectedClinicId) return [];
 
-    return DOCTORS.filter((doctor) => {
+    return doctors.filter((doctor) => {
       const normalized = matchSpecialization(doctor.specialization) ?? doctor.specialization;
       return (
         doctor.clinicId === selectedClinicId &&
         normalized.toLowerCase() === selectedSpecialization.toLowerCase()
       );
     });
-  }, [selectedClinicId, selectedSpecialization]);
+  }, [doctors, selectedClinicId, selectedSpecialization]);
 
-  const fallbackDoctor = useMemo<DoctorProfile | null>(() => {
+  const fallbackDoctor = useMemo<ClinicDoctor | null>(() => {
     if (!selectedClinic) return null;
     const clinicLabelParts = selectedClinic.name.split(" ");
     const clinicSeed = clinicLabelParts[clinicLabelParts.length - 1] || selectedClinic.name;
@@ -418,7 +422,7 @@ export default function Appointment() {
       const clinicName =
         appointment.clinicId === "global"
           ? "Any clinic"
-          : CLINICS.find((clinic) => clinic.id === appointment.clinicId)?.name ?? "Clinic";
+          : clinics.find((clinic) => clinic.id === appointment.clinicId)?.name ?? "Clinic";
       const doctorLabel = appointment.doctorName ?? appointment.specialization;
       return {
         id: appointment._id,
@@ -435,7 +439,7 @@ export default function Appointment() {
         notes: appointment.notes,
       };
     });
-  }, [appointmentsData, formatDateLabel]);
+  }, [appointmentsData, clinics, formatDateLabel]);
 
   const hasAppointments = appointments.length > 0;
 

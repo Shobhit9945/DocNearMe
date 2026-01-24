@@ -4,8 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { BottomNav } from "@/components/BottomNav";
 import { PageScaffold } from "@/components/PageScaffold";
 import { DocDaisyBanner } from "@/components/DocDaisyBanner";
-import { CLINICS } from "@/lib/clinics";
-import { DOCTORS } from "@/lib/doctors";
+import { useClinicDoctors, useClinicProfile } from "@/lib/clinic-data";
 import { useTranslation } from "@/lib/i18n";
 import { GoogleReviews } from "@/components/GoogleReviews";
 import { useGooglePlaceDetails } from "@/hooks/useGooglePlaceDetails";
@@ -31,15 +30,17 @@ export default function ClinicDetail() {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const queryClient = useQueryClient();
-  const clinic = CLINICS.find((entry) => entry.id === clinicId);
+  const { data: clinicData } = useClinicProfile(clinicId);
+  const clinic = clinicData?.clinic;
   const { data: googlePlaceDetails } = useGooglePlaceDetails(clinic?.googlePlaceId);
   const [editingReviewId, setEditingReviewId] = useState<string | null>(null);
   const [reviewForm, setReviewForm] = useState(emptyReviewForm);
   const [formError, setFormError] = useState("");
 
+  const { data: clinicDoctorsData } = useClinicDoctors(clinicId);
   const clinicDoctors = useMemo(
-    () => DOCTORS.filter((doctor) => doctor.clinicId === clinicId),
-    [clinicId],
+    () => clinicDoctorsData?.doctors ?? [],
+    [clinicDoctorsData?.doctors],
   );
 
   const doctorsBySpecialization = useMemo(() => {

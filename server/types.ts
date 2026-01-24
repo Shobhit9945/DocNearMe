@@ -104,3 +104,57 @@ export interface ClinicReview {
   createdAt: Date;
   updatedAt?: Date;
 }
+
+export interface ClinicAccount {
+  _id?: unknown;
+  clinicId: string;
+  userId: string;
+  passwordHash: string;
+  tempPassword?: string;
+  createdAt: Date;
+  lastLoginAt?: Date;
+}
+
+export interface ClinicInfo {
+  _id?: unknown;
+  clinicId: string;
+  name: string;
+  type: "Hospital" | "Clinic";
+  rating: number;
+  patients: string;
+  distance: string;
+  location: string;
+  image: string;
+  specializations: string[];
+  nextAvailability: string;
+  googlePlaceId?: string;
+  phone?: string;
+  hours?: {
+    weekdays: string;
+    weekend: string;
+    closedDays: string;
+  };
+  pricing?: {
+    firstVisit: string;
+    followUp: string;
+    otherServices: string;
+  };
+  photos?: {
+    label: string;
+    url: string;
+  }[];
+  updatedAt?: Date;
+}
+
+export interface ClinicDoctorRecord {
+  _id?: unknown;
+  clinicId: string;
+  doctorId: string;
+  name: string;
+  specialization: string;
+  languages: string[];
+  rating: number;
+  nextAvailable: string;
+  availability?: string;
+  updatedAt?: Date;
+}

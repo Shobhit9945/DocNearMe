@@ -198,6 +198,102 @@ export interface MedicalConsentStatusResponse {
   consentVersion?: string;
 }
 
+export interface ClinicHours {
+  weekdays: string;
+  weekend: string;
+  closedDays: string;
+}
+
+export interface ClinicPricing {
+  firstVisit: string;
+  followUp: string;
+  otherServices: string;
+}
+
+export interface ClinicPhoto {
+  label: string;
+  url: string;
+}
+
+export interface ClinicDoctor {
+  id: string;
+  name: string;
+  clinicId: string;
+  specialization: string;
+  languages: string[];
+  rating: number;
+  nextAvailable: string;
+  availability?: string;
+}
+
+export interface ClinicProfile {
+  id: string;
+  name: string;
+  type: "Hospital" | "Clinic";
+  rating: number;
+  patients: string;
+  distance: string;
+  location: string;
+  image: string;
+  specializations: string[];
+  nextAvailability: string;
+  googlePlaceId?: string;
+  phone?: string;
+  hours?: ClinicHours;
+  pricing?: ClinicPricing;
+  photos?: ClinicPhoto[];
+  doctors?: ClinicDoctor[];
+}
+
+export interface ClinicListResponse {
+  clinics: ClinicProfile[];
+}
+
+export interface ClinicProfileResponse {
+  clinic: ClinicProfile;
+}
+
+export interface ClinicDoctorsResponse {
+  doctors: ClinicDoctor[];
+}
+
+export interface ClinicLoginRequest {
+  userId: string;
+  password: string;
+}
+
+export interface ClinicLoginResponse {
+  token: string;
+  clinicId: string;
+}
+
+export interface ClinicCredentials {
+  clinicId: string;
+  clinicName: string;
+  userId: string;
+  password: string;
+}
+
+export interface ClinicCredentialsResponse {
+  credentials: ClinicCredentials[];
+}
+
+export interface ClinicProfileUpdateRequest {
+  name?: string;
+  location?: string;
+  phone?: string;
+  image?: string;
+  specializations?: string[];
+  nextAvailability?: string;
+  hours?: ClinicHours;
+  pricing?: ClinicPricing;
+  photos?: ClinicPhoto[];
+}
+
+export interface ClinicDoctorsUpdateRequest {
+  doctors: ClinicDoctor[];
+}
+
 export interface MedicalConsentRequest {
   consentVersion: string;
   consentText: string;

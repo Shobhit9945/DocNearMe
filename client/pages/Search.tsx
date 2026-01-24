@@ -4,8 +4,7 @@ import { Search as SearchIcon, Stethoscope, Building2, Star } from "lucide-react
 import { useTranslation } from "@/lib/i18n";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { CLINICS } from "@/lib/clinics";
-import { DOCTORS } from "@/lib/doctors";
+import { useAllDoctors, useClinics } from "@/lib/clinic-data";
 import { matchSpecialization, SPECIALIZATION_OPTIONS } from "@/lib/specializations";
 
 export default function Search() {
@@ -14,6 +13,8 @@ export default function Search() {
   const [query, setQuery] = useState("");
   const [specializationFilter, setSpecializationFilter] = useState("all");
   const [resultType, setResultType] = useState<"all" | "doctor" | "clinic">("all");
+  const { data: clinicsData } = useClinics();
+  const { data: doctorsData } = useAllDoctors();
 
   const normalizedQuery = query.trim().toLowerCase();
   const specializations = useMemo(
@@ -33,7 +34,7 @@ export default function Search() {
       : matchSpecialization(specializationFilter) ?? specializationFilter;
 
   const filteredClinics = useMemo(() => {
-    return CLINICS.filter((clinic) => {
+    return (clinicsData?.clinics ?? []).filter((clinic) => {
       const matchesQuery =
         !normalizedQuery ||
         clinic.name.toLowerCase().includes(normalizedQuery) ||
@@ -46,11 +47,11 @@ export default function Search() {
         : true;
       return matchesQuery && matchesSpecialization;
     });
-  }, [normalizedQuery, normalizedSpecialization]);
+  }, [clinicsData?.clinics, normalizedQuery, normalizedSpecialization]);
 
   const filteredDoctors = useMemo(() => {
-    return DOCTORS.filter((doctor) => {
-      const clinic = CLINICS.find((entry) => entry.id === doctor.clinicId);
+    return (doctorsData?.doctors ?? []).filter((doctor) => {
+      const clinic = clinicsData?.clinics?.find((entry) => entry.id === doctor.clinicId);
       const matchesQuery =
         !normalizedQuery ||
         doctor.name.toLowerCase().includes(normalizedQuery) ||
@@ -63,7 +64,7 @@ export default function Search() {
         : true;
       return matchesQuery && matchesSpecialization;
     });
-  }, [normalizedQuery, normalizedSpecialization]);
+  }, [clinicsData?.clinics, doctorsData?.doctors, normalizedQuery, normalizedSpecialization]);
 
   const visibleClinics = resultType === "doctor" ? [] : filteredClinics;
   const visibleDoctors = resultType === "clinic" ? [] : filteredDoctors;
@@ -150,7 +151,7 @@ export default function Search() {
                   <h3 className="text-lg font-semibold text-[#002D55]">{t("Doctors")}</h3>
                   <div className="grid gap-4 md:grid-cols-2">
                     {visibleDoctors.map((doctor) => {
-                      const clinic = CLINICS.find((entry) => entry.id === doctor.clinicId);
+                      const clinic = clinicsData?.clinics?.find((entry) => entry.id === doctor.clinicId);
                       return (
                         <article
                           key={doctor.id}
