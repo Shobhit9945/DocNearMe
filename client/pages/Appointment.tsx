@@ -818,7 +818,7 @@ export default function Appointment() {
             >
               Book appointment
             </button>
-            <img src="/dnm.png" alt="DocNearMe Logo" className="w-14 h-14 object-contain hidden lg:block" />
+            <img src="/applogo.png" alt="DocNearMe Logo" className="w-14 h-14 object-contain hidden lg:block" />
           </div>
         </header>
 
@@ -1169,7 +1169,7 @@ export default function Appointment() {
             </p>
             <h1 className="text-2xl font-bold text-black">Book your appointment</h1>
           </div>
-          <img src="/dnm.png" alt="DocNearMe Logo" className="w-14 h-14 object-contain hidden lg:block" />
+          <img src="/applogo.png" alt="DocNearMe Logo" className="w-14 h-14 object-contain hidden lg:block" />
         </div>
       </header>
 

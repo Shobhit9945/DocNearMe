@@ -308,7 +308,7 @@ const Index: React.FC = () => {
       headline: t("DOCDAISY SUPPORT"),
       description: t("Ask questions and get guidance in real time."),
       cta: t("Ask DocDaisy"),
-      image: "/dnm.png",
+      image: "/applogo.png",
       accent: "from-[#F9F7FF] to-[#E8E7FF]",
     },
   ];
@@ -408,7 +408,7 @@ const Index: React.FC = () => {
               )}
             </div>
           </div>
-          <img src="/dnm.png" alt="DocNearMe Logo" className="w-14 h-14 object-contain self-start" />
+          <img src="/applogo.png" alt="DocNearMe Logo" className="w-14 h-14 object-contain self-start" />
         </div>
       </header>
 
