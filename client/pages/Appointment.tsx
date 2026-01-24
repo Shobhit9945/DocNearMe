@@ -1319,7 +1319,7 @@ export default function Appointment() {
           {/* Main Grid Layout - Calendar and Time Slots Side by Side */}
           <div className="grid lg:grid-cols-[1.5fr_1fr] gap-6 mb-6">
             {/* Calendar Section */}
-            <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-6 min-w-[400px]">
+            <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-6 w-full min-w-0">
               <div className="flex items-center gap-3 mb-6">
                 <CalendarClock className="w-6 h-6 text-[#0089FF]" />
                 <div>
