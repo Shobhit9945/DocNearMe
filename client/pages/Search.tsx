@@ -112,7 +112,7 @@ export default function Search() {
   const visibleClinics = resultType === "doctor" ? [] : filteredClinics;
   const visibleDoctors = resultType === "clinic" ? [] : filteredDoctors;
   const scrollerCardClass =
-    "min-w-[85%] sm:min-w-[60%] md:min-w-[45%] lg:min-w-[32%] xl:min-w-[24%] snap-start";
+    "flex-none min-w-[85%] sm:min-w-[60%] md:min-w-[45%] lg:min-w-[calc((100%-2rem)/3)] snap-start";
 
   const scrollScroller = (scroller: HTMLDivElement | null, direction: "left" | "right") => {
     if (!scroller) return;
@@ -236,7 +236,7 @@ export default function Search() {
                   </div>
                   <div
                     ref={doctorScrollerRef}
-                    className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2 pt-1"
+                    className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2 pt-1 lg:overflow-x-hidden"
                   >
                     {visibleDoctors.map((doctor) => {
                       const clinic = clinicsData?.clinics?.find((entry) => entry.id === doctor.clinicId);
@@ -319,7 +319,7 @@ export default function Search() {
                   </div>
                   <div
                     ref={clinicScrollerRef}
-                    className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2 pt-1"
+                    className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2 pt-1 lg:overflow-x-hidden"
                   >
                     {visibleClinics.map((clinic) => (
                       <article
