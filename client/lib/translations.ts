@@ -169,7 +169,7 @@ export const translations: Record<string, TranslationEntry> = {
   "No matches yet. Try another search or adjust filters.": { ja: "一致する結果がありません。検索条件を変更してください。" },
   "No matching addresses yet.": { ja: "一致する住所が見つかりません。" },
   "No records uploaded yet.": { ja: "まだ記録がアップロードされていません。" },
-  "No reviews yet. Be the first to share.": { ja: "まだレビューがありません。最初のレビューを投稿しましょう。" },
+  "No reviews yet.": { ja: "まだレビューがありません。" },
   "Only PDF or image files are supported.": { ja: "PDFまたは画像ファイルのみ対応しています。" },
   "Phone number": { ja: "電話番号" },
   "Please enter a file name.": { ja: "ファイル名を入力してください。" },
