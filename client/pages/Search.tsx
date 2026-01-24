@@ -112,7 +112,7 @@ export default function Search() {
   const visibleClinics = resultType === "doctor" ? [] : filteredClinics;
   const visibleDoctors = resultType === "clinic" ? [] : filteredDoctors;
   const scrollerCardClass =
-    "flex-none min-w-[85%] sm:min-w-[60%] md:min-w-[45%] lg:min-w-[calc((100%-1rem)/2)] snap-start";
+    "flex-none min-w-[85%] sm:min-w-[60%] md:min-w-[45%] lg:min-w-0 lg:w-auto lg:flex-auto snap-start";
 
   const scrollScroller = (scroller: HTMLDivElement | null, direction: "left" | "right") => {
     if (!scroller) return;
@@ -127,7 +127,7 @@ export default function Search() {
         <p className="text-sm text-slate-500 mt-2">{t("specialists, clinics and hospitals nearby.")}</p>
       </header>
 
-      <main className="mx-auto w-full max-w-4xl flex-1 px-4 pt-6 lg:px-8 lg:pt-10">
+      <main className="mx-auto w-full max-w-6xl flex-1 px-4 pt-6 lg:px-8 lg:pt-10 2xl:max-w-7xl">
         <div className="flex flex-col gap-6 lg:flex-row">
           <section className="flex-1 space-y-6">
             <div className="rounded-[24px] border border-slate-100 bg-white p-6 shadow-sm lg:p-8">
@@ -215,7 +215,7 @@ export default function Search() {
                 <div className="space-y-4">
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <h3 className="text-lg font-semibold text-[#002D55]">{t("Doctors")}</h3>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 lg:hidden">
                       <button
                         type="button"
                         onClick={() => scrollScroller(doctorScrollerRef.current, "left")}
@@ -236,7 +236,7 @@ export default function Search() {
                   </div>
                   <div
                     ref={doctorScrollerRef}
-                    className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2 pt-1"
+                    className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2 pt-1 lg:grid lg:grid-cols-2 lg:gap-6 lg:overflow-visible lg:pb-0 lg:snap-none 2xl:grid-cols-3"
                   >
                     {visibleDoctors.map((doctor) => {
                       const clinic = clinicsData?.clinics?.find((entry) => entry.id === doctor.clinicId);
@@ -298,7 +298,7 @@ export default function Search() {
                 <div className="space-y-4">
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <h3 className="text-lg font-semibold text-[#002D55]">{t("Clinics")}</h3>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 lg:hidden">
                       <button
                         type="button"
                         onClick={() => scrollScroller(clinicScrollerRef.current, "left")}
@@ -319,7 +319,7 @@ export default function Search() {
                   </div>
                   <div
                     ref={clinicScrollerRef}
-                    className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2 pt-1"
+                    className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2 pt-1 lg:grid lg:grid-cols-2 lg:gap-6 lg:overflow-visible lg:pb-0 lg:snap-none 2xl:grid-cols-3"
                   >
                     {visibleClinics.map((clinic) => (
                       <article
