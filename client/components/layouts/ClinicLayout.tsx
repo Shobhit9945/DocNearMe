@@ -1,6 +1,6 @@
-import React from 'react';
-import { Link, Outlet, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Calendar, UserSquare2, Users, LogOut } from 'lucide-react';
+import React from "react";
+import { Link, Outlet, useLocation } from "react-router-dom";
+import { LayoutDashboard, Calendar, UserSquare2, Users, LogOut } from "lucide-react";
 
 export function ClinicLayout() {
   const location = useLocation();
@@ -15,60 +15,60 @@ export function ClinicLayout() {
           <p className="text-xs text-gray-500 font-medium tracking-wider uppercase mt-1">
             Clinic Portal
           </p>
-          <p className="text-xs text-gray-400 mt-2">日本語 / English</p>
+          <p className="text-xs text-gray-400 mt-2">English (preview)</p>
         </div>
 
         <nav className="flex-1 px-4 space-y-1">
           <Link
             to="/"
             className={`flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
-              isActive('/')
-                ? 'bg-blue-50 text-blue-700'
-                : 'text-gray-700 hover:bg-gray-50'
+              isActive("/")
+                ? "bg-blue-50 text-blue-700"
+                : "text-gray-700 hover:bg-gray-50"
             }`}
           >
             <LayoutDashboard size={20} />
-            ダッシュボード (Dashboard)
+            Dashboard
           </Link>
           <Link
             to="/appointments"
             className={`flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
-              isActive('/appointments')
-                ? 'bg-blue-50 text-blue-700'
-                : 'text-gray-700 hover:bg-gray-50'
+              isActive("/appointments")
+                ? "bg-blue-50 text-blue-700"
+                : "text-gray-700 hover:bg-gray-50"
             }`}
           >
             <Calendar size={20} />
-            予約一覧 (Appointments)
+            Appointments
           </Link>
           <Link
             to="/clinic-info"
             className={`flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
-              isActive('/clinic-info')
-                ? 'bg-blue-50 text-blue-700'
-                : 'text-gray-700 hover:bg-gray-50'
+              isActive("/clinic-info")
+                ? "bg-blue-50 text-blue-700"
+                : "text-gray-700 hover:bg-gray-50"
             }`}
           >
             <UserSquare2 size={20} />
-            クリニック情報 (Clinic Info)
+            Clinic info
           </Link>
           <Link
             to="/doctors"
             className={`flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
-              isActive('/doctors')
-                ? 'bg-blue-50 text-blue-700'
-                : 'text-gray-700 hover:bg-gray-50'
+              isActive("/doctors")
+                ? "bg-blue-50 text-blue-700"
+                : "text-gray-700 hover:bg-gray-50"
             }`}
           >
             <Users size={20} />
-            医師・スタッフ (Doctors)
+            Doctors
           </Link>
         </nav>
 
         <div className="p-4 border-t border-gray-100">
           <button className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-red-600 rounded-lg hover:bg-red-50 w-full transition-colors">
             <LogOut size={20} />
-            ログアウト (Sign Out)
+            Sign out
           </button>
         </div>
       </aside>
