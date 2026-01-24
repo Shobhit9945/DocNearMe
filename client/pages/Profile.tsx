@@ -259,7 +259,21 @@ export default function Profile() {
                   {t("Preferred language")}
                 </label>
                 <div className="flex flex-wrap gap-2">
-                  {["Japanese", "English", "Korean", "Mandarin"].map((language) => (
+                  {[
+                    "Japanese",
+                    "English",
+                    "Indonesian",
+                    "Burmese",
+                    "Bangla",
+                    "Arabic",
+                    "Hindi",
+                    "Filipino",
+                    "Thai",
+                    "Chinese",
+                    "Korean",
+                    "Mexican",
+                    "Vietnamese",
+                  ].map((language) => (
                     <button
                       key={language}
                       type="button"
