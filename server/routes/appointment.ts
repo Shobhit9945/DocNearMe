@@ -117,31 +117,32 @@ const serializeAppointment = (appointment: Appointment) => {
   const status: AppointmentStatus = appointment.status ?? "CONFIRMED";
 
   return {
-  _id: appointment._id
-    ? appointment._id instanceof ObjectId
-      ? appointment._id.toString()
-      : String(appointment._id)
-    : "",
-  date: appointment.date,
-  dateKey: appointment.dateKey,
-  slot: appointment.slot,
-  preferredStart: appointment.preferredStart ?? fallbackPreferredStart,
-  preferredEnd: appointment.preferredEnd ?? fallbackPreferredEnd,
-  confirmedStart: appointment.confirmedStart,
-  confirmedEnd: appointment.confirmedEnd,
-  status,
-  declineReason: appointment.declineReason,
-  specialization: appointment.specialization,
-  doctorName: appointment.doctorName,
-  clinicId: appointment.clinicId,
-  serviceId: appointment.serviceId,
-  notes: appointment.notes,
-  patientId: appointment.patientId,
-  patientName: appointment.patientName,
-  patientPhone: appointment.patientPhone,
-  patientEmail: appointment.patientEmail,
-  createdAt: appointment.createdAt instanceof Date ? appointment.createdAt.toISOString() : appointment.createdAt,
-  updatedAt: appointment.updatedAt instanceof Date ? appointment.updatedAt.toISOString() : appointment.updatedAt,
+    _id: appointment._id
+      ? appointment._id instanceof ObjectId
+        ? appointment._id.toString()
+        : String(appointment._id)
+      : "",
+    date: appointment.date,
+    dateKey: appointment.dateKey,
+    slot: appointment.slot,
+    preferredStart: appointment.preferredStart ?? fallbackPreferredStart,
+    preferredEnd: appointment.preferredEnd ?? fallbackPreferredEnd,
+    confirmedStart: appointment.confirmedStart,
+    confirmedEnd: appointment.confirmedEnd,
+    status,
+    declineReason: appointment.declineReason,
+    clinicMessage: appointment.clinicMessage,
+    specialization: appointment.specialization,
+    doctorName: appointment.doctorName,
+    clinicId: appointment.clinicId,
+    serviceId: appointment.serviceId,
+    notes: appointment.notes,
+    patientId: appointment.patientId,
+    patientName: appointment.patientName,
+    patientPhone: appointment.patientPhone,
+    patientEmail: appointment.patientEmail,
+    createdAt: appointment.createdAt instanceof Date ? appointment.createdAt.toISOString() : appointment.createdAt,
+    updatedAt: appointment.updatedAt instanceof Date ? appointment.updatedAt.toISOString() : appointment.updatedAt,
   };
 };
 
@@ -159,6 +160,36 @@ const resolveConfirmationTimes = (payload: Record<string, unknown>, fallback: { 
   const confirmedEnd = parseDateOrNull(payload.confirmedEnd) ?? parseDateOrNull(fallback.end);
   if (!confirmedStart || !confirmedEnd || confirmedEnd <= confirmedStart) return null;
   return { confirmedStart, confirmedEnd };
+};
+
+const updatePatientAppointmentSummary = async (
+  appointmentId: string,
+  patientId: string | undefined,
+  updates: Partial<PatientAppointmentSummary>,
+) => {
+  if (!patientId) return;
+  const patients = await getPatientsCollection();
+  const patientLookupId = ObjectId.isValid(patientId) ? new ObjectId(patientId) : patientId;
+  const patient = await patients.findOne({ _id: patientLookupId });
+  if (!patient?.appointments) return;
+
+  const updatedAppointments = patient.appointments.map((summary) =>
+    summary.appointmentId === appointmentId
+      ? {
+          ...summary,
+          ...updates,
+        }
+      : summary,
+  );
+
+  await patients.updateOne(
+    { _id: patientLookupId },
+    {
+      $set: {
+        appointments: updatedAppointments,
+      },
+    },
+  );
 };
 
 export const handleRequestAppointment = async (req: Request, res: Response) => {
@@ -399,6 +430,359 @@ export const handleListAppointmentsForUser = async (req: Request, res: Response)
   }
 };
 
+export const handleListAppointmentsForClinic = async (req: Request, res: Response) => {
+  if (!req.clinicAuth) {
+    return res.status(401).json({ error: "Authentication required." });
+  }
+
+  try {
+    const appointments = await getAppointmentsCollection();
+    const list = await appointments
+      .find({ clinicId: req.clinicAuth.clinicId })
+      .sort({ date: 1, slot: 1 })
+      .toArray();
+
+    res.json({
+      appointments: list.map(serializeAppointment),
+    });
+  } catch (error) {
+    console.error("Clinic appointment list error", error);
+    res.status(500).json({ error: "Failed to load clinic appointments" });
+  }
+};
+
+export const handleClinicConfirmAppointment = async (req: Request, res: Response) => {
+  if (!req.clinicAuth) {
+    return res.status(401).json({ error: "Authentication required." });
+  }
+
+  const appointmentId = req.params.id;
+  const payload = parseRequestBody(req.body);
+
+  try {
+    const appointments = await getAppointmentsCollection();
+    const appointmentLookup = resolveAppointmentId(appointmentId);
+    const appointment = await appointments.findOne({ _id: appointmentLookup });
+
+    if (!appointment || appointment.clinicId !== req.clinicAuth.clinicId) {
+      return res.status(404).json({ error: "Appointment not found" });
+    }
+
+    if (appointment.status !== "PENDING_CLINIC" && appointment.status !== "RESCHEDULE_REQUESTED") {
+      return res.status(409).json({ error: "Appointment is not awaiting confirmation." });
+    }
+
+    const fallbackStart = appointment.preferredStart ?? appointment.date;
+    const fallbackEnd =
+      appointment.preferredEnd ??
+      new Date(new Date(fallbackStart).getTime() + DEFAULT_APPOINTMENT_MINUTES * 60 * 1000).toISOString();
+    const confirmTimes = resolveConfirmationTimes(payload, { start: fallbackStart, end: fallbackEnd });
+    if (!confirmTimes) {
+      return res.status(400).json({ error: "Invalid confirmed time range." });
+    }
+
+    const conflict = await findConfirmedOverlap(
+      appointments,
+      appointment.clinicId,
+      confirmTimes.confirmedStart,
+      confirmTimes.confirmedEnd,
+      appointment._id,
+    );
+    if (conflict) {
+      return res.status(409).json({ error: "Confirmed time overlaps another appointment." });
+    }
+
+    const dateKey = confirmTimes.confirmedStart.toISOString().split("T")[0];
+    const slot = formatSlotLabel(confirmTimes.confirmedStart);
+    const now = new Date();
+
+    await appointments.updateOne(
+      { _id: appointmentLookup },
+      {
+        $set: {
+          status: "CONFIRMED",
+          confirmedStart: confirmTimes.confirmedStart.toISOString(),
+          confirmedEnd: confirmTimes.confirmedEnd.toISOString(),
+          date: confirmTimes.confirmedStart.toISOString(),
+          dateKey,
+          slot,
+          clinicMessage: null,
+          declineReason: null,
+          clinicConfirmationTokenHash: null,
+          tokenExpiresAt: null,
+          updatedAt: now,
+        },
+      },
+    );
+
+    await updatePatientAppointmentSummary(appointmentId, appointment.patientId, {
+      status: "CONFIRMED",
+      confirmedStart: confirmTimes.confirmedStart.toISOString(),
+      confirmedEnd: confirmTimes.confirmedEnd.toISOString(),
+      date: confirmTimes.confirmedStart.toISOString(),
+      slot,
+      updatedAt: now,
+    });
+
+    if (appointment.patientEmail) {
+      const formattedDate = confirmTimes.confirmedStart.toLocaleString();
+      try {
+        await sendEmail({
+          to: appointment.patientEmail,
+          subject: "Your DocNearMe appointment is confirmed",
+          text: [
+            `Hi ${appointment.patientName ?? "there"},`,
+            "",
+            "Your appointment request has been confirmed by the clinic.",
+            `Appointment ID: ${appointmentId}`,
+            `Clinic: ${appointment.clinicId}`,
+            `Confirmed date: ${formattedDate}`,
+            `Confirmed time: ${slot}`,
+            "",
+            "Please arrive 10 minutes early and bring a photo ID and insurance card if applicable.",
+          ].join("\n"),
+          html: `
+            <div style="font-family: Arial, sans-serif; line-height: 1.5;">
+              <h2 style="margin-bottom: 12px;">Appointment confirmed</h2>
+              <p>Hi ${appointment.patientName ?? "there"},</p>
+              <p>Your appointment request has been confirmed by the clinic.</p>
+              <table style="border-collapse: collapse; width: 100%; margin: 16px 0;">
+                <tbody>
+                  <tr>
+                    <td style="padding: 6px 0; color: #64748b; width: 160px;">Appointment ID</td>
+                    <td style="padding: 6px 0; font-weight: 600;">${appointmentId}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 6px 0; color: #64748b;">Clinic</td>
+                    <td style="padding: 6px 0; font-weight: 600;">${appointment.clinicId}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 6px 0; color: #64748b;">Confirmed date</td>
+                    <td style="padding: 6px 0; font-weight: 600;">${formattedDate}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 6px 0; color: #64748b;">Confirmed time</td>
+                    <td style="padding: 6px 0; font-weight: 600;">${slot}</td>
+                  </tr>
+                </tbody>
+              </table>
+              <p>Please arrive 10 minutes early and bring a photo ID and insurance card if applicable.</p>
+            </div>
+          `,
+        });
+      } catch (error) {
+        console.error("Failed to send appointment confirmation email", error);
+      }
+    }
+
+    res.json({
+      success: true,
+      appointment: serializeAppointment({
+        ...appointment,
+        status: "CONFIRMED",
+        confirmedStart: confirmTimes.confirmedStart.toISOString(),
+        confirmedEnd: confirmTimes.confirmedEnd.toISOString(),
+        date: confirmTimes.confirmedStart.toISOString(),
+        dateKey,
+        slot,
+        clinicMessage: null,
+        declineReason: null,
+        clinicConfirmationTokenHash: null,
+        tokenExpiresAt: null,
+        updatedAt: now,
+      }),
+      message: "Appointment confirmed successfully",
+    });
+  } catch (error) {
+    console.error("Clinic appointment confirmation error", error);
+    res.status(500).json({ error: "Failed to confirm appointment" });
+  }
+};
+
+export const handleClinicDeclineAppointment = async (req: Request, res: Response) => {
+  if (!req.clinicAuth) {
+    return res.status(401).json({ error: "Authentication required." });
+  }
+
+  const appointmentId = req.params.id;
+  const payload = parseRequestBody(req.body);
+  const declineReason = typeof payload.declineReason === "string" ? payload.declineReason : undefined;
+
+  try {
+    const appointments = await getAppointmentsCollection();
+    const appointmentLookup = resolveAppointmentId(appointmentId);
+    const appointment = await appointments.findOne({ _id: appointmentLookup });
+
+    if (!appointment || appointment.clinicId !== req.clinicAuth.clinicId) {
+      return res.status(404).json({ error: "Appointment not found" });
+    }
+
+    if (appointment.status !== "PENDING_CLINIC" && appointment.status !== "RESCHEDULE_REQUESTED") {
+      return res.status(409).json({ error: "Appointment is not awaiting confirmation." });
+    }
+
+    const now = new Date();
+    await appointments.updateOne(
+      { _id: appointmentLookup },
+      {
+        $set: {
+          status: "DECLINED",
+          declineReason,
+          clinicMessage: null,
+          clinicConfirmationTokenHash: null,
+          tokenExpiresAt: null,
+          updatedAt: now,
+        },
+      },
+    );
+
+    await updatePatientAppointmentSummary(appointmentId, appointment.patientId, {
+      status: "DECLINED",
+      updatedAt: now,
+    });
+
+    if (appointment.patientEmail) {
+      try {
+        await sendEmail({
+          to: appointment.patientEmail,
+          subject: "Clinic could not confirm your appointment",
+          text: [
+            `Hi ${appointment.patientName ?? "there"},`,
+            "",
+            "The clinic was unable to confirm your requested time.",
+            "Please choose another time and submit a new request.",
+            declineReason ? "" : undefined,
+            declineReason ? `Reason: ${declineReason}` : undefined,
+          ]
+            .filter(Boolean)
+            .join("\n"),
+          html: `
+            <div style="font-family: Arial, sans-serif; line-height: 1.5;">
+              <h2 style="margin-bottom: 12px;">Request declined</h2>
+              <p>Hi ${appointment.patientName ?? "there"},</p>
+              <p>The clinic was unable to confirm your requested time. Please choose another time and submit a new request.</p>
+              ${declineReason ? `<p><strong>Reason:</strong> ${declineReason}</p>` : ""}
+            </div>
+          `,
+        });
+      } catch (error) {
+        console.error("Failed to send appointment decline email", error);
+      }
+    }
+
+    res.json({
+      success: true,
+      appointment: serializeAppointment({
+        ...appointment,
+        status: "DECLINED",
+        declineReason,
+        clinicMessage: null,
+        clinicConfirmationTokenHash: null,
+        tokenExpiresAt: null,
+        updatedAt: now,
+      }),
+      message: "Appointment request declined",
+    });
+  } catch (error) {
+    console.error("Clinic appointment decline error", error);
+    res.status(500).json({ error: "Failed to decline appointment" });
+  }
+};
+
+export const handleClinicRescheduleMessage = async (req: Request, res: Response) => {
+  if (!req.clinicAuth) {
+    return res.status(401).json({ error: "Authentication required." });
+  }
+
+  const appointmentId = req.params.id;
+  const payload = parseRequestBody(req.body);
+  const message = typeof payload.message === "string" ? payload.message.trim() : "";
+
+  if (!message) {
+    return res.status(400).json({ error: "Reschedule message is required." });
+  }
+
+  try {
+    const appointments = await getAppointmentsCollection();
+    const appointmentLookup = resolveAppointmentId(appointmentId);
+    const appointment = await appointments.findOne({ _id: appointmentLookup });
+
+    if (!appointment || appointment.clinicId !== req.clinicAuth.clinicId) {
+      return res.status(404).json({ error: "Appointment not found" });
+    }
+
+    if (appointment.status === "CANCELLED_BY_PATIENT" || appointment.status === "DECLINED") {
+      return res.status(409).json({ error: "Appointment can no longer be rescheduled." });
+    }
+
+    const now = new Date();
+    await appointments.updateOne(
+      { _id: appointmentLookup },
+      {
+        $set: {
+          status: "RESCHEDULE_REQUESTED",
+          clinicMessage: message,
+          updatedAt: now,
+        },
+      },
+    );
+
+    await updatePatientAppointmentSummary(appointmentId, appointment.patientId, {
+      status: "RESCHEDULE_REQUESTED",
+      updatedAt: now,
+    });
+
+    if (appointment.patientEmail) {
+      try {
+        await sendEmail({
+          to: appointment.patientEmail,
+          subject: "Clinic requested a new appointment time",
+          text: [
+            `Hi ${appointment.patientName ?? "there"},`,
+            "",
+            "The clinic reviewed your appointment request and needs to reschedule.",
+            "Message from the clinic:",
+            message,
+            "",
+            `Appointment ID: ${appointmentId}`,
+            `Clinic: ${appointment.clinicId}`,
+            "",
+            "Please choose a new time and submit a new request.",
+          ].join("\n"),
+          html: `
+            <div style="font-family: Arial, sans-serif; line-height: 1.5;">
+              <h2 style="margin-bottom: 12px;">Reschedule requested</h2>
+              <p>Hi ${appointment.patientName ?? "there"},</p>
+              <p>The clinic reviewed your appointment request and needs to reschedule.</p>
+              <p style="margin: 12px 0;"><strong>Message from the clinic:</strong></p>
+              <p style="background: #f8fafc; padding: 12px; border-radius: 8px;">${message}</p>
+              <p>Appointment ID: <strong>${appointmentId}</strong></p>
+              <p>Clinic: <strong>${appointment.clinicId}</strong></p>
+              <p>Please choose a new time and submit a new request.</p>
+            </div>
+          `,
+        });
+      } catch (error) {
+        console.error("Failed to send appointment reschedule email", error);
+      }
+    }
+
+    res.json({
+      success: true,
+      appointment: serializeAppointment({
+        ...appointment,
+        status: "RESCHEDULE_REQUESTED",
+        clinicMessage: message,
+        updatedAt: now,
+      }),
+      message: "Reschedule request sent to patient",
+    });
+  } catch (error) {
+    console.error("Clinic appointment reschedule error", error);
+    res.status(500).json({ error: "Failed to send reschedule message" });
+  }
+};
+
 export const handleRescheduleAppointment = async (req: Request, res: Response) => {
   if (!req.auth) {
     return res.status(401).json({ error: "Authentication required." });
@@ -456,6 +840,7 @@ export const handleRescheduleAppointment = async (req: Request, res: Response) =
           clinicConfirmationTokenHash: hashToken(rawToken),
           tokenExpiresAt,
           declineReason: undefined,
+          clinicMessage: null,
           updatedAt: now,
         },
       },
@@ -473,8 +858,8 @@ export const handleRescheduleAppointment = async (req: Request, res: Response) =
               slot: preferredTimes.slot,
               preferredStart: preferredTimes.preferredStart.toISOString(),
               preferredEnd: preferredTimes.preferredEnd.toISOString(),
-          confirmedStart: null,
-          confirmedEnd: null,
+              confirmedStart: null,
+              confirmedEnd: null,
               status: "PENDING_CLINIC" as AppointmentStatus,
               updatedAt: now,
             }
@@ -673,6 +1058,8 @@ export const handleConfirmAppointment = async (req: Request, res: Response) => {
           date: confirmTimes.confirmedStart.toISOString(),
           dateKey,
           slot,
+          clinicMessage: null,
+          declineReason: null,
           clinicConfirmationTokenHash: null,
           tokenExpiresAt: null,
           updatedAt: now,
@@ -772,6 +1159,8 @@ export const handleConfirmAppointment = async (req: Request, res: Response) => {
         date: confirmTimes.confirmedStart.toISOString(),
         dateKey,
         slot,
+        clinicMessage: null,
+        declineReason: null,
         clinicConfirmationTokenHash: null,
         tokenExpiresAt: null,
         updatedAt: now,
@@ -826,6 +1215,7 @@ export const handleDeclineAppointment = async (req: Request, res: Response) => {
         $set: {
           status: "DECLINED",
           declineReason,
+          clinicMessage: null,
           clinicConfirmationTokenHash: null,
           tokenExpiresAt: null,
           updatedAt: now,
@@ -895,6 +1285,7 @@ export const handleDeclineAppointment = async (req: Request, res: Response) => {
         ...appointment,
         status: "DECLINED",
         declineReason,
+        clinicMessage: null,
         clinicConfirmationTokenHash: null,
         tokenExpiresAt: null,
         updatedAt: now,

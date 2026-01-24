@@ -1,5 +1,6 @@
 export type AppointmentStatus =
   | "PENDING_CLINIC"
+  | "RESCHEDULE_REQUESTED"
   | "CONFIRMED"
   | "DECLINED"
   | "CANCELLED_BY_PATIENT"
@@ -19,6 +20,7 @@ export interface Appointment {
   clinicConfirmationTokenHash?: string;
   tokenExpiresAt?: Date;
   declineReason?: string;
+  clinicMessage?: string;
   specialization: string;
   doctorName?: string;
   clinicId: string;
