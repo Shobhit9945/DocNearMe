@@ -29,7 +29,12 @@ import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useAllDoctors, useClinics } from "@/lib/clinic-data";
-import { matchSpecialization, SPECIALIZATION_OPTIONS } from "@/lib/specializations";
+import {
+  getSpecializationLabel,
+  matchSpecialization,
+  resolveSpecializationId,
+  SPECIALIZATION_OPTIONS,
+} from "@/lib/specializations";
 import { useTranslation } from "@/lib/i18n";
 import type {
   AppointmentCancelRequest,
@@ -99,11 +104,12 @@ export default function Appointment() {
   const [view, setView] = useState<"upcoming" | "booking">(initialView);
   const [step, setStep] = useState<"booking" | "confirmation">("booking");
 
-  const normalizedParam =
-    (specializationParam && matchSpecialization(specializationParam)) ||
-    specializationParam;
+  const fallbackSpecializationId = resolveSpecializationId("");
+  const normalizedParam = specializationParam
+    ? resolveSpecializationId(specializationParam, fallbackSpecializationId)
+    : "";
   const [selectedSpecialization, setSelectedSpecialization] = useState(
-    normalizedParam || "General Physician"
+    normalizedParam || fallbackSpecializationId
   );
   const [selectedClinicId, setSelectedClinicId] = useState(clinicId ?? "");
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
@@ -190,16 +196,21 @@ export default function Appointment() {
   const selectedClinic = clinics.find((clinic) => clinic.id === selectedClinicId) ?? null;
   const clinicLabel = selectedClinic ? selectedClinic.name : "Select a clinic";
   const isAuthenticated = Boolean(authSession?.token);
+  const selectedSpecializationId = resolveSpecializationId(
+    selectedSpecialization,
+    fallbackSpecializationId
+  );
+  const selectedSpecializationLabel = getSpecializationLabel(selectedSpecializationId);
 
   const clinicsForSpecialization = useMemo(
     () =>
       clinics.filter((clinic) =>
         clinic.specializations.some((spec) => {
           const normalized = matchSpecialization(spec) ?? spec;
-          return normalized.toLowerCase() === selectedSpecialization.toLowerCase();
+          return normalized.toLowerCase() === selectedSpecializationId.toLowerCase();
         })
       ),
-    [clinics, selectedSpecialization]
+    [clinics, selectedSpecializationId]
   );
 
   const doctorsForSelection = useMemo(() => {
@@ -209,10 +220,10 @@ export default function Appointment() {
       const normalized = matchSpecialization(doctor.specialization) ?? doctor.specialization;
       return (
         doctor.clinicId === selectedClinicId &&
-        normalized.toLowerCase() === selectedSpecialization.toLowerCase()
+        normalized.toLowerCase() === selectedSpecializationId.toLowerCase()
       );
     });
-  }, [doctors, selectedClinicId, selectedSpecialization]);
+  }, [doctors, selectedClinicId, selectedSpecializationId]);
 
   const fallbackDoctor = useMemo<ClinicDoctor | null>(() => {
     if (!selectedClinic) return null;
@@ -225,12 +236,12 @@ export default function Appointment() {
       id: `fallback-${selectedClinic.id}-${selectedSpecialization}`,
       name: `Dr. ${fallbackLastName}`,
       clinicId: selectedClinic.id,
-      specialization: selectedSpecialization,
+      specialization: selectedSpecializationLabel,
       languages: ["Japanese", "English"],
       rating: 4.6,
       nextAvailable: "Within 24 hours",
     };
-  }, [selectedClinic, selectedSpecialization]);
+  }, [selectedClinic, selectedSpecialization, selectedSpecializationLabel]);
 
   const doctorOptions = useMemo(() => {
     if (doctorsForSelection.length > 0) return doctorsForSelection;
@@ -353,7 +364,7 @@ export default function Appointment() {
 
   useEffect(() => {
     setSelectedDoctorId(null);
-  }, [selectedClinicId, selectedSpecialization]);
+  }, [selectedClinicId, selectedSpecializationId]);
 
   useEffect(() => {
     if (doctorsForSelection.length === 0 && fallbackDoctor) {
@@ -422,13 +433,13 @@ export default function Appointment() {
     endTime.setHours(hour + 1, minutes, 0, 0); // 1 hour duration
 
     return {
-      title: `Doctor Appointment - ${selectedSpecialization}`,
+      title: `Doctor Appointment - ${selectedSpecializationLabel}`,
       description: `Appointment with ${doctorDisplayName} at ${clinicLabel}. Notes: ${notes}`,
       location: clinicLabel,
       startTime,
       endTime,
     };
-  }, [selectedDate, selectedSlot, selectedSpecialization, clinicLabel, notes, doctorDisplayName]);
+  }, [selectedDate, selectedSlot, selectedSpecializationLabel, clinicLabel, notes, doctorDisplayName]);
 
   const appointments = useMemo<UpcomingAppointment[]>(() => {
     const items = appointmentsData?.appointments ?? [];
@@ -547,7 +558,7 @@ export default function Appointment() {
       patientPhone: trimmedPhone,
       patientEmail: trimmedEmail,
       note: notes,
-      specialization: selectedSpecialization,
+      specialization: selectedSpecializationLabel,
       doctorName: doctorDisplayName,
       slot: selectedSlot,
       sharedRecord: sharedRecordPayload,
@@ -582,7 +593,7 @@ export default function Appointment() {
         patientName: trimmedName,
         patientEmail: trimmedEmail,
         doctorName: doctorLabel,
-        specialization: selectedSpecialization,
+        specialization: selectedSpecializationLabel,
         dateLabel: formatDateLabel(selectedDate),
         timeLabel: selectedSlot,
         notes,
@@ -718,7 +729,7 @@ export default function Appointment() {
       patientName: patientName || "Patient",
       patientEmail,
       doctorName: doctorDisplayName,
-      specialization: selectedSpecialization,
+      specialization: selectedSpecializationLabel,
       dateLabel: selectedDate ? formatDateLabel(selectedDate) : "Date pending",
       timeLabel: selectedSlot ?? "Time pending",
       notes,
@@ -1646,7 +1657,7 @@ export default function Appointment() {
                   <Stethoscope className="w-5 h-5 text-[#0089FF] mt-0.5 flex-shrink-0" />
                   <div>
                     <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Specialization</p>
-                    <p className="text-sm text-slate-800 font-medium">{t(selectedSpecialization)}</p>
+                    <p className="text-sm text-slate-800 font-medium">{t(selectedSpecializationLabel)}</p>
                   </div>
                 </div>
 

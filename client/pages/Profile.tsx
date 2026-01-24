@@ -300,6 +300,20 @@ export default function Profile() {
               )}
               {profileSaved && <span className="text-sm text-emerald-600">{t("Profile saved.")}</span>}
             </div>
+            <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold">
+                {t("Help & support")}
+              </p>
+              <p className="mt-2 text-sm text-slate-600">
+                {t("Contact us at")}{" "}
+                <a
+                  className="font-semibold text-[#0089FF] hover:underline"
+                  href="mailto:docnearme.jp@gmail.com"
+                >
+                  docnearme.jp@gmail.com
+                </a>
+              </p>
+            </div>
           </section>
 
           <aside className="hidden lg:flex lg:w-1/3 flex-col gap-4">

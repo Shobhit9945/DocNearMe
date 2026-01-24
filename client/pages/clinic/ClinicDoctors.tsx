@@ -12,6 +12,7 @@ export default function ClinicDoctors() {
   const { data } = useClinicDoctors(clinicId);
   const [doctors, setDoctors] = useState<ClinicDoctor[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [languageDrafts, setLanguageDrafts] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (!data?.doctors) return;
@@ -23,6 +24,40 @@ export default function ClinicDoctors() {
       const next = [...prev];
       const entry = { ...next[index], [field]: value };
       next[index] = entry;
+      return next;
+    });
+  };
+
+  const handleLanguageDraftChange = (doctorId: string, value: string) => {
+    setLanguageDrafts((prev) => ({ ...prev, [doctorId]: value }));
+  };
+
+  const handleAddLanguage = (index: number) => {
+    const doctorId = doctors[index]?.id;
+    setDoctors((prev) => {
+      const next = [...prev];
+      const doctor = next[index];
+      const draft = languageDrafts[doctor.id]?.trim();
+      if (!draft) return prev;
+      const languages = doctor.languages ?? [];
+      const exists = languages.some((language) => language.toLowerCase() === draft.toLowerCase());
+      if (exists) return prev;
+      next[index] = { ...doctor, languages: [...languages, draft] };
+      return next;
+    });
+    if (doctorId) {
+      setLanguageDrafts((prev) => ({ ...prev, [doctorId]: "" }));
+    }
+  };
+
+  const handleRemoveLanguage = (index: number, language: string) => {
+    setDoctors((prev) => {
+      const next = [...prev];
+      const doctor = next[index];
+      next[index] = {
+        ...doctor,
+        languages: (doctor.languages ?? []).filter((item) => item !== language),
+      };
       return next;
     });
   };
@@ -61,6 +96,9 @@ export default function ClinicDoctors() {
         name: doctor.name.trim(),
         specialization: doctor.specialization.trim(),
         availability: doctor.availability?.trim(),
+        languages: (doctor.languages ?? [])
+          .map((language) => language.trim())
+          .filter((language) => language.length > 0),
       })),
     };
 
@@ -132,8 +170,39 @@ export default function ClinicDoctors() {
                   />
                 </div>
               </div>
-              <div className="flex items-center justify-between text-xs text-gray-500">
-                <span>{doctor.languages?.join(", ") ?? "English"}</span>
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-gray-500 block">Languages spoken</label>
+                <div className="flex flex-wrap gap-2">
+                  {(doctor.languages ?? ["English"]).map((language) => (
+                    <span
+                      key={language}
+                      className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-xs text-gray-600"
+                    >
+                      {language}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveLanguage(index, language)}
+                        className="text-gray-400 hover:text-gray-600"
+                        aria-label={`Remove ${language}`}
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Input
+                    value={languageDrafts[doctor.id] ?? ""}
+                    onChange={(event) => handleLanguageDraftChange(doctor.id, event.target.value)}
+                    placeholder="Add language"
+                    className="max-w-xs"
+                  />
+                  <Button type="button" variant="outline" onClick={() => handleAddLanguage(index)}>
+                    + Add
+                  </Button>
+                </div>
+              </div>
+              <div className="flex items-center justify-end text-xs text-gray-500">
                 <Button type="button" variant="outline" onClick={() => handleRemove(index)}>
                   Remove
                 </Button>
