@@ -19,7 +19,7 @@ export function DesktopNav() {
   return (
     <div className="sticky top-0 hidden h-screen w-full flex-col border-r border-slate-200 bg-white p-6 lg:flex">
       <div className="flex items-center gap-3 mb-8">
-        <img src="/dnm.png" alt="DocNearMe" className="w-12 h-12 object-contain" />
+        <img src="/applogo.png" alt="DocNearMe" className="w-12 h-12 object-contain" />
         <div>
           <p className="text-xs uppercase tracking-wide text-slate-400">{t("DocNearMe")}</p>
           <p className="text-lg font-semibold text-slate-900">{t("DocNearMe")}</p>
