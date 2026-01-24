@@ -40,9 +40,9 @@ export default function ClinicAppointments() {
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="text-2xl font-bold text-gray-900">予約一覧 (Appointments)</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Appointments</h1>
         <p className="text-gray-500 mt-1">
-          今日〜来週分の予約を確認し、必要なら変更してください。
+          Review appointments for today through next week.
         </p>
       </header>
 
@@ -67,17 +67,15 @@ export default function ClinicAppointments() {
                       : "bg-yellow-50 text-yellow-700"
                   }`}
                 >
-                  {appointment.status === "Confirmed"
-                    ? "確定 (Confirmed)"
-                    : "保留 (Pending)"}
+                  {appointment.status === "Confirmed" ? "Confirmed" : "Pending"}
                 </span>
-                <Button variant="outline">変更 (Reschedule)</Button>
-                <Button variant="outline">キャンセル (Cancel)</Button>
-                <Button>確認 (Confirm)</Button>
+                <Button variant="outline">Reschedule</Button>
+                <Button variant="outline">Cancel</Button>
+                <Button>Confirm</Button>
               </div>
             </div>
             <div className="mt-4 bg-gray-50 rounded-lg p-3 text-sm text-gray-600">
-              メモ (Notes): 初診。受付で保険証確認。
+              Notes: First visit. Verify insurance at check-in.
             </div>
           </div>
         ))}
