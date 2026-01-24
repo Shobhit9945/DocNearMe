@@ -158,10 +158,22 @@ export interface ClinicInfo {
   googlePlaceId?: string;
   phone?: string;
   hours?: {
-    weekdays: string;
-    weekend: string;
-    closedDays: string;
+    weekdays: {
+      start: string;
+      end: string;
+    };
+    weekend: {
+      start: string;
+      end: string;
+    };
+    closedDays: string[];
+    slotMinutes?: number;
   };
+  bookingClosures?: {
+    startDate: string;
+    endDate: string;
+    reason?: string;
+  }[];
   pricing?: {
     firstVisit: string;
     followUp: string;

@@ -255,10 +255,22 @@ export interface MedicalConsentStatusResponse {
   consentVersion?: string;
 }
 
+export interface ClinicDailyHours {
+  start: string;
+  end: string;
+}
+
 export interface ClinicHours {
-  weekdays: string;
-  weekend: string;
-  closedDays: string;
+  weekdays: ClinicDailyHours;
+  weekend: ClinicDailyHours;
+  closedDays: string[];
+  slotMinutes?: number;
+}
+
+export interface ClinicBookingClosure {
+  startDate: string;
+  endDate: string;
+  reason?: string;
 }
 
 export interface ClinicPricing {
@@ -297,6 +309,7 @@ export interface ClinicProfile {
   googlePlaceId?: string;
   phone?: string;
   hours?: ClinicHours;
+  bookingClosures?: ClinicBookingClosure[];
   pricing?: ClinicPricing;
   photos?: ClinicPhoto[];
   doctors?: ClinicDoctor[];
@@ -342,6 +355,7 @@ export interface ClinicProfileUpdateRequest {
   image?: string;
   nextAvailability?: string;
   hours?: ClinicHours;
+  bookingClosures?: ClinicBookingClosure[];
   pricing?: ClinicPricing;
   photos?: ClinicPhoto[];
 }

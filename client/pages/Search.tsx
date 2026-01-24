@@ -12,6 +12,7 @@ export default function Search() {
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const [specializationFilter, setSpecializationFilter] = useState("all");
+  const [languageFilter, setLanguageFilter] = useState("all");
   const [resultType, setResultType] = useState<"all" | "doctor" | "clinic">("all");
   const { data: clinicsData } = useClinics();
   const { data: doctorsData } = useAllDoctors();
@@ -46,6 +47,27 @@ export default function Search() {
       ? null
       : matchSpecialization(specializationFilter) ?? specializationFilter;
 
+  const languageOptions = useMemo(() => {
+    const languageSet = new Set<string>();
+    (doctorsData?.doctors ?? []).forEach((doctor) => {
+      doctor.languages.forEach((language) => languageSet.add(language));
+    });
+    const options = Array.from(languageSet).sort((a, b) => a.localeCompare(b));
+    return ["all", ...options];
+  }, [doctorsData?.doctors]);
+
+  const normalizedLanguage = languageFilter === "all" ? null : languageFilter.toLowerCase();
+
+  const clinicLanguages = useMemo(() => {
+    const map = new Map<string, Set<string>>();
+    (doctorsData?.doctors ?? []).forEach((doctor) => {
+      const existing = map.get(doctor.clinicId) ?? new Set<string>();
+      doctor.languages.forEach((language) => existing.add(language.toLowerCase()));
+      map.set(doctor.clinicId, existing);
+    });
+    return map;
+  }, [doctorsData?.doctors]);
+
   const filteredClinics = useMemo(() => {
     return (clinicsData?.clinics ?? []).filter((clinic) => {
       const matchesQuery =
@@ -58,9 +80,12 @@ export default function Search() {
             (spec) => (matchSpecialization(spec) ?? spec).toLowerCase() === normalizedSpecialization.toLowerCase(),
           )
         : true;
-      return matchesQuery && matchesSpecialization;
+      const matchesLanguage = normalizedLanguage
+        ? (clinicLanguages.get(clinic.id) ?? new Set<string>()).has(normalizedLanguage)
+        : true;
+      return matchesQuery && matchesSpecialization && matchesLanguage;
     });
-  }, [clinicsData?.clinics, normalizedQuery, normalizedSpecialization]);
+  }, [clinicLanguages, clinicsData?.clinics, normalizedQuery, normalizedLanguage, normalizedSpecialization]);
 
   const filteredDoctors = useMemo(() => {
     return (doctorsData?.doctors ?? []).filter((doctor) => {
@@ -75,9 +100,12 @@ export default function Search() {
             .toLowerCase()
             .includes(normalizedSpecialization.toLowerCase())
         : true;
-      return matchesQuery && matchesSpecialization;
+      const matchesLanguage = normalizedLanguage
+        ? doctor.languages.some((language) => language.toLowerCase() === normalizedLanguage)
+        : true;
+      return matchesQuery && matchesSpecialization && matchesLanguage;
     });
-  }, [clinicsData?.clinics, doctorsData?.doctors, normalizedQuery, normalizedSpecialization]);
+  }, [clinicsData?.clinics, doctorsData?.doctors, normalizedQuery, normalizedLanguage, normalizedSpecialization]);
 
   const visibleClinics = resultType === "doctor" ? [] : filteredClinics;
   const visibleDoctors = resultType === "clinic" ? [] : filteredDoctors;
@@ -104,7 +132,7 @@ export default function Search() {
                   {visibleDoctors.length + visibleClinics.length} {t("matches")}
                 </div>
               </div>
-              <div className="mt-5 grid gap-4 lg:grid-cols-[2fr_1fr_1fr]">
+              <div className="mt-5 grid gap-4 lg:grid-cols-[2fr_1fr_1fr_1fr]">
                 <label className="flex flex-col gap-2 text-sm font-semibold text-slate-700">
                   {t("Search term")}
                   <div className="relative">
@@ -128,6 +156,20 @@ export default function Search() {
                     {specializations.map((specialization) => (
                       <option key={specialization.id} value={specialization.id}>
                         {specialization.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="flex flex-col gap-2 text-sm font-semibold text-slate-700">
+                  {t("Language")}
+                  <select
+                    value={languageFilter}
+                    onChange={(event) => setLanguageFilter(event.target.value)}
+                    className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-[#0089FF] focus:outline-none"
+                  >
+                    {languageOptions.map((language) => (
+                      <option key={language} value={language}>
+                        {language === "all" ? t("All languages") : t(language)}
                       </option>
                     ))}
                   </select>
