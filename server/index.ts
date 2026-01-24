@@ -5,6 +5,7 @@ import { handleDemo } from "./routes/demo";
 import { handleAvailability } from "./routes/availability";
 import {
   handleCancelAppointment,
+  handleClinicCancelAppointment,
   handleClinicConfirmAppointment,
   handleClinicDeclineAppointment,
   handleClinicRescheduleMessage,
@@ -110,6 +111,7 @@ export async function createServer(): Promise<Express> {
   app.get("/api/appointments", handleListAppointments);
   app.get("/api/appointments/me", requireAuth, handleListAppointmentsForUser);
   app.get("/api/clinic/appointments", requireClinicAuth, handleListAppointmentsForClinic);
+  app.post("/api/clinic/appointments/:id/cancel", requireClinicAuth, handleClinicCancelAppointment);
   app.post("/api/clinic/appointments/:id/confirm", requireClinicAuth, handleClinicConfirmAppointment);
   app.post("/api/clinic/appointments/:id/decline", requireClinicAuth, handleClinicDeclineAppointment);
   app.post("/api/clinic/appointments/:id/reschedule-message", requireClinicAuth, handleClinicRescheduleMessage);

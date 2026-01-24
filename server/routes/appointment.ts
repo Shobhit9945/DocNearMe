@@ -711,7 +711,11 @@ export const handleClinicRescheduleMessage = async (req: Request, res: Response)
       return res.status(404).json({ error: "Appointment not found" });
     }
 
-    if (appointment.status === "CANCELLED_BY_PATIENT" || appointment.status === "DECLINED") {
+    if (
+      appointment.status === "CANCELLED_BY_PATIENT" ||
+      appointment.status === "CANCELLED_BY_CLINIC" ||
+      appointment.status === "DECLINED"
+    ) {
       return res.status(409).json({ error: "Appointment can no longer be rescheduled." });
     }
 
@@ -780,6 +784,107 @@ export const handleClinicRescheduleMessage = async (req: Request, res: Response)
   } catch (error) {
     console.error("Clinic appointment reschedule error", error);
     res.status(500).json({ error: "Failed to send reschedule message" });
+  }
+};
+
+export const handleClinicCancelAppointment = async (req: Request, res: Response) => {
+  if (!req.clinicAuth) {
+    return res.status(401).json({ error: "Authentication required." });
+  }
+
+  const appointmentId = req.params.id;
+  const payload = parseRequestBody(req.body);
+  const reason = typeof payload.reason === "string" ? payload.reason.trim() : "";
+
+  if (!reason) {
+    return res.status(400).json({ error: "Cancellation reason is required." });
+  }
+
+  try {
+    const appointments = await getAppointmentsCollection();
+    const appointmentLookup = resolveAppointmentId(appointmentId);
+    const appointment = await appointments.findOne({ _id: appointmentLookup });
+
+    if (!appointment || appointment.clinicId !== req.clinicAuth.clinicId) {
+      return res.status(404).json({ error: "Appointment not found" });
+    }
+
+    if (
+      appointment.status === "CANCELLED_BY_PATIENT" ||
+      appointment.status === "CANCELLED_BY_CLINIC" ||
+      appointment.status === "DECLINED"
+    ) {
+      return res.status(409).json({ error: "Appointment can no longer be cancelled." });
+    }
+
+    const now = new Date();
+    await appointments.updateOne(
+      { _id: appointmentLookup },
+      {
+        $set: {
+          status: "CANCELLED_BY_CLINIC",
+          declineReason: reason,
+          clinicMessage: null,
+          clinicConfirmationTokenHash: null,
+          tokenExpiresAt: null,
+          updatedAt: now,
+        },
+      },
+    );
+
+    await updatePatientAppointmentSummary(appointmentId, appointment.patientId, {
+      status: "CANCELLED_BY_CLINIC",
+      updatedAt: now,
+    });
+
+    if (appointment.patientEmail) {
+      try {
+        await sendEmail({
+          to: appointment.patientEmail,
+          subject: "Clinic cancelled your appointment",
+          text: [
+            `Hi ${appointment.patientName ?? "there"},`,
+            "",
+            "The clinic cancelled your appointment.",
+            `Appointment ID: ${appointmentId}`,
+            `Clinic: ${appointment.clinicId}`,
+            `Reason: ${reason}`,
+            "",
+            "Please contact the clinic if you need to reschedule.",
+          ].join("\n"),
+          html: `
+            <div style="font-family: Arial, sans-serif; line-height: 1.5;">
+              <h2 style="margin-bottom: 12px;">Appointment cancelled</h2>
+              <p>Hi ${appointment.patientName ?? "there"},</p>
+              <p>The clinic cancelled your appointment.</p>
+              <p><strong>Reason:</strong> ${reason}</p>
+              <p>Appointment ID: <strong>${appointmentId}</strong></p>
+              <p>Clinic: <strong>${appointment.clinicId}</strong></p>
+              <p>Please contact the clinic if you need to reschedule.</p>
+            </div>
+          `,
+        });
+      } catch (error) {
+        console.error("Failed to send appointment cancellation email", error);
+      }
+    }
+
+    res.json({
+      success: true,
+      appointment: serializeAppointment({
+        ...appointment,
+        status: "CANCELLED_BY_CLINIC",
+        declineReason: reason,
+        clinicMessage: null,
+        clinicConfirmationTokenHash: null,
+        tokenExpiresAt: null,
+        updatedAt: now,
+      }),
+      message: "Appointment cancelled",
+    });
+  } catch (error) {
+    console.error("Clinic appointment cancellation error", error);
+    res.status(500).json({ error: "Failed to cancel appointment" });
   }
 };
 

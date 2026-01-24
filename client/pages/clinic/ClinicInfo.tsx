@@ -16,7 +16,6 @@ export default function ClinicInfo() {
   const [location, setLocation] = useState("");
   const [phone, setPhone] = useState("");
   const [image, setImage] = useState("");
-  const [specializations, setSpecializations] = useState("");
   const [nextAvailability, setNextAvailability] = useState("");
   const [weekdayHours, setWeekdayHours] = useState("");
   const [weekendHours, setWeekendHours] = useState("");
@@ -33,7 +32,6 @@ export default function ClinicInfo() {
     setLocation(clinic.location ?? "");
     setPhone(clinic.phone ?? "");
     setImage(clinic.image ?? "");
-    setSpecializations((clinic.specializations ?? []).join(", "));
     setNextAvailability(clinic.nextAvailability ?? "");
     setWeekdayHours(clinic.hours?.weekdays ?? "");
     setWeekendHours(clinic.hours?.weekend ?? "");
@@ -67,10 +65,6 @@ export default function ClinicInfo() {
       location: location.trim(),
       phone: phone.trim(),
       image: image.trim(),
-      specializations: specializations
-        .split(",")
-        .map((item) => item.trim())
-        .filter(Boolean),
       nextAvailability: nextAvailability.trim(),
       hours: {
         weekdays: weekdayHours.trim(),
@@ -142,20 +136,40 @@ export default function ClinicInfo() {
             <Input value={image} onChange={(event) => setImage(event.target.value)} placeholder="https://..." />
           </div>
           <div>
-            <label className="text-sm font-medium text-gray-700 block mb-2">Specializations</label>
-            <Input
-              value={specializations}
-              onChange={(event) => setSpecializations(event.target.value)}
-              placeholder="Cardiology, Dermatology"
-            />
+            <label className="text-sm font-medium text-gray-700 block mb-2">
+              Specializations (from doctors)
+            </label>
+            <div className="rounded-md border border-dashed border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
+              {(clinic?.specializations ?? []).length > 0
+                ? clinic?.specializations?.join(", ")
+                : "Add doctor profiles to populate specialties."}
+            </div>
           </div>
           <div>
             <label className="text-sm font-medium text-gray-700 block mb-2">Next availability</label>
-            <Input
-              value={nextAvailability}
-              onChange={(event) => setNextAvailability(event.target.value)}
-              placeholder="Today, 4:30 PM"
-            />
+            <div className="space-y-2">
+              <Input
+                value={nextAvailability}
+                onChange={(event) => setNextAvailability(event.target.value)}
+                placeholder="Today, 4:30 PM"
+              />
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setNextAvailability("Closed for today")}
+                >
+                  Mark closed for today
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setNextAvailability("")}
+                >
+                  Clear
+                </Button>
+              </div>
+            </div>
           </div>
           <Button onClick={handleSave} disabled={isSaving}>
             {isSaving ? "Saving..." : "Save"}

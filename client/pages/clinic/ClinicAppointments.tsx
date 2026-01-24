@@ -7,7 +7,7 @@ import { toast } from "@/components/ui/use-toast";
 import { getClinicAuthHeader, getClinicSession } from "@/lib/clinic-auth";
 import type { AppointmentListResponse, AppointmentResponseItem } from "@shared/api";
 
-type ActionType = "decline" | "reschedule";
+type ActionType = "decline" | "reschedule" | "cancel";
 
 const statusStyles: Record<string, string> = {
   CONFIRMED: "bg-green-50 text-green-700",
@@ -15,6 +15,7 @@ const statusStyles: Record<string, string> = {
   RESCHEDULE_REQUESTED: "bg-orange-50 text-orange-700",
   DECLINED: "bg-red-50 text-red-700",
   CANCELLED_BY_PATIENT: "bg-slate-100 text-slate-600",
+  CANCELLED_BY_CLINIC: "bg-slate-100 text-slate-600",
 };
 
 const statusLabels: Record<string, string> = {
@@ -23,6 +24,7 @@ const statusLabels: Record<string, string> = {
   RESCHEDULE_REQUESTED: "Reschedule requested",
   DECLINED: "Declined",
   CANCELLED_BY_PATIENT: "Cancelled",
+  CANCELLED_BY_CLINIC: "Cancelled by clinic",
 };
 
 const fetchClinicAppointments = async (): Promise<AppointmentListResponse> => {
@@ -120,11 +122,15 @@ export default function ClinicAppointments() {
     const endpoint =
       actionType === "decline"
         ? `/api/clinic/appointments/${activeAppointment._id}/decline`
-        : `/api/clinic/appointments/${activeAppointment._id}/reschedule-message`;
+        : actionType === "cancel"
+          ? `/api/clinic/appointments/${activeAppointment._id}/cancel`
+          : `/api/clinic/appointments/${activeAppointment._id}/reschedule-message`;
     const payload =
       actionType === "decline"
         ? { declineReason: actionMessage.trim() }
-        : { message: actionMessage.trim() };
+        : actionType === "cancel"
+          ? { reason: actionMessage.trim() }
+          : { message: actionMessage.trim() };
 
     setIsSubmitting(true);
     try {
@@ -142,8 +148,14 @@ export default function ClinicAppointments() {
         throw new Error(errorPayload?.error ?? "Unable to update appointment.");
       }
 
+      const title =
+        actionType === "decline"
+          ? "Appointment declined"
+          : actionType === "cancel"
+            ? "Appointment cancelled"
+            : "Reschedule message sent";
       toast({
-        title: actionType === "decline" ? "Appointment declined" : "Reschedule message sent",
+        title,
         description: "The patient has been notified.",
       });
       await refetch();
@@ -192,7 +204,13 @@ export default function ClinicAppointments() {
             const canConfirm =
               appointment.status === "PENDING_CLINIC" || appointment.status === "RESCHEDULE_REQUESTED";
             const canMessage =
-              appointment.status !== "DECLINED" && appointment.status !== "CANCELLED_BY_PATIENT";
+              appointment.status !== "DECLINED" &&
+              appointment.status !== "CANCELLED_BY_PATIENT" &&
+              appointment.status !== "CANCELLED_BY_CLINIC";
+            const canCancel =
+              appointment.status !== "DECLINED" &&
+              appointment.status !== "CANCELLED_BY_PATIENT" &&
+              appointment.status !== "CANCELLED_BY_CLINIC";
 
             return (
               <div
@@ -220,6 +238,13 @@ export default function ClinicAppointments() {
                       disabled={!canMessage || isSubmitting}
                     >
                       Reschedule
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => openDialog("cancel", appointment)}
+                      disabled={!canCancel || isSubmitting}
+                    >
+                      Cancel
                     </Button>
                     <Button
                       variant="outline"
@@ -253,12 +278,18 @@ export default function ClinicAppointments() {
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>
-              {actionType === "decline" ? "Decline appointment request" : "Request a reschedule"}
+              {actionType === "decline"
+                ? "Decline appointment request"
+                : actionType === "cancel"
+                  ? "Cancel appointment"
+                  : "Request a reschedule"}
             </DialogTitle>
             <DialogDescription>
               {actionType === "decline"
                 ? "Share a brief reason for declining this request."
-                : "Send a message requesting a new time for this appointment."}
+                : actionType === "cancel"
+                  ? "Share a brief reason for cancelling this appointment."
+                  : "Send a message requesting a new time for this appointment."}
             </DialogDescription>
           </DialogHeader>
           <Textarea
@@ -267,7 +298,9 @@ export default function ClinicAppointments() {
             placeholder={
               actionType === "decline"
                 ? "Let the patient know why the appointment cannot be confirmed."
-                : "Suggest a new time window or ask the patient to submit another request."
+                : actionType === "cancel"
+                  ? "Let the patient know why the appointment is being cancelled."
+                  : "Suggest a new time window or ask the patient to submit another request."
             }
             className="min-h-[120px]"
           />

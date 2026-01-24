@@ -5,7 +5,7 @@ import { useTranslation } from "@/lib/i18n";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAllDoctors, useClinics } from "@/lib/clinic-data";
-import { matchSpecialization, SPECIALIZATION_OPTIONS } from "@/lib/specializations";
+import { getSpecializationLabel, matchSpecialization, SPECIALIZATION_OPTIONS } from "@/lib/specializations";
 
 export default function Search() {
   const { t } = useTranslation();
@@ -17,16 +17,29 @@ export default function Search() {
   const { data: doctorsData } = useAllDoctors();
 
   const normalizedQuery = query.trim().toLowerCase();
-  const specializations = useMemo(
-    () => [
-      { id: "all", label: t("All specializations") },
-      ...SPECIALIZATION_OPTIONS.map((specialization) => ({
-        ...specialization,
-        label: t(specialization.label),
-      })),
-    ],
-    [t],
-  );
+  const specializations = useMemo(() => {
+    const specializationMap = new Map<string, string>();
+    (clinicsData?.clinics ?? []).forEach((clinic) => {
+      clinic.specializations.forEach((spec) => {
+        const normalized = matchSpecialization(spec) ?? spec;
+        if (!specializationMap.has(normalized)) {
+          specializationMap.set(normalized, getSpecializationLabel(normalized));
+        }
+      });
+    });
+
+    if (specializationMap.size === 0) {
+      SPECIALIZATION_OPTIONS.forEach((specialization) => {
+        specializationMap.set(specialization.id, specialization.label);
+      });
+    }
+
+    const dynamicOptions = Array.from(specializationMap.entries())
+      .map(([id, label]) => ({ id, label: t(label) }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+
+    return [{ id: "all", label: t("All specializations") }, ...dynamicOptions];
+  }, [clinicsData?.clinics, t]);
 
   const normalizedSpecialization =
     specializationFilter === "all"
