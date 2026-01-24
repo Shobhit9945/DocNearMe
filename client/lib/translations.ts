@@ -184,6 +184,8 @@ export const translations: Record<string, TranslationEntry> = {
   "Profile details": { ja: "プロフィール詳細" },
   "Profile saved.": { ja: "プロフィールを保存しました。" },
   "Public access": { ja: "パブリックアクセス" },
+  "Help & support": { ja: "ヘルプとサポート" },
+  "Contact us at": { ja: "お問い合わせ" },
   "Rating": { ja: "評価" },
   "Record deleted.": { ja: "記録を削除しました。" },
   "Record renamed.": { ja: "記録名を変更しました。" },

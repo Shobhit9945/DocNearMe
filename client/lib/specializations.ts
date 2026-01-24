@@ -93,6 +93,24 @@ export const matchSpecialization = (input: string): string | null => {
   return null;
 };
 
+export const resolveSpecializationId = (
+  input: string,
+  fallbackId: string = SPECIALIZATION_OPTIONS[0]?.id ?? "General Physician"
+): string => {
+  const normalized = matchSpecialization(input);
+  if (normalized) return normalized;
+
+  const trimmed = input.trim();
+  if (!trimmed) return fallbackId;
+
+  const lower = trimmed.toLowerCase();
+  if (lower === "other" || lower === "unsure") {
+    return fallbackId;
+  }
+
+  return fallbackId;
+};
+
 export const getSpecializationLabel = (specialization: string): string => {
   const normalized = matchSpecialization(specialization) ?? specialization.trim();
   if (!normalized) return "";

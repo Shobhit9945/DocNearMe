@@ -3,7 +3,7 @@ import { Send, Loader2, ChevronLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { PageScaffold } from "@/components/PageScaffold";
 import { useTranslation } from "@/lib/i18n";
-import { matchSpecialization, SPECIALIZATION_IDS } from "@/lib/specializations";
+import { getSpecializationLabel, resolveSpecializationId, SPECIALIZATION_IDS } from "@/lib/specializations";
 
 // ---------- Types ----------
 type ChatMessage = {
@@ -162,6 +162,10 @@ const DocDaisy: React.FC = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  const recommendedLabel = recommendedSpecialization
+    ? getSpecializationLabel(recommendedSpecialization)
+    : "";
+
   const handleReevaluation = () => {
     setRecommendedSpecialization(null);
     setMessages((prev) => [
@@ -213,8 +217,7 @@ const DocDaisy: React.FC = () => {
       setMessages((prev) => [...prev, { sender: "bot", text: finalBotReply }]);
 
       if (specialization && specialization !== "Unsure") {
-        const normalized = matchSpecialization(specialization);
-        const safeSpecialization = normalized ?? specialization.trim();
+        const safeSpecialization = resolveSpecializationId(specialization);
         setRecommendedSpecialization(safeSpecialization);
       }
     } catch (err) {
@@ -296,7 +299,7 @@ const DocDaisy: React.FC = () => {
                   <p className="text-sm font-semibold text-[#002D55] mb-3">
                     Assessment complete. We recommend a specialist in
                     <strong className="font-extrabold text-[#3A12DB] ml-1">
-                      {recommendedSpecialization}
+                      {recommendedLabel}
                     </strong>
                     .
                   </p>
@@ -307,7 +310,7 @@ const DocDaisy: React.FC = () => {
                         className="flex-1 bg-[#3A12DB] text-white text-base font-bold py-3 rounded-lg shadow-[0_4px_10px_0_rgba(58,18,219,0.3)] hover:bg-[#2A0F9D] transition-colors flex items-center justify-center"
                       >
                         <Send className="w-5 h-5 mr-2" />
-                        Search clinics for {recommendedSpecialization}
+                        Search clinics for {recommendedLabel}
                       </button>
                       <button
                         onClick={handleReevaluation}
@@ -355,7 +358,7 @@ const DocDaisy: React.FC = () => {
                   <p className="text-base text-slate-700 mt-3">
                     DocDaisy recommends consulting a{" "}
                     <span className="font-semibold">
-                      {recommendedSpecialization}
+                      {recommendedLabel}
                     </span>{" "}
                     based on your inputs.
                   </p>
