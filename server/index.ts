@@ -5,9 +5,11 @@ import { handleDemo } from "./routes/demo";
 import { handleAvailability } from "./routes/availability";
 import {
   handleCancelAppointment,
-  handleCreateAppointment,
+  handleConfirmAppointment,
+  handleDeclineAppointment,
   handleListAppointments,
   handleListAppointmentsForUser,
+  handleRequestAppointment,
   handleRescheduleAppointment,
 } from "./routes/appointment";
 import docDaisyRouter from "./routes/docdaisy";
@@ -93,9 +95,12 @@ export async function createServer(): Promise<Express> {
 
   app.get("/api/demo", handleDemo);
   app.get("/api/availability", handleAvailability);
-  app.post("/api/appointments", requireAuth, handleCreateAppointment);
+  app.post("/api/appointments", requireAuth, handleRequestAppointment);
+  app.post("/api/appointments/request", requireAuth, handleRequestAppointment);
   app.patch("/api/appointments/:id/reschedule", requireAuth, handleRescheduleAppointment);
   app.patch("/api/appointments/:id/cancel", requireAuth, handleCancelAppointment);
+  app.post("/api/appointments/:id/confirm", handleConfirmAppointment);
+  app.post("/api/appointments/:id/decline", handleDeclineAppointment);
   app.get("/api/appointments", handleListAppointments);
   app.get("/api/appointments/me", requireAuth, handleListAppointmentsForUser);
   app.post("/api/auth/signup", handleSignup);

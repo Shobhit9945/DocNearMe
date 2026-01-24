@@ -1,17 +1,36 @@
+export type AppointmentStatus =
+  | "PENDING_CLINIC"
+  | "CONFIRMED"
+  | "DECLINED"
+  | "CANCELLED_BY_PATIENT"
+  | "NO_SHOW"
+  | "COMPLETED";
+
 export interface Appointment {
   _id?: unknown;
   date: string;
   dateKey: string;
   slot: string;
+  preferredStart: string;
+  preferredEnd: string;
+  confirmedStart?: string;
+  confirmedEnd?: string;
+  status: AppointmentStatus;
+  clinicConfirmationTokenHash?: string;
+  tokenExpiresAt?: Date;
+  declineReason?: string;
   specialization: string;
   doctorName?: string;
   clinicId: string;
+  serviceId?: string;
   notes?: string;
   patientId?: string;
   patientName?: string;
+  patientPhone?: string;
   patientEmail?: string;
   sharedRecord?: SharedMedicalRecord;
   createdAt: Date;
+  updatedAt?: Date;
 }
 
 export interface SharedMedicalRecord {
@@ -27,10 +46,16 @@ export interface PatientAppointmentSummary {
   appointmentId: string;
   date: string;
   slot: string;
+  preferredStart: string;
+  preferredEnd: string;
+  confirmedStart?: string;
+  confirmedEnd?: string;
+  status: AppointmentStatus;
   specialization: string;
   doctorName?: string;
   clinicId: string;
   createdAt: Date;
+  updatedAt?: Date;
 }
 
 export interface PatientUser {

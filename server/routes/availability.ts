@@ -40,10 +40,14 @@ export const handleAvailability = async (req: Request, res: Response) => {
     const appointments = await getAppointmentsCollection();
     const bookedAppointments = await appointments
       .find({ dateKey, clinicId: clinicKey })
-      .project({ slot: 1, _id: 0 })
+      .project({ slot: 1, status: 1, _id: 0 })
       .toArray();
 
-    const bookedSlots = new Set(bookedAppointments.map((appt) => appt.slot));
+    const bookedSlots = new Set(
+      bookedAppointments
+        .filter((appt) => !appt.status || appt.status === "CONFIRMED")
+        .map((appt) => appt.slot),
+    );
     availableSlots = availableSlots.filter((slot) => !bookedSlots.has(slot));
 
     res.json({ date: dateKey, clinicId: clinicKey, slots: availableSlots });
