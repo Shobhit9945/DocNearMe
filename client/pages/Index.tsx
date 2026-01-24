@@ -316,7 +316,8 @@ const Index: React.FC = () => {
   return (
     <PageScaffold contentClassName="pb-28 lg:pb-12">
       <header className="bg-white px-4 pt-10 pb-4 border-b border-gray-100 shadow-sm lg:px-10 lg:rounded-t-3xl lg:border-none lg:shadow-none">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="mx-auto w-full max-w-6xl">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-start gap-3">
             <div className="rounded-2xl bg-[#EBF5FF] p-2">
               <Navigation className="w-7 h-7 text-[#0089FF]" />
@@ -409,11 +410,12 @@ const Index: React.FC = () => {
             </div>
           </div>
           <img src="/applogo.png" alt="DocNearMe Logo" className="w-14 h-14 object-contain self-start" />
+          </div>
         </div>
       </header>
 
       <main className="flex-1 px-4 pt-4 lg:px-10 lg:pt-8">
-        <div className="lg:grid lg:grid-cols-[2fr_1fr] lg:gap-8">
+        <div className="mx-auto w-full max-w-6xl lg:grid lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] lg:gap-8">
           <section className="space-y-5">
             <Carousel
               setApi={setCarouselApi}
@@ -487,17 +489,6 @@ const Index: React.FC = () => {
           </section>
 
           <aside className="hidden lg:flex flex-col gap-5">
-            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Current location</p>
-              <p className="text-base font-bold text-slate-900 leading-snug">{locationLabel}</p>
-              {locationError ? (
-                <p className="text-sm text-red-500 mt-2">{locationError}</p>
-              ) : (
-                <p className="text-sm text-slate-500 mt-2">
-                  Your nearest clinics are shown based on this location.
-                </p>
-              )}
-            </div>
             <DocDaisyBanner variant="card" onClick={() => navigate("/docdaisy")} className="bg-white" />
           </aside>
         </div>
