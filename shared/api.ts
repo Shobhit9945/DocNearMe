@@ -10,6 +10,7 @@ export interface DemoResponse {
 
 export type AppointmentStatus =
   | "PENDING_CLINIC"
+  | "RESCHEDULE_REQUESTED"
   | "CONFIRMED"
   | "DECLINED"
   | "CANCELLED_BY_PATIENT"
@@ -27,6 +28,7 @@ export interface AppointmentResponseItem {
   confirmedEnd?: string;
   status: AppointmentStatus;
   declineReason?: string;
+  clinicMessage?: string;
   specialization: string;
   doctorName?: string;
   clinicId: string;
@@ -80,6 +82,16 @@ export interface AppointmentDeclineRequest {
 }
 
 export interface AppointmentDeclineResponse {
+  success: boolean;
+  appointment: AppointmentResponseItem;
+  message: string;
+}
+
+export interface AppointmentRescheduleMessageRequest {
+  message: string;
+}
+
+export interface AppointmentRescheduleMessageResponse {
   success: boolean;
   appointment: AppointmentResponseItem;
   message: string;
