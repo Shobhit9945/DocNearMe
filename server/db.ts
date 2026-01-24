@@ -17,24 +17,30 @@ import {
 
 const uri = process.env.MONGODB_URI ?? process.env.MONGODB_API_URL ?? process.env.VITE_MONGODB_API_URL;
 const dbName = process.env.MONGODB_DB_NAME ?? process.env.MONGODB_DATABASE ?? "patients";
+const clinicDbName =
+  process.env.MONGODB_CLINIC_DB_NAME ?? process.env.MONGODB_CLINIC_DATABASE ?? "clinics";
 const preferMemory = process.env.USE_IN_MEMORY_DB === "true";
 const allowMemoryFallback = process.env.ALLOW_IN_MEMORY_DB !== "false";
 
 // ---- Cache across Netlify function invocations ----
 type Cache = {
   client: MongoClient | null;
-  db: Db | InMemoryDb | null;
+  patientDb: Db | InMemoryPatientDb | null;
+  clinicDb: Db | InMemoryClinicDb | null;
   connectPromise: Promise<MongoClient> | null;
-  prepared: boolean; // indexes + admin seeded
+  preparedPatients: boolean;
+  preparedClinics: boolean;
 };
 
 const g = globalThis as unknown as { __docnearmeCache?: Cache };
 if (!g.__docnearmeCache) {
   g.__docnearmeCache = {
     client: null,
-    db: null,
+    patientDb: null,
+    clinicDb: null,
     connectPromise: null,
-    prepared: false,
+    preparedPatients: false,
+    preparedClinics: false,
   };
 }
 const cache = g.__docnearmeCache;
@@ -145,7 +151,7 @@ class InMemoryCollection<T extends Record<string, unknown>> {
   }
 }
 
-export type InMemoryDb = {
+export type InMemoryPatientDb = {
   kind: "memory";
   collections: {
     appointments: InMemoryCollection<Appointment>;
@@ -154,6 +160,12 @@ export type InMemoryDb = {
     medicalRecords: InMemoryCollection<MedicalRecord>;
     medicalConsents: InMemoryCollection<MedicalConsent>;
     medicalRecordKeys: InMemoryCollection<MedicalRecordKey>;
+  };
+};
+
+export type InMemoryClinicDb = {
+  kind: "memory";
+  collections: {
     clinicReviews: InMemoryCollection<ClinicReview>;
     clinicAccounts: InMemoryCollection<ClinicAccount>;
     clinicInfo: InMemoryCollection<ClinicInfo>;
@@ -161,7 +173,7 @@ export type InMemoryDb = {
   };
 };
 
-const inMemoryDb: InMemoryDb = {
+const inMemoryPatientDb: InMemoryPatientDb = {
   kind: "memory",
   collections: {
     appointments: new InMemoryCollection<Appointment>([]),
@@ -170,6 +182,12 @@ const inMemoryDb: InMemoryDb = {
     medicalRecords: new InMemoryCollection<MedicalRecord>([]),
     medicalConsents: new InMemoryCollection<MedicalConsent>([]),
     medicalRecordKeys: new InMemoryCollection<MedicalRecordKey>([]),
+  },
+};
+
+const inMemoryClinicDb: InMemoryClinicDb = {
+  kind: "memory",
+  collections: {
     clinicReviews: new InMemoryCollection<ClinicReview>([]),
     clinicAccounts: new InMemoryCollection<ClinicAccount>([]),
     clinicInfo: new InMemoryCollection<ClinicInfo>([]),
@@ -177,22 +195,20 @@ const inMemoryDb: InMemoryDb = {
   },
 };
 
-export const isMemoryDb = (db: Db | InMemoryDb): db is InMemoryDb => (db as InMemoryDb).kind === "memory";
+export const isMemoryPatientDb = (db: Db | InMemoryPatientDb): db is InMemoryPatientDb =>
+  (db as InMemoryPatientDb).kind === "memory";
+export const isMemoryClinicDb = (db: Db | InMemoryClinicDb): db is InMemoryClinicDb =>
+  (db as InMemoryClinicDb).kind === "memory";
 
-const getCollection = <T>(
-  db: Db | InMemoryDb,
-  name:
-    | "appointments"
-    | "patients"
-    | "emailOtps"
-    | "medicalRecords"
-    | "medicalConsents"
-    | "medicalRecordKeys"
-    | "clinicReviews"
-    | "clinicAccounts"
-    | "clinicInfo"
-    | "clinicDoctors",
-) => (isMemoryDb(db) ? db.collections[name] : db.collection<T>(name));
+const getPatientCollection = <T>(
+  db: Db | InMemoryPatientDb,
+  name: "appointments" | "patients" | "emailOtps" | "medicalRecords" | "medicalConsents" | "medicalRecordKeys",
+) => (isMemoryPatientDb(db) ? db.collections[name] : db.collection<T>(name));
+
+const getClinicCollection = <T>(
+  db: Db | InMemoryClinicDb,
+  name: "clinicReviews" | "clinicAccounts" | "clinicInfo" | "clinicDoctors",
+) => (isMemoryClinicDb(db) ? db.collections[name] : db.collection<T>(name));
 
 // Short, serverless-friendly timeouts. Keep pools tiny.
 function newClient() {
@@ -207,19 +223,15 @@ function newClient() {
   });
 }
 
-async function prepareOnce(db: Db | InMemoryDb) {
-  if (cache.prepared) return;
+async function preparePatientOnce(db: Db | InMemoryPatientDb) {
+  if (cache.preparedPatients) return;
 
-  const appointments = getCollection<Appointment>(db, "appointments");
-  const patients = getCollection<PatientUser>(db, "patients");
-  const emailOtps = getCollection<EmailOtp>(db, "emailOtps");
-  const medicalRecords = getCollection<MedicalRecord>(db, "medicalRecords");
-  const medicalConsents = getCollection<MedicalConsent>(db, "medicalConsents");
-  const medicalRecordKeys = getCollection<MedicalRecordKey>(db, "medicalRecordKeys");
-  const clinicReviews = getCollection<ClinicReview>(db, "clinicReviews");
-  const clinicAccounts = getCollection<ClinicAccount>(db, "clinicAccounts");
-  const clinicInfo = getCollection<ClinicInfo>(db, "clinicInfo");
-  const clinicDoctors = getCollection<ClinicDoctorRecord>(db, "clinicDoctors");
+  const appointments = getPatientCollection<Appointment>(db, "appointments");
+  const patients = getPatientCollection<PatientUser>(db, "patients");
+  const emailOtps = getPatientCollection<EmailOtp>(db, "emailOtps");
+  const medicalRecords = getPatientCollection<MedicalRecord>(db, "medicalRecords");
+  const medicalConsents = getPatientCollection<MedicalConsent>(db, "medicalConsents");
+  const medicalRecordKeys = getPatientCollection<MedicalRecordKey>(db, "medicalRecordKeys");
 
   // Run in parallel, but only once per warm container
   await Promise.all([
@@ -230,6 +242,20 @@ async function prepareOnce(db: Db | InMemoryDb) {
     medicalRecords.createIndex({ patientId: 1, createdAt: -1 }),
     medicalConsents.createIndex({ patientId: 1, consentVersion: 1 }, { unique: true }),
     medicalRecordKeys.createIndex({ patientId: 1 }, { unique: true }),
+  ]);
+
+  cache.preparedPatients = true;
+}
+
+async function prepareClinicOnce(db: Db | InMemoryClinicDb) {
+  if (cache.preparedClinics) return;
+
+  const clinicReviews = getClinicCollection<ClinicReview>(db, "clinicReviews");
+  const clinicAccounts = getClinicCollection<ClinicAccount>(db, "clinicAccounts");
+  const clinicInfo = getClinicCollection<ClinicInfo>(db, "clinicInfo");
+  const clinicDoctors = getClinicCollection<ClinicDoctorRecord>(db, "clinicDoctors");
+
+  await Promise.all([
     clinicReviews.createIndex({ clinicId: 1, createdAt: -1 }),
     clinicAccounts.createIndex({ clinicId: 1 }, { unique: true }),
     clinicAccounts.createIndex({ userId: 1 }, { unique: true }),
@@ -240,13 +266,13 @@ async function prepareOnce(db: Db | InMemoryDb) {
 
   await seedClinicData(db);
 
-  cache.prepared = true;
+  cache.preparedClinics = true;
 }
 
-async function seedClinicData(db: Db | InMemoryDb) {
-  const clinics = getCollection<ClinicInfo>(db, "clinicInfo");
-  const clinicAccounts = getCollection<ClinicAccount>(db, "clinicAccounts");
-  const clinicDoctors = getCollection<ClinicDoctorRecord>(db, "clinicDoctors");
+async function seedClinicData(db: Db | InMemoryClinicDb) {
+  const clinics = getClinicCollection<ClinicInfo>(db, "clinicInfo");
+  const clinicAccounts = getClinicCollection<ClinicAccount>(db, "clinicAccounts");
+  const clinicDoctors = getClinicCollection<ClinicDoctorRecord>(db, "clinicDoctors");
 
   const existingClinic = await clinics.findOne({});
   if (existingClinic) {
@@ -294,27 +320,7 @@ async function seedClinicData(db: Db | InMemoryDb) {
   await Promise.all(doctorInsertions);
 }
 
-export async function connectToDatabase(): Promise<Db | InMemoryDb> {
-  if (cache.db) return cache.db;
-
-  if (preferMemory) {
-    console.warn("[db] Using in-memory database because USE_IN_MEMORY_DB=true.");
-    cache.db = inMemoryDb;
-    await prepareOnce(cache.db);
-    return cache.db;
-  }
-
-  if (!uri) {
-    if (!allowMemoryFallback) {
-      throw new Error("MONGODB_URI environment variable is required.");
-    }
-
-    console.warn("[db] Missing MONGODB_URI. Falling back to in-memory database for this session.");
-    cache.db = inMemoryDb;
-    await prepareOnce(cache.db);
-    return cache.db;
-  }
-
+async function connectToMongoClient() {
   if (!cache.connectPromise) {
     const host = (() => {
       try {
@@ -334,20 +340,48 @@ export async function connectToDatabase(): Promise<Db | InMemoryDb> {
       });
   }
 
+  return cache.connectPromise;
+}
+
+export async function connectToDatabase(): Promise<Db | InMemoryPatientDb> {
+  if (cache.patientDb) return cache.patientDb;
+
+  if (preferMemory) {
+    console.warn("[db] Using in-memory database because USE_IN_MEMORY_DB=true.");
+    cache.patientDb = inMemoryPatientDb;
+    cache.clinicDb = inMemoryClinicDb;
+    await Promise.all([preparePatientOnce(cache.patientDb), prepareClinicOnce(cache.clinicDb)]);
+    return cache.patientDb;
+  }
+
+  if (!uri) {
+    if (!allowMemoryFallback) {
+      throw new Error("MONGODB_URI environment variable is required.");
+    }
+
+    console.warn("[db] Missing MONGODB_URI. Falling back to in-memory database for this session.");
+    cache.patientDb = inMemoryPatientDb;
+    cache.clinicDb = inMemoryClinicDb;
+    await Promise.all([preparePatientOnce(cache.patientDb), prepareClinicOnce(cache.clinicDb)]);
+    return cache.patientDb;
+  }
+
   try {
     // Reuse the same client on warm calls
-    const client = await cache.connectPromise;
-    const db = client.db(dbName);
+    const client = await connectToMongoClient();
+    const patientDb = client.db(dbName);
+    const clinicDb = client.db(clinicDbName);
 
     cache.client = client;
-    cache.db = db;
+    cache.patientDb = patientDb;
+    cache.clinicDb = clinicDb;
 
     // Make sure prep work runs only once per container
-    await prepareOnce(db);
+    await Promise.all([preparePatientOnce(patientDb), prepareClinicOnce(clinicDb)]);
 
-    console.info(`[db] Connected to ${db.databaseName}`);
+    console.info(`[db] Connected to patient DB ${patientDb.databaseName} and clinic DB ${clinicDb.databaseName}`);
 
-    return db;
+    return patientDb;
   } catch (err) {
     console.error("[db] MongoDB connection failed", err);
 
@@ -356,31 +390,34 @@ export async function connectToDatabase(): Promise<Db | InMemoryDb> {
     }
 
     console.warn("[db] Falling back to in-memory database. Data will reset on each restart.");
-    cache.db = inMemoryDb;
+    cache.patientDb = inMemoryPatientDb;
+    cache.clinicDb = inMemoryClinicDb;
     cache.connectPromise = null;
-    await prepareOnce(cache.db);
-    return cache.db;
+    await Promise.all([preparePatientOnce(cache.patientDb), prepareClinicOnce(cache.clinicDb)]);
+    return cache.patientDb;
   }
 }
 
 export async function getAppointmentsCollection(): Promise<Collection<Appointment> | InMemoryCollection<Appointment>> {
   const db = await connectToDatabase();
-  return getCollection<Appointment>(db, "appointments") as Collection<Appointment> | InMemoryCollection<Appointment>;
+  return getPatientCollection<Appointment>(db, "appointments") as
+    | Collection<Appointment>
+    | InMemoryCollection<Appointment>;
 }
 
 export async function getPatientsCollection(): Promise<Collection<PatientUser> | InMemoryCollection<PatientUser>> {
   const db = await connectToDatabase();
-  return getCollection<PatientUser>(db, "patients") as Collection<PatientUser> | InMemoryCollection<PatientUser>;
+  return getPatientCollection<PatientUser>(db, "patients") as Collection<PatientUser> | InMemoryCollection<PatientUser>;
 }
 
 export async function getEmailOtpsCollection(): Promise<Collection<EmailOtp> | InMemoryCollection<EmailOtp>> {
   const db = await connectToDatabase();
-  return getCollection<EmailOtp>(db, "emailOtps") as Collection<EmailOtp> | InMemoryCollection<EmailOtp>;
+  return getPatientCollection<EmailOtp>(db, "emailOtps") as Collection<EmailOtp> | InMemoryCollection<EmailOtp>;
 }
 
 export async function getMedicalRecordsCollection(): Promise<Collection<MedicalRecord> | InMemoryCollection<MedicalRecord>> {
   const db = await connectToDatabase();
-  return getCollection<MedicalRecord>(db, "medicalRecords") as
+  return getPatientCollection<MedicalRecord>(db, "medicalRecords") as
     | Collection<MedicalRecord>
     | InMemoryCollection<MedicalRecord>;
 }
@@ -389,7 +426,7 @@ export async function getMedicalConsentsCollection(): Promise<
   Collection<MedicalConsent> | InMemoryCollection<MedicalConsent>
 > {
   const db = await connectToDatabase();
-  return getCollection<MedicalConsent>(db, "medicalConsents") as
+  return getPatientCollection<MedicalConsent>(db, "medicalConsents") as
     | Collection<MedicalConsent>
     | InMemoryCollection<MedicalConsent>;
 }
@@ -398,7 +435,7 @@ export async function getMedicalRecordKeysCollection(): Promise<
   Collection<MedicalRecordKey> | InMemoryCollection<MedicalRecordKey>
 > {
   const db = await connectToDatabase();
-  return getCollection<MedicalRecordKey>(db, "medicalRecordKeys") as
+  return getPatientCollection<MedicalRecordKey>(db, "medicalRecordKeys") as
     | Collection<MedicalRecordKey>
     | InMemoryCollection<MedicalRecordKey>;
 }
@@ -406,8 +443,8 @@ export async function getMedicalRecordKeysCollection(): Promise<
 export async function getClinicReviewsCollection(): Promise<
   Collection<ClinicReview> | InMemoryCollection<ClinicReview>
 > {
-  const db = await connectToDatabase();
-  return getCollection<ClinicReview>(db, "clinicReviews") as
+  const db = await connectToClinicDatabase();
+  return getClinicCollection<ClinicReview>(db, "clinicReviews") as
     | Collection<ClinicReview>
     | InMemoryCollection<ClinicReview>;
 }
@@ -415,22 +452,75 @@ export async function getClinicReviewsCollection(): Promise<
 export async function getClinicAccountsCollection(): Promise<
   Collection<ClinicAccount> | InMemoryCollection<ClinicAccount>
 > {
-  const db = await connectToDatabase();
-  return getCollection<ClinicAccount>(db, "clinicAccounts") as
+  const db = await connectToClinicDatabase();
+  return getClinicCollection<ClinicAccount>(db, "clinicAccounts") as
     | Collection<ClinicAccount>
     | InMemoryCollection<ClinicAccount>;
 }
 
 export async function getClinicInfoCollection(): Promise<Collection<ClinicInfo> | InMemoryCollection<ClinicInfo>> {
-  const db = await connectToDatabase();
-  return getCollection<ClinicInfo>(db, "clinicInfo") as Collection<ClinicInfo> | InMemoryCollection<ClinicInfo>;
+  const db = await connectToClinicDatabase();
+  return getClinicCollection<ClinicInfo>(db, "clinicInfo") as Collection<ClinicInfo> | InMemoryCollection<ClinicInfo>;
 }
 
 export async function getClinicDoctorsCollection(): Promise<
   Collection<ClinicDoctorRecord> | InMemoryCollection<ClinicDoctorRecord>
 > {
-  const db = await connectToDatabase();
-  return getCollection<ClinicDoctorRecord>(db, "clinicDoctors") as
+  const db = await connectToClinicDatabase();
+  return getClinicCollection<ClinicDoctorRecord>(db, "clinicDoctors") as
     | Collection<ClinicDoctorRecord>
     | InMemoryCollection<ClinicDoctorRecord>;
+}
+
+export async function connectToClinicDatabase(): Promise<Db | InMemoryClinicDb> {
+  if (cache.clinicDb) return cache.clinicDb;
+
+  if (preferMemory) {
+    console.warn("[db] Using in-memory clinic database because USE_IN_MEMORY_DB=true.");
+    cache.patientDb = inMemoryPatientDb;
+    cache.clinicDb = inMemoryClinicDb;
+    await Promise.all([preparePatientOnce(cache.patientDb), prepareClinicOnce(cache.clinicDb)]);
+    return cache.clinicDb;
+  }
+
+  if (!uri) {
+    if (!allowMemoryFallback) {
+      throw new Error("MONGODB_URI environment variable is required.");
+    }
+
+    console.warn("[db] Missing MONGODB_URI. Falling back to in-memory clinic database for this session.");
+    cache.patientDb = inMemoryPatientDb;
+    cache.clinicDb = inMemoryClinicDb;
+    await Promise.all([preparePatientOnce(cache.patientDb), prepareClinicOnce(cache.clinicDb)]);
+    return cache.clinicDb;
+  }
+
+  try {
+    const client = await connectToMongoClient();
+    const patientDb = client.db(dbName);
+    const clinicDb = client.db(clinicDbName);
+
+    cache.client = client;
+    cache.patientDb = patientDb;
+    cache.clinicDb = clinicDb;
+
+    await Promise.all([preparePatientOnce(patientDb), prepareClinicOnce(clinicDb)]);
+
+    console.info(`[db] Connected to patient DB ${patientDb.databaseName} and clinic DB ${clinicDb.databaseName}`);
+
+    return clinicDb;
+  } catch (err) {
+    console.error("[db] MongoDB connection failed", err);
+
+    if (!allowMemoryFallback) {
+      throw err;
+    }
+
+    console.warn("[db] Falling back to in-memory clinic database. Data will reset on each restart.");
+    cache.patientDb = inMemoryPatientDb;
+    cache.clinicDb = inMemoryClinicDb;
+    cache.connectPromise = null;
+    await Promise.all([preparePatientOnce(cache.patientDb), prepareClinicOnce(cache.clinicDb)]);
+    return cache.clinicDb;
+  }
 }
