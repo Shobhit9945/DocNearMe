@@ -127,7 +127,7 @@ export default function Search() {
         <p className="text-sm text-slate-500 mt-2">{t("specialists, clinics and hospitals nearby.")}</p>
       </header>
 
-      <main className="flex-1 px-4 pt-6 lg:px-10 lg:pt-10">
+      <main className="mx-auto w-full max-w-6xl flex-1 px-4 pt-6 lg:px-10 lg:pt-10">
         <div className="flex flex-col gap-6 lg:flex-row">
           <section className="flex-1 space-y-6">
             <div className="rounded-[24px] border border-slate-100 bg-white p-6 shadow-sm lg:p-8">
@@ -236,7 +236,7 @@ export default function Search() {
                   </div>
                   <div
                     ref={doctorScrollerRef}
-                    className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2 pt-1 lg:overflow-x-hidden"
+                    className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2 pt-1"
                   >
                     {visibleDoctors.map((doctor) => {
                       const clinic = clinicsData?.clinics?.find((entry) => entry.id === doctor.clinicId);
@@ -319,7 +319,7 @@ export default function Search() {
                   </div>
                   <div
                     ref={clinicScrollerRef}
-                    className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2 pt-1 lg:overflow-x-hidden"
+                    className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2 pt-1"
                   >
                     {visibleClinics.map((clinic) => (
                       <article
