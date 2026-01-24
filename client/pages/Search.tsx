@@ -112,7 +112,7 @@ export default function Search() {
   const visibleClinics = resultType === "doctor" ? [] : filteredClinics;
   const visibleDoctors = resultType === "clinic" ? [] : filteredDoctors;
   const scrollerCardClass =
-    "flex-none min-w-[85%] sm:min-w-[60%] md:min-w-[45%] lg:min-w-[calc((100%-2rem)/3)] snap-start";
+    "flex-none min-w-[85%] sm:min-w-[60%] md:min-w-[45%] lg:min-w-[calc((100%-1rem)/2)] snap-start";
 
   const scrollScroller = (scroller: HTMLDivElement | null, direction: "left" | "right") => {
     if (!scroller) return;
@@ -142,7 +142,7 @@ export default function Search() {
                   {visibleDoctors.length + visibleClinics.length} {t("matches")}
                 </div>
                 </div>
-              <div className="mt-5 grid gap-4 lg:grid-cols-2 xl:grid-cols-[2fr_1fr_1fr_1fr]">
+              <div className="mt-5 grid gap-4 lg:grid-cols-2 2xl:grid-cols-[2fr_1fr_1fr_1fr]">
                 <label className="flex flex-col gap-2 text-sm font-semibold text-slate-700">
                   {t("Search term")}
                   <div className="relative">
