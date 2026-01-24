@@ -92,7 +92,7 @@ export function ClinicLayout() {
 
       {/* Main Content */}
       <main className="flex-1 overflow-auto">
-        <div className="p-6 md:p-8">
+        <div className="mx-auto w-full max-w-6xl p-6 md:p-8">
           <Outlet />
         </div>
       </main>
