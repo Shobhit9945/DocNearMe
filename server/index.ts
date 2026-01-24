@@ -105,7 +105,7 @@ export async function createServer(): Promise<Express> {
   app.post("/api/auth/request-password-reset", handleRequestPasswordReset);
   app.post("/api/auth/reset-password", handleResetPassword);
   app.post("/api/clinic-auth/login", handleClinicLogin);
-  app.get("/api/clinic-credentials", handleClinicCredentials);
+  app.get("/api/clinic-credentials", requireClinicAuth, handleClinicCredentials);
   app.get("/api/clinics", handleClinicList);
   app.get("/api/clinics/doctors", handleClinicDoctorsAll);
   app.get("/api/clinics/:clinicId", handleClinicProfile);

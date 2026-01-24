@@ -168,20 +168,22 @@ export const handleClinicLogin: RequestHandler = async (req, res, next) => {
   }
 };
 
-export const handleClinicCredentials: RequestHandler = async (_req, res, next) => {
+export const handleClinicCredentials: RequestHandler = async (req, res, next) => {
   try {
+    if (!req.clinicAuth?.clinicId) {
+      return res.status(401).json({ error: "Authentication required." });
+    }
+
+    const clinicId = req.clinicAuth.clinicId;
     const accounts = await getClinicAccountsCollection();
     const clinics = await getClinicInfoCollection();
-    const clinicList = await clinics.find({}).toArray();
-    const clinicMap = new Map(clinicList.map((clinic) => [clinic.clinicId ?? clinic.id, clinic.name]));
-
-    const accountList = await accounts.find({}).toArray();
+    const clinic = await clinics.findOne({ clinicId });
+    const accountList = await accounts.find({ clinicId }).toArray();
     const response: ClinicCredentialsResponse = {
       credentials: accountList.map((account) => ({
         clinicId: account.clinicId,
-        clinicName: clinicMap.get(account.clinicId) ?? account.clinicId,
+        clinicName: clinic?.name ?? account.clinicId,
         userId: account.userId,
-        password: account.tempPassword ?? "Use existing password",
       })),
     };
 
@@ -301,28 +303,39 @@ export const handleUpdateClinicDoctors: RequestHandler = async (req, res, next) 
       }
     }
 
-    await Promise.all(
-      payload.doctors.map(async (doctor) => {
-        const existingDoctor = await doctors.findOne({ doctorId: doctor.id });
-        const record = {
-          clinicId,
-          doctorId: doctor.id,
-          name: doctor.name,
-          specialization: doctor.specialization,
-          languages: doctor.languages,
-          rating: doctor.rating,
-          nextAvailable: doctor.nextAvailable,
-          availability: doctor.availability,
-          updatedAt: new Date(),
-        };
+    for (const doctor of payload.doctors) {
+      if (doctor.clinicId !== clinicId) {
+        return res.status(400).json({ error: "Doctor clinicId does not match authenticated clinic." });
+      }
+      const conflictingDoctor = await doctors.findOne({
+        doctorId: doctor.id,
+        clinicId: { $ne: clinicId },
+      });
+      if (conflictingDoctor) {
+        return res.status(409).json({ error: "Doctor ID already belongs to another clinic." });
+      }
+    }
 
-        if (existingDoctor) {
-          await doctors.updateOne({ doctorId: doctor.id }, { $set: record });
-        } else {
-          await doctors.insertOne(record);
-        }
-      }),
-    );
+    for (const doctor of payload.doctors) {
+      const existingDoctor = await doctors.findOne({ clinicId, doctorId: doctor.id });
+      const record = {
+        clinicId,
+        doctorId: doctor.id,
+        name: doctor.name,
+        specialization: doctor.specialization,
+        languages: doctor.languages,
+        rating: doctor.rating,
+        nextAvailable: doctor.nextAvailable,
+        availability: doctor.availability,
+        updatedAt: new Date(),
+      };
+
+      if (existingDoctor) {
+        await doctors.updateOne({ clinicId, doctorId: doctor.id }, { $set: record });
+      } else {
+        await doctors.insertOne(record);
+      }
+    }
 
     const refreshed = await doctors.find({ clinicId }).toArray();
     const response: ClinicDoctorsResponse = {
