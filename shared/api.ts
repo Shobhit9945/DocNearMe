@@ -8,36 +8,80 @@ export interface DemoResponse {
   message: string;
 }
 
+export type AppointmentStatus =
+  | "PENDING_CLINIC"
+  | "CONFIRMED"
+  | "DECLINED"
+  | "CANCELLED_BY_PATIENT"
+  | "NO_SHOW"
+  | "COMPLETED";
+
 export interface AppointmentResponseItem {
   _id: string;
   date: string;
   dateKey: string;
   slot: string;
+  preferredStart: string;
+  preferredEnd: string;
+  confirmedStart?: string;
+  confirmedEnd?: string;
+  status: AppointmentStatus;
+  declineReason?: string;
   specialization: string;
   doctorName?: string;
   clinicId: string;
+  serviceId?: string;
   notes?: string;
   patientId?: string;
   patientName?: string;
+  patientPhone?: string;
   patientEmail?: string;
   createdAt: string;
+  updatedAt?: string;
 }
 
 export interface AppointmentCreateRequest {
-  date: string;
-  slot: string;
-  specialization: string;
-  doctorName?: string;
   clinicId: string;
-  notes?: string;
-  patientName?: string;
-  patientEmail?: string;
+  preferredStart: string;
+  preferredEnd: string;
+  patientName: string;
+  patientPhone: string;
+  patientEmail: string;
+  note?: string;
+  serviceId?: string;
+  specialization?: string;
+  doctorName?: string;
+  slot?: string;
   sharedRecord?: SharedMedicalRecord;
 }
 
 export interface AppointmentCreateResponse {
   success: boolean;
   id: string;
+  appointment: AppointmentResponseItem;
+  message: string;
+}
+
+export interface AppointmentConfirmRequest {
+  clinicConfirmationToken: string;
+  confirmedStart?: string;
+  confirmedEnd?: string;
+}
+
+export interface AppointmentConfirmResponse {
+  success: boolean;
+  appointment: AppointmentResponseItem;
+  message: string;
+}
+
+export interface AppointmentDeclineRequest {
+  clinicConfirmationToken: string;
+  declineReason?: string;
+}
+
+export interface AppointmentDeclineResponse {
+  success: boolean;
+  appointment: AppointmentResponseItem;
   message: string;
 }
 

@@ -235,7 +235,8 @@ async function preparePatientOnce(db: Db | InMemoryPatientDb) {
 
   // Run in parallel, but only once per warm container
   await Promise.all([
-    appointments.createIndex({ dateKey: 1, slot: 1, clinicId: 1 }, { unique: true }),
+    appointments.createIndex({ clinicId: 1, status: 1, confirmedStart: 1, confirmedEnd: 1 }),
+    appointments.createIndex({ dateKey: 1, slot: 1, clinicId: 1, status: 1 }),
     patients.createIndex({ email: 1 }, { unique: true }),
     emailOtps.createIndex({ email: 1, createdAt: -1 }),
     emailOtps.createIndex({ expiresAt: 1 }),

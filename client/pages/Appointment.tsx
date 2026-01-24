@@ -112,6 +112,7 @@ export default function Appointment() {
   const [notes, setNotes] = useState("");
   const [patientName, setPatientName] = useState("");
   const [patientEmail, setPatientEmail] = useState("");
+  const [patientPhone, setPatientPhone] = useState("");
   const [selectedVaultRecordId, setSelectedVaultRecordId] = useState("");
   const [selectedVaultRecord, setSelectedVaultRecord] = useState<MedicalRecordDetail | null>(null);
   const [vaultRecordError, setVaultRecordError] = useState<string | null>(null);
@@ -135,6 +136,7 @@ export default function Appointment() {
   const [fieldErrors, setFieldErrors] = useState<{
     name?: string;
     email?: string;
+    phone?: string;
     clinic?: string;
     date?: string;
     slot?: string;
@@ -155,6 +157,18 @@ export default function Appointment() {
       day: "numeric",
       year: "numeric",
     }).format(date);
+
+  const buildDateTimeFromSlot = (date: Date, slot: string) => {
+    const [time, period] = slot.split(" ");
+    const [hoursText, minutesText] = time.split(":");
+    const hours = Number(hoursText);
+    const minutes = Number(minutesText);
+    const normalizedHours =
+      period === "PM" && hours < 12 ? hours + 12 : period === "AM" && hours === 12 ? 0 : hours;
+    const result = new Date(date);
+    result.setHours(normalizedHours, minutes, 0, 0);
+    return result;
+  };
 
   const clearFieldError = (field: keyof typeof fieldErrors) => {
     setFieldErrors((prev) => ({ ...prev, [field]: undefined }));
@@ -418,27 +432,31 @@ export default function Appointment() {
 
   const appointments = useMemo<UpcomingAppointment[]>(() => {
     const items = appointmentsData?.appointments ?? [];
-    return items.map((appointment) => {
-      const clinicName =
-        appointment.clinicId === "global"
-          ? "Any clinic"
-          : clinics.find((clinic) => clinic.id === appointment.clinicId)?.name ?? "Clinic";
-      const doctorLabel = appointment.doctorName ?? appointment.specialization;
-      return {
-        id: appointment._id,
-        doctor: doctorLabel,
-        specialization: appointment.specialization,
-        date: formatDateLabel(new Date(appointment.date)),
-        time: appointment.slot,
-        dateISO: appointment.date,
-        clinic: clinicName,
-        type: "In-person",
-        clinicId: appointment.clinicId,
-        patientName: appointment.patientName,
-        patientEmail: appointment.patientEmail,
-        notes: appointment.notes,
-      };
-    });
+    return items
+      .filter(
+        (appointment) => appointment.status !== "CANCELLED_BY_PATIENT" && appointment.status !== "DECLINED",
+      )
+      .map((appointment) => {
+        const clinicName =
+          appointment.clinicId === "global"
+            ? "Any clinic"
+            : clinics.find((clinic) => clinic.id === appointment.clinicId)?.name ?? "Clinic";
+        const doctorLabel = appointment.doctorName ?? appointment.specialization;
+        return {
+          id: appointment._id,
+          doctor: doctorLabel,
+          specialization: appointment.specialization,
+          date: formatDateLabel(new Date(appointment.date)),
+          time: appointment.slot,
+          dateISO: appointment.date,
+          clinic: clinicName,
+          type: "In-person",
+          clinicId: appointment.clinicId,
+          patientName: appointment.patientName,
+          patientEmail: appointment.patientEmail,
+          notes: appointment.notes,
+        };
+      });
   }, [appointmentsData, clinics, formatDateLabel]);
 
   const hasAppointments = appointments.length > 0;
@@ -452,13 +470,14 @@ export default function Appointment() {
   const handleConfirm = async () => {
     setAuthError(null);
     if (!isAuthenticated) {
-      setAuthError("Please sign in to book an appointment.");
+      setAuthError("Please sign in to request an appointment.");
       return;
     }
 
     const errors: typeof fieldErrors = {};
     const trimmedName = patientName.trim();
     const trimmedEmail = patientEmail.trim();
+    const trimmedPhone = patientPhone.trim();
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
     if (trimmedName.length < 2) {
@@ -467,6 +486,10 @@ export default function Appointment() {
 
     if (!emailRegex.test(trimmedEmail)) {
       errors.email = "Please enter a valid email address.";
+    }
+
+    if (trimmedPhone.length < 7) {
+      errors.phone = "Please enter a valid phone number.";
     }
 
     if (!selectedClinicId) {
@@ -511,20 +534,24 @@ export default function Appointment() {
           data: selectedVaultRecord.data,
         }
       : undefined;
+    const preferredStart = buildDateTimeFromSlot(selectedDate, selectedSlot);
+    const preferredEnd = new Date(preferredStart.getTime() + 30 * 60 * 1000);
     const payload: AppointmentCreateRequest = {
-      date: selectedDate.toISOString(),
-      slot: selectedSlot,
+      clinicId: clinicKey,
+      preferredStart: preferredStart.toISOString(),
+      preferredEnd: preferredEnd.toISOString(),
+      patientName: trimmedName,
+      patientPhone: trimmedPhone,
+      patientEmail: trimmedEmail,
+      note: notes,
       specialization: selectedSpecialization,
       doctorName: doctorDisplayName,
-      clinicId: clinicKey,
-      notes,
-      patientName: trimmedName,
-      patientEmail: trimmedEmail,
+      slot: selectedSlot,
       sharedRecord: sharedRecordPayload,
     };
 
     try {
-      const response = await fetch("/api/appointments", {
+      const response = await fetch("/api/appointments/request", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -535,7 +562,7 @@ export default function Appointment() {
 
       const data = (await response.json()) as AppointmentCreateResponse | { error?: string };
       if (!response.ok) {
-        const message = "error" in data && data.error ? data.error : "Unable to book appointment.";
+        const message = "error" in data && data.error ? data.error : "Unable to request appointment.";
         if (response.status === 401) {
           setAuthError("Your session has expired. Please sign in again.");
         } else {
@@ -562,7 +589,7 @@ export default function Appointment() {
       window.scrollTo(0, 0);
       await refetchAppointments();
     } catch (error) {
-      setAuthError(error instanceof Error ? error.message : "Unable to book appointment.");
+      setAuthError(error instanceof Error ? error.message : "Unable to request appointment.");
     } finally {
       setIsBooking(false);
     }
@@ -702,18 +729,18 @@ export default function Appointment() {
           </div>
 
           <div className="space-y-2">
-            <h1 className="text-2xl font-bold text-slate-900">Appointment Confirmed!</h1>
+            <h1 className="text-2xl font-bold text-slate-900">Request received</h1>
             <p className="text-slate-600 max-w-md mx-auto">
-              Your appointment with {t(details.doctorName)} has been successfully booked for {details.dateLabel} at {details.timeLabel}.
+              Your request for {details.dateLabel} at {details.timeLabel} was sent to the clinic. We’ll email you once it’s confirmed.
             </p>
           </div>
 
           <div className="w-full max-w-2xl grid gap-4">
             <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm text-left space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="font-semibold text-slate-900">Booking details</h3>
+                <h3 className="font-semibold text-slate-900">Request details</h3>
                 <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
-                  Booking ID: {details.id}
+                  Request ID: {details.id}
                 </span>
               </div>
               <div className="grid gap-3 text-sm text-slate-700">
@@ -1167,7 +1194,7 @@ export default function Appointment() {
             <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold">
               Plan your visit
             </p>
-            <h1 className="text-2xl font-bold text-black">Book your appointment</h1>
+            <h1 className="text-2xl font-bold text-black">Request an appointment</h1>
           </div>
           <img src="/applogo.png" alt="DocNearMe Logo" className="w-14 h-14 object-contain hidden lg:block" />
         </div>
@@ -1456,6 +1483,29 @@ export default function Appointment() {
                         <p className="text-sm text-red-500">{fieldErrors.email}</p>
                       ) : null}
                     </div>
+                    <div className="space-y-2 sm:col-span-2">
+                      <label className="text-sm font-medium text-slate-700" htmlFor="patient-phone">
+                        Phone
+                      </label>
+                      <Input
+                        id="patient-phone"
+                        type="tel"
+                        value={patientPhone}
+                        onChange={(e) => {
+                          setPatientPhone(e.target.value);
+                          if (fieldErrors.phone) clearFieldError("phone");
+                        }}
+                        placeholder="+81 90 1234 5678"
+                        required
+                        aria-invalid={!!fieldErrors.phone}
+                        className={cn(
+                          fieldErrors.phone ? "border-red-400 focus-visible:ring-red-200" : ""
+                        )}
+                      />
+                      {fieldErrors.phone ? (
+                        <p className="text-sm text-red-500">{fieldErrors.phone}</p>
+                      ) : null}
+                    </div>
                   </div>
                 </div>
                 <div>
@@ -1663,10 +1713,10 @@ export default function Appointment() {
                 {isBooking ? (
                   <div className="flex items-center justify-center gap-2">
                     <Loader2 className="w-5 h-5 animate-spin" />
-                    Confirming...
+                    Sending request...
                   </div>
                 ) : (
-                  "Confirm Appointment"
+                  "Send appointment request"
                 )}
               </button>
 
