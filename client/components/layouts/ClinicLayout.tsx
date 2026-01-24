@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Calendar, Settings, LogOut } from 'lucide-react';
+import { LayoutDashboard, Calendar, UserSquare2, Users, LogOut } from 'lucide-react';
 
 export function ClinicLayout() {
   const location = useLocation();
@@ -15,6 +15,7 @@ export function ClinicLayout() {
           <p className="text-xs text-gray-500 font-medium tracking-wider uppercase mt-1">
             Clinic Portal
           </p>
+          <p className="text-xs text-gray-400 mt-2">日本語 / English</p>
         </div>
 
         <nav className="flex-1 px-4 space-y-1">
@@ -27,7 +28,7 @@ export function ClinicLayout() {
             }`}
           >
             <LayoutDashboard size={20} />
-            Dashboard
+            ダッシュボード (Dashboard)
           </Link>
           <Link
             to="/appointments"
@@ -38,32 +39,43 @@ export function ClinicLayout() {
             }`}
           >
             <Calendar size={20} />
-            Appointments
+            予約一覧 (Appointments)
           </Link>
           <Link
-            to="/settings"
+            to="/clinic-info"
             className={`flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
-              isActive('/settings')
+              isActive('/clinic-info')
                 ? 'bg-blue-50 text-blue-700'
                 : 'text-gray-700 hover:bg-gray-50'
             }`}
           >
-            <Settings size={20} />
-            Settings
+            <UserSquare2 size={20} />
+            クリニック情報 (Clinic Info)
+          </Link>
+          <Link
+            to="/doctors"
+            className={`flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
+              isActive('/doctors')
+                ? 'bg-blue-50 text-blue-700'
+                : 'text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            <Users size={20} />
+            医師・スタッフ (Doctors)
           </Link>
         </nav>
 
         <div className="p-4 border-t border-gray-100">
           <button className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-red-600 rounded-lg hover:bg-red-50 w-full transition-colors">
             <LogOut size={20} />
-            Sign Out
+            ログアウト (Sign Out)
           </button>
         </div>
       </aside>
 
       {/* Main Content */}
       <main className="flex-1 overflow-auto">
-        <div className="p-8">
+        <div className="p-6 md:p-8">
           <Outlet />
         </div>
       </main>
