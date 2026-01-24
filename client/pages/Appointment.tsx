@@ -36,6 +36,7 @@ import {
   SPECIALIZATION_OPTIONS,
 } from "@/lib/specializations";
 import { useTranslation } from "@/lib/i18n";
+import { isDateWithinClosure, normalizeClinicHours } from "@/lib/scheduling";
 import type {
   AppointmentCancelRequest,
   AppointmentCancelResponse,
@@ -152,6 +153,7 @@ export default function Appointment() {
   const [isBooking, setIsBooking] = useState(false);
   const [authSession, setAuthSession] = useState<AuthSession | null>(null);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [availabilityNotice, setAvailabilityNotice] = useState<string | null>(null);
 
   const generateBookingId = () =>
     `DNM-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
@@ -201,6 +203,42 @@ export default function Appointment() {
     fallbackSpecializationId
   );
   const selectedSpecializationLabel = getSpecializationLabel(selectedSpecializationId);
+  const clinicHours = normalizeClinicHours(selectedClinic?.hours);
+  const clinicClosures = selectedClinic?.bookingClosures ?? [];
+
+  const isDateUnavailable = (date: Date) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (date < today) return true;
+    if (!selectedClinic) return false;
+    const dayName = new Intl.DateTimeFormat("en-US", { weekday: "long" }).format(date);
+    if (clinicHours.closedDays.some((day) => day.toLowerCase() === dayName.toLowerCase())) {
+      return true;
+    }
+    return Boolean(isDateWithinClosure(date, clinicClosures));
+  };
+
+  const specializationOptions = useMemo(() => {
+    const specializationMap = new Map<string, string>();
+    clinics.forEach((clinic) => {
+      clinic.specializations.forEach((spec) => {
+        const normalized = matchSpecialization(spec) ?? spec;
+        if (!specializationMap.has(normalized)) {
+          specializationMap.set(normalized, getSpecializationLabel(normalized));
+        }
+      });
+    });
+
+    if (specializationMap.size === 0) {
+      SPECIALIZATION_OPTIONS.forEach((specialization) => {
+        specializationMap.set(specialization.id, specialization.label);
+      });
+    }
+
+    return Array.from(specializationMap.entries())
+      .map(([id, label]) => ({ id, label }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [clinics]);
 
   const clinicsForSpecialization = useMemo(
     () =>
@@ -259,36 +297,36 @@ export default function Appointment() {
   const { data: slotsData, isLoading: isLoadingSlots } = useQuery({
     queryKey: ["availability", selectedDate?.toISOString(), selectedClinicId],
     queryFn: async () => {
-      if (!selectedDate || !selectedClinicId) return [];
+      if (!selectedDate || !selectedClinicId) return { slots: [] as string[] };
       const activeClinicId = selectedClinicId;
       const res = await fetch(
         `/api/availability?date=${selectedDate.toISOString()}&clinicId=${activeClinicId}`
       );
       if (!res.ok) throw new Error("Failed to fetch slots");
       const data = await res.json();
-      return data.slots as string[];
+      return data as { slots: string[]; isClosed?: boolean; reason?: string };
     },
     enabled: view === "booking" && !!selectedDate && !!selectedClinicId,
   });
 
-  const timeSlots = slotsData || [];
+  const timeSlots = slotsData?.slots ?? [];
 
   const actionClinicId = actionAppointment?.clinicId ?? "";
   const { data: actionSlotsData, isLoading: isLoadingActionSlots } = useQuery({
     queryKey: ["availability", actionDate?.toISOString(), actionClinicId, "action"],
     queryFn: async () => {
-      if (!actionDate || !actionClinicId) return [];
+      if (!actionDate || !actionClinicId) return { slots: [] as string[] };
       const res = await fetch(
         `/api/availability?date=${actionDate.toISOString()}&clinicId=${actionClinicId}`
       );
       if (!res.ok) throw new Error("Failed to fetch slots");
       const data = await res.json();
-      return data.slots as string[];
+      return data as { slots: string[]; isClosed?: boolean; reason?: string };
     },
     enabled: actionType === "reschedule" && !!actionDate && !!actionClinicId,
   });
 
-  const actionSlots = actionSlotsData || [];
+  const actionSlots = actionSlotsData?.slots ?? [];
 
   const { data: appointmentsData, isLoading: isLoadingAppointments, refetch: refetchAppointments } = useQuery({
     queryKey: ["appointments", "me", authSession?.token],
@@ -354,6 +392,12 @@ export default function Appointment() {
   }, [clinicsForSpecialization, selectedClinicId]);
 
   useEffect(() => {
+    if (!specializationOptions.find((spec) => spec.id === selectedSpecializationId)) {
+      setSelectedSpecialization(specializationOptions[0]?.id ?? fallbackSpecializationId);
+    }
+  }, [fallbackSpecializationId, selectedSpecializationId, specializationOptions]);
+
+  useEffect(() => {
     if (!FORM_REQUIRED_CLINICS.has(selectedClinicId)) {
       setIntakeReason("");
       setIntakeAllergies("");
@@ -380,6 +424,14 @@ export default function Appointment() {
   useEffect(() => {
     setSelectedSlot(undefined);
   }, [selectedClinicId]);
+
+  useEffect(() => {
+    if (!slotsData?.isClosed) {
+      setAvailabilityNotice(null);
+      return;
+    }
+    setAvailabilityNotice(slotsData.reason ?? "Clinic is closed for this date.");
+  }, [slotsData?.isClosed, slotsData?.reason]);
 
   useEffect(() => {
     if (!selectedVaultRecordId) {
@@ -1245,7 +1297,7 @@ export default function Appointment() {
                   onChange={(e) => setSelectedSpecialization(e.target.value)}
                   className="w-full bg-white border border-gray-300 rounded-xl shadow-sm px-4 py-3 text-gray-700 focus:outline-none focus:border-[#0089FF] focus:ring-2 focus:ring-[#0089FF]/20"
                 >
-                  {SPECIALIZATION_OPTIONS.map((spec) => (
+                  {specializationOptions.map((spec) => (
                     <option key={spec.id} value={spec.id}>
                       {t(spec.label)}
                     </option>
@@ -1379,7 +1431,7 @@ export default function Appointment() {
                     if (date && fieldErrors.date) clearFieldError("date");
                   }}
                   className="rounded-md border shadow-sm"
-                  disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                  disabled={isDateUnavailable}
                 />
               </div>
               {fieldErrors.date ? (
@@ -1396,6 +1448,9 @@ export default function Appointment() {
                 <p className="text-sm text-slate-600">
                   {selectedDate ? selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }) : 'Select a date'}
                 </p>
+                {availabilityNotice ? (
+                  <p className="mt-2 text-sm font-semibold text-rose-500">{availabilityNotice}</p>
+                ) : null}
               </div>
 
               {!selectedClinicId ? (

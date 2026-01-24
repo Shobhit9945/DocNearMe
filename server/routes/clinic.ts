@@ -6,7 +6,16 @@ import {
   getClinicAccountsCollection,
   getClinicDoctorsCollection,
   getClinicInfoCollection,
+  getAppointmentsCollection,
 } from "../db";
+import {
+  buildNextAvailabilityLabel,
+  buildSlotsForDate,
+  getDateKey,
+  getSlotDateTime,
+  isClinicClosedOnDate,
+  normalizeClinicHours,
+} from "../lib/scheduling";
 import {
   ClinicCredentialsResponse,
   ClinicDoctorsResponse,
@@ -35,10 +44,30 @@ const clinicUpdateSchema = z.object({
   nextAvailability: z.string().trim().min(2).max(80).optional(),
   hours: z
     .object({
-      weekdays: z.string().trim().min(2).max(80),
-      weekend: z.string().trim().min(2).max(80),
-      closedDays: z.string().trim().min(2).max(120),
+      weekdays: z
+        .object({
+          start: z.string().trim().min(4).max(10),
+          end: z.string().trim().min(4).max(10),
+        })
+        .or(z.string().trim().min(2).max(80)),
+      weekend: z
+        .object({
+          start: z.string().trim().min(4).max(10),
+          end: z.string().trim().min(4).max(10),
+        })
+        .or(z.string().trim().min(2).max(80)),
+      closedDays: z.array(z.string().trim().min(2).max(20)).or(z.string().trim().max(120)),
+      slotMinutes: z.number().min(10).max(120).optional(),
     })
+    .optional(),
+  bookingClosures: z
+    .array(
+      z.object({
+        startDate: z.string().trim().min(10).max(10),
+        endDate: z.string().trim().min(10).max(10),
+        reason: z.string().trim().max(200).optional(),
+      }),
+    )
     .optional(),
   pricing: z
     .object({
@@ -110,7 +139,7 @@ const collectClinicSpecializations = (doctors: any[]) => {
   return Array.from(specializations).sort((a, b) => a.localeCompare(b));
 };
 
-const buildClinicProfile = (clinic: any, specializations?: string[]) => ({
+const buildClinicProfile = (clinic: any, specializations?: string[], nextAvailability?: string) => ({
   id: clinic.clinicId ?? clinic.id,
   name: clinic.name,
   type: clinic.type,
@@ -120,10 +149,11 @@ const buildClinicProfile = (clinic: any, specializations?: string[]) => ({
   location: clinic.location,
   image: clinic.image,
   specializations: specializations ?? [],
-  nextAvailability: clinic.nextAvailability,
+  nextAvailability: nextAvailability ?? clinic.nextAvailability,
   googlePlaceId: clinic.googlePlaceId,
   phone: clinic.phone,
   hours: clinic.hours,
+  bookingClosures: clinic.bookingClosures,
   pricing: clinic.pricing,
   photos: clinic.photos,
 });
@@ -138,6 +168,53 @@ const buildDoctor = (doctor: any) => ({
   nextAvailable: doctor.nextAvailable ?? doctor.next_available ?? "Schedule TBD",
   availability: doctor.availability,
 });
+
+const buildBookedSlotMap = (appointments: any[]) => {
+  const bookedByDate = new Map<string, Set<string>>();
+  appointments
+    .filter((appt) => !appt.status || appt.status === "CONFIRMED")
+    .forEach((appt) => {
+      const dateKey = appt.dateKey ?? (typeof appt.date === "string" ? appt.date.split("T")[0] : "");
+      if (!dateKey || !appt.slot) return;
+      const existing = bookedByDate.get(dateKey) ?? new Set<string>();
+      existing.add(appt.slot);
+      bookedByDate.set(dateKey, existing);
+    });
+  return bookedByDate;
+};
+
+const computeNextAvailability = (clinic: any, appointments: any[]) => {
+  const hours = normalizeClinicHours(clinic.hours);
+  const bookedByDate = buildBookedSlotMap(appointments);
+  const now = new Date();
+  const todayKey = getDateKey(now);
+  const maxDays = 14;
+
+  for (let offset = 0; offset < maxDays; offset += 1) {
+    const date = new Date(now);
+    date.setHours(0, 0, 0, 0);
+    date.setDate(date.getDate() + offset);
+
+    const closureCheck = isClinicClosedOnDate(date, hours, clinic.bookingClosures);
+    if (closureCheck.closed) continue;
+
+    let slots = buildSlotsForDate(date, hours);
+    const dateKey = getDateKey(date);
+    const bookedSlots = bookedByDate.get(dateKey) ?? new Set<string>();
+    slots = slots.filter((slot) => !bookedSlots.has(slot));
+    if (dateKey === todayKey) {
+      slots = slots.filter((slot) => {
+        const slotDate = getSlotDateTime(date, slot);
+        return slotDate ? slotDate.getTime() > now.getTime() : false;
+      });
+    }
+    if (slots.length > 0) {
+      return buildNextAvailabilityLabel(date, slots[0]);
+    }
+  }
+
+  return "No availability";
+};
 
 export const handleClinicLogin: RequestHandler = async (req, res, next) => {
   try {
@@ -209,6 +286,16 @@ export const handleClinicList: RequestHandler = async (_req, res, next) => {
     const list = await clinics.find({}).sort({ name: 1 }).toArray();
     const doctors = await getClinicDoctorsCollection();
     const doctorList = await doctors.find({}).toArray();
+    const appointments = await getAppointmentsCollection();
+    const appointmentList = await appointments.find({}).toArray();
+    const appointmentsByClinic = new Map<string, any[]>();
+    appointmentList.forEach((appointment) => {
+      const clinicId = appointment.clinicId ?? appointment.clinic_id;
+      if (!clinicId) return;
+      const existing = appointmentsByClinic.get(clinicId) ?? [];
+      existing.push(appointment);
+      appointmentsByClinic.set(clinicId, existing);
+    });
     const specializationsByClinic = new Map<string, Set<string>>();
 
     doctorList.forEach((doctor) => {
@@ -228,7 +315,8 @@ export const handleClinicList: RequestHandler = async (_req, res, next) => {
         const specializations = Array.from(specializationsByClinic.get(clinicId) ?? []).sort((a, b) =>
           a.localeCompare(b),
         );
-        return buildClinicProfile(clinic, specializations);
+        const nextAvailability = computeNextAvailability(clinic, appointmentsByClinic.get(clinicId) ?? []);
+        return buildClinicProfile(clinic, specializations, nextAvailability);
       }),
     };
     return res.json(response);
@@ -247,8 +335,11 @@ export const handleClinicProfile: RequestHandler = async (req, res, next) => {
     }
     const doctors = await getClinicDoctorsCollection();
     const doctorList = await doctors.find({ clinicId }).toArray();
+    const appointments = await getAppointmentsCollection();
+    const appointmentList = await appointments.find({ clinicId }).toArray();
+    const nextAvailability = computeNextAvailability(clinic, appointmentList);
     const response: ClinicProfileResponse = {
-      clinic: buildClinicProfile(clinic, collectClinicSpecializations(doctorList)),
+      clinic: buildClinicProfile(clinic, collectClinicSpecializations(doctorList), nextAvailability),
     };
     return res.json(response);
   } catch (error) {
@@ -310,8 +401,15 @@ export const handleUpdateClinicProfile: RequestHandler = async (req, res, next) 
     const refreshed = await clinics.findOne({ clinicId });
     const doctors = await getClinicDoctorsCollection();
     const doctorList = await doctors.find({ clinicId }).toArray();
+    const appointments = await getAppointmentsCollection();
+    const appointmentList = await appointments.find({ clinicId }).toArray();
+    const nextAvailability = computeNextAvailability(refreshed ?? existing, appointmentList);
     const response: ClinicProfileResponse = {
-      clinic: buildClinicProfile(refreshed ?? existing, collectClinicSpecializations(doctorList)),
+      clinic: buildClinicProfile(
+        refreshed ?? existing,
+        collectClinicSpecializations(doctorList),
+        nextAvailability,
+      ),
     };
     return res.json(response);
   } catch (error) {

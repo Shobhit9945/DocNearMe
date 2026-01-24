@@ -280,6 +280,9 @@ const Index: React.FC = () => {
       className:
         "bg-[#FB4F4F] rounded-[20px] shadow-[2px_0_20px_0_rgba(24,57,107,0.05)] p-4 min-h-[120px] flex flex-col items-center justify-center gap-2 text-white hover:bg-[#E94444] transition-colors",
       icon: <Ambulance className="w-[42px] h-[30px]" />,
+      onClick: () => {
+        window.location.href = "tel:119";
+      },
       textClassName: "text-sm font-medium text-center",
     },
   ] as const;

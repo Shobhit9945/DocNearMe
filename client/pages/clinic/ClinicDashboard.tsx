@@ -1,13 +1,20 @@
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Users, Calendar, Clock, CheckCircle2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { getClinicAuthHeader, getClinicSession } from "@/lib/clinic-auth";
 import { useClinicProfile } from "@/lib/clinic-data";
-import type { AppointmentListResponse } from "@shared/api";
+import { normalizeClinicHours } from "@/lib/scheduling";
+import type { AppointmentListResponse, ClinicBookingClosure, ClinicProfileUpdateRequest } from "@shared/api";
+import { toast } from "@/components/ui/use-toast";
+
+const DAYS_OF_WEEK = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
 export default function ClinicDashboard() {
   const session = getClinicSession();
   const { data: clinicData } = useClinicProfile(session?.clinicId);
+  const clinic = clinicData?.clinic;
   const { data: appointmentsData } = useQuery<AppointmentListResponse>({
     queryKey: ["clinic-dashboard-appointments", session?.clinicId],
     queryFn: async () => {
@@ -68,11 +75,70 @@ export default function ClinicDashboard() {
     return patientIds.size;
   }, [appointments]);
 
-  const clinicHours = clinicData?.clinic?.hours?.weekdays ?? "09:00-18:00";
+  const normalizedHours = normalizeClinicHours(clinic?.hours);
+  const clinicHours = `${normalizedHours.weekdays.start} - ${normalizedHours.weekdays.end}`;
   const todayStatus =
     clinicData?.clinic?.nextAvailability?.toLowerCase() === "closed for today"
       ? "Closed for today"
       : `Clinic hours: ${clinicHours}`;
+
+  const [weekdayStart, setWeekdayStart] = useState(normalizedHours.weekdays.start);
+  const [weekdayEnd, setWeekdayEnd] = useState(normalizedHours.weekdays.end);
+  const [weekendStart, setWeekendStart] = useState(normalizedHours.weekend.start);
+  const [weekendEnd, setWeekendEnd] = useState(normalizedHours.weekend.end);
+  const [closedDays, setClosedDays] = useState<string[]>(normalizedHours.closedDays);
+  const [bookingClosures, setBookingClosures] = useState<ClinicBookingClosure[]>(clinic?.bookingClosures ?? []);
+  const [closureDraft, setClosureDraft] = useState<ClinicBookingClosure>({ startDate: "", endDate: "", reason: "" });
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    if (!clinic) return;
+    const hours = normalizeClinicHours(clinic.hours);
+    setWeekdayStart(hours.weekdays.start);
+    setWeekdayEnd(hours.weekdays.end);
+    setWeekendStart(hours.weekend.start);
+    setWeekendEnd(hours.weekend.end);
+    setClosedDays(hours.closedDays);
+    setBookingClosures(clinic.bookingClosures ?? []);
+  }, [clinic]);
+
+  const handleSaveHours = async () => {
+    const clinicId = session?.clinicId;
+    if (!clinicId) return;
+    const payload: ClinicProfileUpdateRequest = {
+      hours: {
+        weekdays: { start: weekdayStart, end: weekdayEnd },
+        weekend: { start: weekendStart, end: weekendEnd },
+        closedDays,
+        slotMinutes: 30,
+      },
+      bookingClosures,
+    };
+    setIsSaving(true);
+    try {
+      const response = await fetch(`/api/clinics/${clinicId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          ...getClinicAuthHeader(),
+        },
+        body: JSON.stringify(payload),
+      });
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error?.error ?? "Unable to update hours.");
+      }
+      toast({ title: "Availability updated", description: "Patient booking hours were refreshed." });
+    } catch (error) {
+      toast({
+        title: "Update failed",
+        description: error instanceof Error ? error.message : "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const stats = [
     {
@@ -162,6 +228,127 @@ export default function ClinicDashboard() {
               })
             )}
           </div>
+        </div>
+        <div className="bg-white rounded-xl border border-gray-100 p-6 shadow-sm space-y-4">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">Availability settings</h2>
+            <p className="text-sm text-gray-500">Adjust hours, closed days, and booking blocks.</p>
+          </div>
+          <div className="space-y-3">
+            <label className="text-sm font-medium text-gray-700 block">Weekday hours</label>
+            <div className="flex items-center gap-3">
+              <Input type="time" value={weekdayStart} onChange={(event) => setWeekdayStart(event.target.value)} />
+              <span className="text-sm text-slate-500">to</span>
+              <Input type="time" value={weekdayEnd} onChange={(event) => setWeekdayEnd(event.target.value)} />
+            </div>
+          </div>
+          <div className="space-y-3">
+            <label className="text-sm font-medium text-gray-700 block">Weekend hours</label>
+            <div className="flex items-center gap-3">
+              <Input type="time" value={weekendStart} onChange={(event) => setWeekendStart(event.target.value)} />
+              <span className="text-sm text-slate-500">to</span>
+              <Input type="time" value={weekendEnd} onChange={(event) => setWeekendEnd(event.target.value)} />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700 block">Closed days</label>
+            <div className="flex flex-wrap gap-2">
+              {DAYS_OF_WEEK.map((day) => {
+                const checked = closedDays.includes(day);
+                return (
+                  <button
+                    key={day}
+                    type="button"
+                    onClick={() =>
+                      setClosedDays((prev) => (checked ? prev.filter((item) => item !== day) : [...prev, day]))
+                    }
+                    className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
+                      checked
+                        ? "bg-[#0089FF] text-white"
+                        : "bg-white text-slate-600 border border-slate-200"
+                    }`}
+                  >
+                    {day}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <div className="space-y-3">
+            <label className="text-sm font-medium text-gray-700 block">Booking closures</label>
+            <div className="grid gap-3">
+              <div className="grid gap-3 md:grid-cols-[1fr_1fr_2fr_auto]">
+                <Input
+                  type="date"
+                  value={closureDraft.startDate}
+                  onChange={(event) => setClosureDraft((prev) => ({ ...prev, startDate: event.target.value }))}
+                />
+                <Input
+                  type="date"
+                  value={closureDraft.endDate}
+                  onChange={(event) => setClosureDraft((prev) => ({ ...prev, endDate: event.target.value }))}
+                />
+                <Input
+                  value={closureDraft.reason ?? ""}
+                  onChange={(event) => setClosureDraft((prev) => ({ ...prev, reason: event.target.value }))}
+                  placeholder="Reason (optional)"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    if (!closureDraft.startDate) return;
+                    const endDate = closureDraft.endDate || closureDraft.startDate;
+                    setBookingClosures((prev) => [...prev, { ...closureDraft, endDate }]);
+                    setClosureDraft({ startDate: "", endDate: "", reason: "" });
+                  }}
+                >
+                  Add
+                </Button>
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => {
+                  const today = new Date().toISOString().split("T")[0];
+                  setBookingClosures((prev) => [
+                    ...prev,
+                    { startDate: today, endDate: today, reason: "Closed today" },
+                  ]);
+                }}
+              >
+                Close today
+              </Button>
+            </div>
+            {bookingClosures.length > 0 ? (
+              <div className="space-y-2">
+                {bookingClosures.map((closure, index) => (
+                  <div
+                    key={`${closure.startDate}-${closure.endDate}-${index}`}
+                    className="flex items-center justify-between rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600"
+                  >
+                    <span>
+                      {closure.startDate} → {closure.endDate} {closure.reason ? `(${closure.reason})` : ""}
+                    </span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() =>
+                        setBookingClosures((prev) => prev.filter((_, itemIndex) => itemIndex !== index))
+                      }
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-slate-500">No upcoming closures.</p>
+            )}
+          </div>
+          <Button onClick={handleSaveHours} disabled={isSaving}>
+            {isSaving ? "Saving..." : "Save availability"}
+          </Button>
         </div>
       </div>
     </div>

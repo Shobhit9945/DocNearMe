@@ -45,6 +45,13 @@ export const translations: Record<string, TranslationEntry> = {
   "Minimum rating": { ja: "最低評価" },
   "Drag to prioritise higher-rated doctors.": { ja: "スライダーを動かして高評価の医師を優先してください。" },
   "Next availability": { ja: "次の空き時間" },
+  "All languages": { ja: "すべての言語" },
+  "Language": { ja: "言語" },
+  "Availability settings": { ja: "診療時間設定" },
+  "Booking closures": { ja: "休診期間" },
+  "Close today": { ja: "本日休診" },
+  "Closed today": { ja: "本日休診" },
+  "Save availability": { ja: "診療時間を保存" },
   "Book appointment": { ja: "予約する" },
   "No clinics match this specialty yet. Try another selection or chat with DocDaisy.": {
     ja: "この専門に該当するクリニックはまだありません。別の条件を選ぶかDocDaisyに相談してください。",
