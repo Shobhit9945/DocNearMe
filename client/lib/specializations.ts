@@ -92,3 +92,10 @@ export const matchSpecialization = (input: string): string | null => {
 
   return null;
 };
+
+export const getSpecializationLabel = (specialization: string): string => {
+  const normalized = matchSpecialization(specialization) ?? specialization.trim();
+  if (!normalized) return "";
+  const option = SPECIALIZATION_OPTIONS.find((spec) => spec.id === normalized);
+  return option?.label ?? normalized;
+};

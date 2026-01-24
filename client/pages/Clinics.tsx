@@ -15,12 +15,7 @@ import { useLiveLocation } from "@/hooks/useLiveLocation";
 import { useAddressSearch } from "@/hooks/useAddressSearch";
 import { useTranslation } from "@/lib/i18n";
 import { useClinics } from "@/lib/clinic-data";
-import { matchSpecialization, SPECIALIZATION_OPTIONS } from "@/lib/specializations";
-
-const BASE_SPECIALIZATIONS = SPECIALIZATION_OPTIONS.map(({ id, label }) => ({
-  id,
-  label,
-}));
+import { getSpecializationLabel, matchSpecialization, SPECIALIZATION_OPTIONS } from "@/lib/specializations";
 
 export default function Clinics() {
   const navigate = useNavigate();
@@ -54,27 +49,49 @@ export default function Clinics() {
     ? matchSpecialization(specializationParam) ?? specializationParam
     : null;
 
-  const availableSpecializations = useMemo(() => {
-    if (!normalizedSpecialization) return BASE_SPECIALIZATIONS;
+  const { data: clinicsData } = useClinics();
+  const baseSpecializations = useMemo(() => {
+    const specializationMap = new Map<string, string>();
+    (clinicsData?.clinics ?? []).forEach((clinic) => {
+      clinic.specializations.forEach((spec) => {
+        const normalized = matchSpecialization(spec) ?? spec;
+        if (!specializationMap.has(normalized)) {
+          specializationMap.set(normalized, getSpecializationLabel(normalized));
+        }
+      });
+    });
 
-    const exists = BASE_SPECIALIZATIONS.some(
-      (spec) => spec.id.toLowerCase() === normalizedSpecialization.toLowerCase()
+    if (specializationMap.size === 0) {
+      SPECIALIZATION_OPTIONS.forEach((specialization) => {
+        specializationMap.set(specialization.id, specialization.label);
+      });
+    }
+
+    return Array.from(specializationMap.entries())
+      .map(([id, label]) => ({ id, label }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [clinicsData?.clinics]);
+
+  const availableSpecializations = useMemo(() => {
+    if (!normalizedSpecialization) return baseSpecializations;
+
+    const exists = baseSpecializations.some(
+      (spec) => spec.id.toLowerCase() === normalizedSpecialization.toLowerCase(),
     );
 
     return exists
-      ? BASE_SPECIALIZATIONS
+      ? baseSpecializations
       : [
-          ...BASE_SPECIALIZATIONS,
+          ...baseSpecializations,
           { id: normalizedSpecialization, label: normalizedSpecialization },
         ];
-  }, [normalizedSpecialization]);
+  }, [baseSpecializations, normalizedSpecialization]);
 
   const selectedSpecialization =
     availableSpecializations.find(
       (spec) => spec.id.toLowerCase() === (normalizedSpecialization ?? "").toLowerCase()
     )?.id ?? availableSpecializations[0].id;
 
-  const { data: clinicsData } = useClinics();
   const clinics = useMemo(
     () =>
       (clinicsData?.clinics ?? []).filter((clinic) => {

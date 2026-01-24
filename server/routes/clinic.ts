@@ -32,7 +32,6 @@ const clinicUpdateSchema = z.object({
   location: z.string().trim().min(2).max(200).optional(),
   phone: z.string().trim().min(3).max(40).optional(),
   image: z.string().trim().min(5).optional(),
-  specializations: z.array(z.string().trim().min(2).max(80)).optional(),
   nextAvailability: z.string().trim().min(2).max(80).optional(),
   hours: z
     .object({
@@ -98,7 +97,20 @@ const parseRequestBody = (body: unknown): unknown => {
   }
 };
 
-const buildClinicProfile = (clinic: any) => ({
+const collectClinicSpecializations = (doctors: any[]) => {
+  const specializations = new Set<string>();
+
+  doctors.forEach((doctor) => {
+    const specialization = typeof doctor.specialization === "string" ? doctor.specialization.trim() : "";
+    if (specialization) {
+      specializations.add(specialization);
+    }
+  });
+
+  return Array.from(specializations).sort((a, b) => a.localeCompare(b));
+};
+
+const buildClinicProfile = (clinic: any, specializations?: string[]) => ({
   id: clinic.clinicId ?? clinic.id,
   name: clinic.name,
   type: clinic.type,
@@ -107,7 +119,7 @@ const buildClinicProfile = (clinic: any) => ({
   distance: clinic.distance,
   location: clinic.location,
   image: clinic.image,
-  specializations: clinic.specializations ?? [],
+  specializations: specializations ?? [],
   nextAvailability: clinic.nextAvailability,
   googlePlaceId: clinic.googlePlaceId,
   phone: clinic.phone,
@@ -195,8 +207,29 @@ export const handleClinicList: RequestHandler = async (_req, res, next) => {
   try {
     const clinics = await getClinicInfoCollection();
     const list = await clinics.find({}).sort({ name: 1 }).toArray();
+    const doctors = await getClinicDoctorsCollection();
+    const doctorList = await doctors.find({}).toArray();
+    const specializationsByClinic = new Map<string, Set<string>>();
+
+    doctorList.forEach((doctor) => {
+      const clinicId = doctor.clinicId ?? doctor.clinic_id;
+      if (!clinicId) return;
+      const specialization = typeof doctor.specialization === "string" ? doctor.specialization.trim() : "";
+      if (specialization) {
+        const existing = specializationsByClinic.get(clinicId) ?? new Set<string>();
+        existing.add(specialization);
+        specializationsByClinic.set(clinicId, existing);
+      }
+    });
+
     const response: ClinicListResponse = {
-      clinics: list.map(buildClinicProfile),
+      clinics: list.map((clinic) => {
+        const clinicId = clinic.clinicId ?? clinic.id;
+        const specializations = Array.from(specializationsByClinic.get(clinicId) ?? []).sort((a, b) =>
+          a.localeCompare(b),
+        );
+        return buildClinicProfile(clinic, specializations);
+      }),
     };
     return res.json(response);
   } catch (error) {
@@ -212,8 +245,10 @@ export const handleClinicProfile: RequestHandler = async (req, res, next) => {
     if (!clinic) {
       return res.status(404).json({ error: "Clinic not found." });
     }
+    const doctors = await getClinicDoctorsCollection();
+    const doctorList = await doctors.find({ clinicId }).toArray();
     const response: ClinicProfileResponse = {
-      clinic: buildClinicProfile(clinic),
+      clinic: buildClinicProfile(clinic, collectClinicSpecializations(doctorList)),
     };
     return res.json(response);
   } catch (error) {
@@ -273,8 +308,10 @@ export const handleUpdateClinicProfile: RequestHandler = async (req, res, next) 
     );
 
     const refreshed = await clinics.findOne({ clinicId });
+    const doctors = await getClinicDoctorsCollection();
+    const doctorList = await doctors.find({ clinicId }).toArray();
     const response: ClinicProfileResponse = {
-      clinic: buildClinicProfile(refreshed ?? existing),
+      clinic: buildClinicProfile(refreshed ?? existing, collectClinicSpecializations(doctorList)),
     };
     return res.json(response);
   } catch (error) {

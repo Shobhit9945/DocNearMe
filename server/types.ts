@@ -4,6 +4,7 @@ export type AppointmentStatus =
   | "CONFIRMED"
   | "DECLINED"
   | "CANCELLED_BY_PATIENT"
+  | "CANCELLED_BY_CLINIC"
   | "NO_SHOW"
   | "COMPLETED";
 

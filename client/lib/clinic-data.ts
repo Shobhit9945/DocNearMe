@@ -17,11 +17,25 @@ const fetchJson = async <T>(url: string): Promise<T> => {
   return response.json() as Promise<T>;
 };
 
-const fallbackClinics = CLINICS as ClinicProfile[];
 const fallbackDoctors = DOCTORS.map((doctor) => ({
   ...doctor,
   availability: doctor.nextAvailable,
 })) as ClinicDoctor[];
+const fallbackSpecializations = fallbackDoctors.reduce((map, doctor) => {
+  const specialization = doctor.specialization.trim();
+  if (!specialization) return map;
+  const existing = map.get(doctor.clinicId) ?? new Set<string>();
+  existing.add(specialization);
+  map.set(doctor.clinicId, existing);
+  return map;
+}, new Map<string, Set<string>>());
+
+const fallbackClinics = (CLINICS as ClinicProfile[]).map((clinic) => ({
+  ...clinic,
+  specializations: Array.from(fallbackSpecializations.get(clinic.id) ?? []).sort((a, b) =>
+    a.localeCompare(b),
+  ),
+}));
 
 export const useClinics = () =>
   useQuery<ClinicListResponse>({

@@ -14,6 +14,7 @@ export type AppointmentStatus =
   | "CONFIRMED"
   | "DECLINED"
   | "CANCELLED_BY_PATIENT"
+  | "CANCELLED_BY_CLINIC"
   | "NO_SHOW"
   | "COMPLETED";
 
@@ -339,7 +340,6 @@ export interface ClinicProfileUpdateRequest {
   location?: string;
   phone?: string;
   image?: string;
-  specializations?: string[];
   nextAvailability?: string;
   hours?: ClinicHours;
   pricing?: ClinicPricing;

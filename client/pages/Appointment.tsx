@@ -434,7 +434,10 @@ export default function Appointment() {
     const items = appointmentsData?.appointments ?? [];
     return items
       .filter(
-        (appointment) => appointment.status !== "CANCELLED_BY_PATIENT" && appointment.status !== "DECLINED",
+        (appointment) =>
+          appointment.status !== "CANCELLED_BY_PATIENT" &&
+          appointment.status !== "CANCELLED_BY_CLINIC" &&
+          appointment.status !== "DECLINED",
       )
       .map((appointment) => {
         const clinicName =
