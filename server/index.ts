@@ -40,6 +40,17 @@ import {
   handleUpdateClinicReview,
 } from "./routes/clinic-reviews";
 import { handleGeocode, handlePlaceAutocomplete, handlePlaceDetails } from "./routes/google-maps";
+import {
+  handleClinicCredentials,
+  handleClinicDoctors,
+  handleClinicDoctorsAll,
+  handleClinicList,
+  handleClinicLogin,
+  handleClinicProfile,
+  handleUpdateClinicDoctors,
+  handleUpdateClinicProfile,
+} from "./routes/clinic";
+import { requireClinicAuth } from "./middleware/clinic-auth";
 
 export async function createServer(): Promise<Express> {
   const app = express();
@@ -93,6 +104,14 @@ export async function createServer(): Promise<Express> {
   app.post("/api/auth/verify-otp", handleVerifyOtp);
   app.post("/api/auth/request-password-reset", handleRequestPasswordReset);
   app.post("/api/auth/reset-password", handleResetPassword);
+  app.post("/api/clinic-auth/login", handleClinicLogin);
+  app.get("/api/clinic-credentials", handleClinicCredentials);
+  app.get("/api/clinics", handleClinicList);
+  app.get("/api/clinics/doctors", handleClinicDoctorsAll);
+  app.get("/api/clinics/:clinicId", handleClinicProfile);
+  app.get("/api/clinics/:clinicId/doctors", handleClinicDoctors);
+  app.put("/api/clinics/:clinicId", requireClinicAuth, handleUpdateClinicProfile);
+  app.put("/api/clinics/:clinicId/doctors", requireClinicAuth, handleUpdateClinicDoctors);
   app.get("/api/medical-records/consent", requireAuth, handleGetMedicalConsent);
   app.post("/api/medical-records/consent", requireAuth, handleCreateMedicalConsent);
   app.get("/api/medical-records/key", requireAuth, handleGetMedicalRecordKey);

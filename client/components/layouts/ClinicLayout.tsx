@@ -1,10 +1,24 @@
-import React from "react";
-import { Link, Outlet, useLocation } from "react-router-dom";
+import React, { useEffect } from "react";
+import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { LayoutDashboard, Calendar, UserSquare2, Users, LogOut } from "lucide-react";
+import { clearClinicSession, getClinicSession } from "@/lib/clinic-auth";
 
 export function ClinicLayout() {
   const location = useLocation();
+  const navigate = useNavigate();
   const isActive = (path: string) => location.pathname === path;
+
+  useEffect(() => {
+    const session = getClinicSession();
+    if (!session) {
+      navigate("/login");
+    }
+  }, [navigate]);
+
+  const handleSignOut = () => {
+    clearClinicSession();
+    navigate("/login");
+  };
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -66,7 +80,10 @@ export function ClinicLayout() {
         </nav>
 
         <div className="p-4 border-t border-gray-100">
-          <button className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-red-600 rounded-lg hover:bg-red-50 w-full transition-colors">
+          <button
+            onClick={handleSignOut}
+            className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-red-600 rounded-lg hover:bg-red-50 w-full transition-colors"
+          >
             <LogOut size={20} />
             Sign out
           </button>

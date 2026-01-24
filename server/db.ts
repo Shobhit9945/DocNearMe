@@ -1,9 +1,13 @@
 // server/db.ts
 import "dotenv/config";
+import bcryptjs from "bcryptjs";
 import { MongoClient, Db, Collection, ObjectId } from "mongodb";
 import {
   Appointment,
   ClinicReview,
+  ClinicAccount,
+  ClinicDoctorRecord,
+  ClinicInfo,
   EmailOtp,
   MedicalConsent,
   MedicalRecord,
@@ -151,6 +155,9 @@ export type InMemoryDb = {
     medicalConsents: InMemoryCollection<MedicalConsent>;
     medicalRecordKeys: InMemoryCollection<MedicalRecordKey>;
     clinicReviews: InMemoryCollection<ClinicReview>;
+    clinicAccounts: InMemoryCollection<ClinicAccount>;
+    clinicInfo: InMemoryCollection<ClinicInfo>;
+    clinicDoctors: InMemoryCollection<ClinicDoctorRecord>;
   };
 };
 
@@ -164,6 +171,9 @@ const inMemoryDb: InMemoryDb = {
     medicalConsents: new InMemoryCollection<MedicalConsent>([]),
     medicalRecordKeys: new InMemoryCollection<MedicalRecordKey>([]),
     clinicReviews: new InMemoryCollection<ClinicReview>([]),
+    clinicAccounts: new InMemoryCollection<ClinicAccount>([]),
+    clinicInfo: new InMemoryCollection<ClinicInfo>([]),
+    clinicDoctors: new InMemoryCollection<ClinicDoctorRecord>([]),
   },
 };
 
@@ -178,7 +188,10 @@ const getCollection = <T>(
     | "medicalRecords"
     | "medicalConsents"
     | "medicalRecordKeys"
-    | "clinicReviews",
+    | "clinicReviews"
+    | "clinicAccounts"
+    | "clinicInfo"
+    | "clinicDoctors",
 ) => (isMemoryDb(db) ? db.collections[name] : db.collection<T>(name));
 
 // Short, serverless-friendly timeouts. Keep pools tiny.
@@ -204,6 +217,9 @@ async function prepareOnce(db: Db | InMemoryDb) {
   const medicalConsents = getCollection<MedicalConsent>(db, "medicalConsents");
   const medicalRecordKeys = getCollection<MedicalRecordKey>(db, "medicalRecordKeys");
   const clinicReviews = getCollection<ClinicReview>(db, "clinicReviews");
+  const clinicAccounts = getCollection<ClinicAccount>(db, "clinicAccounts");
+  const clinicInfo = getCollection<ClinicInfo>(db, "clinicInfo");
+  const clinicDoctors = getCollection<ClinicDoctorRecord>(db, "clinicDoctors");
 
   // Run in parallel, but only once per warm container
   await Promise.all([
@@ -215,9 +231,67 @@ async function prepareOnce(db: Db | InMemoryDb) {
     medicalConsents.createIndex({ patientId: 1, consentVersion: 1 }, { unique: true }),
     medicalRecordKeys.createIndex({ patientId: 1 }, { unique: true }),
     clinicReviews.createIndex({ clinicId: 1, createdAt: -1 }),
+    clinicAccounts.createIndex({ clinicId: 1 }, { unique: true }),
+    clinicAccounts.createIndex({ userId: 1 }, { unique: true }),
+    clinicInfo.createIndex({ clinicId: 1 }, { unique: true }),
+    clinicDoctors.createIndex({ clinicId: 1 }),
+    clinicDoctors.createIndex({ doctorId: 1 }, { unique: true }),
   ]);
 
+  await seedClinicData(db);
+
   cache.prepared = true;
+}
+
+async function seedClinicData(db: Db | InMemoryDb) {
+  const clinics = getCollection<ClinicInfo>(db, "clinicInfo");
+  const clinicAccounts = getCollection<ClinicAccount>(db, "clinicAccounts");
+  const clinicDoctors = getCollection<ClinicDoctorRecord>(db, "clinicDoctors");
+
+  const existingClinic = await clinics.findOne({});
+  if (existingClinic) {
+    return;
+  }
+
+  const { CLINIC_SEED, DOCTOR_SEED } = await import("../shared/clinic-seed");
+
+  const clinicInsertions = CLINIC_SEED.map((clinic) =>
+    clinics.insertOne({
+      ...clinic,
+      clinicId: clinic.id,
+      updatedAt: new Date(),
+    }),
+  );
+  await Promise.all(clinicInsertions);
+
+  await Promise.all(
+    CLINIC_SEED.map(async (clinic) => {
+      const tempPassword = `clinic-${clinic.id}-2024`;
+      const passwordHash = await bcryptjs.hash(tempPassword, 10);
+      return clinicAccounts.insertOne({
+        clinicId: clinic.id,
+        userId: `${clinic.id}-admin`,
+        passwordHash,
+        tempPassword,
+        createdAt: new Date(),
+      });
+    }),
+  );
+
+  const doctorInsertions = DOCTOR_SEED.map((doctor) =>
+    clinicDoctors.insertOne({
+      clinicId: doctor.clinicId,
+      doctorId: doctor.id,
+      name: doctor.name,
+      specialization: doctor.specialization,
+      languages: doctor.languages,
+      rating: doctor.rating,
+      nextAvailable: doctor.nextAvailable,
+      availability: doctor.availability,
+      updatedAt: new Date(),
+    }),
+  );
+  await Promise.all(doctorInsertions);
 }
 
 export async function connectToDatabase(): Promise<Db | InMemoryDb> {
@@ -336,4 +410,27 @@ export async function getClinicReviewsCollection(): Promise<
   return getCollection<ClinicReview>(db, "clinicReviews") as
     | Collection<ClinicReview>
     | InMemoryCollection<ClinicReview>;
+}
+
+export async function getClinicAccountsCollection(): Promise<
+  Collection<ClinicAccount> | InMemoryCollection<ClinicAccount>
+> {
+  const db = await connectToDatabase();
+  return getCollection<ClinicAccount>(db, "clinicAccounts") as
+    | Collection<ClinicAccount>
+    | InMemoryCollection<ClinicAccount>;
+}
+
+export async function getClinicInfoCollection(): Promise<Collection<ClinicInfo> | InMemoryCollection<ClinicInfo>> {
+  const db = await connectToDatabase();
+  return getCollection<ClinicInfo>(db, "clinicInfo") as Collection<ClinicInfo> | InMemoryCollection<ClinicInfo>;
+}
+
+export async function getClinicDoctorsCollection(): Promise<
+  Collection<ClinicDoctorRecord> | InMemoryCollection<ClinicDoctorRecord>
+> {
+  const db = await connectToDatabase();
+  return getCollection<ClinicDoctorRecord>(db, "clinicDoctors") as
+    | Collection<ClinicDoctorRecord>
+    | InMemoryCollection<ClinicDoctorRecord>;
 }

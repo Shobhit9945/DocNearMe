@@ -14,7 +14,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useLiveLocation } from "@/hooks/useLiveLocation";
 import { useAddressSearch } from "@/hooks/useAddressSearch";
 import { useTranslation } from "@/lib/i18n";
-import { CLINICS } from "@/lib/clinics";
+import { useClinics } from "@/lib/clinic-data";
 import { matchSpecialization, SPECIALIZATION_OPTIONS } from "@/lib/specializations";
 
 const BASE_SPECIALIZATIONS = SPECIALIZATION_OPTIONS.map(({ id, label }) => ({
@@ -74,9 +74,10 @@ export default function Clinics() {
       (spec) => spec.id.toLowerCase() === (normalizedSpecialization ?? "").toLowerCase()
     )?.id ?? availableSpecializations[0].id;
 
+  const { data: clinicsData } = useClinics();
   const clinics = useMemo(
     () =>
-      CLINICS.filter((clinic) => {
+      (clinicsData?.clinics ?? []).filter((clinic) => {
         const specializationMatch = clinic.specializations.some((spec) => {
           const normalized = matchSpecialization(spec) ?? spec;
           return normalized.toLowerCase() === selectedSpecialization.toLowerCase();
@@ -85,7 +86,7 @@ export default function Clinics() {
 
         return specializationMatch && ratingMatch;
       }),
-    [selectedSpecialization, minRating]
+    [clinicsData?.clinics, selectedSpecialization, minRating]
   );
 
   const selectedLabel =
