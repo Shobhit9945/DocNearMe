@@ -412,7 +412,6 @@ const Index: React.FC = () => {
               )}
             </div>
           </div>
-          <img src="/applogo.png" alt="DocNearMe Logo" className="w-14 h-14 object-contain self-start" />
           </div>
         </div>
       </header>

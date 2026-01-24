@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState, ReactNode } from "react";
-import { translations, Language } from "./translations";
+import { translations, Language, supportedLanguages } from "./translations";
 
 interface TranslationContextValue {
   language: Language;
@@ -13,7 +13,8 @@ const TranslationContext = createContext<TranslationContextValue | null>(null);
 function getInitialLanguage(): Language {
   if (typeof localStorage !== "undefined") {
     const saved = localStorage.getItem("dnm-language");
-    if (saved === "ja" || saved === "en") return saved;
+    const match = supportedLanguages.find((lang) => lang.code === saved);
+    if (match) return match.code;
   }
   return "en";
 }
@@ -34,15 +35,20 @@ export function TranslationProvider({ children }: { children: ReactNode }) {
     () =>
       (key: string, fallback?: string) => {
         const entry = translations[key];
-        if (language === "ja" && entry?.ja) return entry.ja;
-        if (language === "en" && entry?.en) return entry.en;
+        if (entry?.[language]) return entry[language] as string;
+        if (entry?.en) return entry.en;
         return fallback ?? key;
       },
     [language]
   );
 
   const toggleLanguage = () => {
-    setLanguage((prev) => (prev === "en" ? "ja" : "en"));
+    setLanguage((prev) => {
+      const index = supportedLanguages.findIndex((item) => item.code === prev);
+      if (index === -1) return "en";
+      const next = supportedLanguages[(index + 1) % supportedLanguages.length];
+      return next.code;
+    });
   };
 
   const value = useMemo(
