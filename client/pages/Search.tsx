@@ -2,7 +2,7 @@ import { BottomNav } from "@/components/BottomNav";
 import { PageScaffold } from "@/components/PageScaffold";
 import { Search as SearchIcon, Stethoscope, Building2, Star } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAllDoctors, useClinics } from "@/lib/clinic-data";
 import { getSpecializationLabel, matchSpecialization, SPECIALIZATION_OPTIONS } from "@/lib/specializations";
@@ -16,6 +16,8 @@ export default function Search() {
   const [resultType, setResultType] = useState<"all" | "doctor" | "clinic">("all");
   const { data: clinicsData } = useClinics();
   const { data: doctorsData } = useAllDoctors();
+  const doctorScrollerRef = useRef<HTMLDivElement | null>(null);
+  const clinicScrollerRef = useRef<HTMLDivElement | null>(null);
 
   const normalizedQuery = query.trim().toLowerCase();
   const specializations = useMemo(() => {
@@ -109,6 +111,14 @@ export default function Search() {
 
   const visibleClinics = resultType === "doctor" ? [] : filteredClinics;
   const visibleDoctors = resultType === "clinic" ? [] : filteredDoctors;
+  const scrollerCardClass =
+    "min-w-[85%] sm:min-w-[60%] md:min-w-[45%] lg:min-w-[32%] xl:min-w-[24%] snap-start";
+
+  const scrollScroller = (scroller: HTMLDivElement | null, direction: "left" | "right") => {
+    if (!scroller) return;
+    const offset = Math.max(scroller.clientWidth * 0.85, 280);
+    scroller.scrollBy({ left: direction === "left" ? -offset : offset, behavior: "smooth" });
+  };
 
   return (
     <PageScaffold contentClassName="pb-28 lg:pb-12">
@@ -203,14 +213,37 @@ export default function Search() {
             <div className="space-y-4">
               {visibleDoctors.length > 0 && (
                 <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-[#002D55]">{t("Doctors")}</h3>
-                  <div className="grid gap-4 md:grid-cols-2">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <h3 className="text-lg font-semibold text-[#002D55]">{t("Doctors")}</h3>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => scrollScroller(doctorScrollerRef.current, "left")}
+                        className="rounded-full border border-slate-200 p-2 text-[#002D55] shadow-sm hover:border-[#1648CE] hover:text-[#1648CE]"
+                        aria-label="Scroll doctors left"
+                      >
+                        ←
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => scrollScroller(doctorScrollerRef.current, "right")}
+                        className="rounded-full border border-slate-200 p-2 text-[#002D55] shadow-sm hover:border-[#1648CE] hover:text-[#1648CE]"
+                        aria-label="Scroll doctors right"
+                      >
+                        →
+                      </button>
+                    </div>
+                  </div>
+                  <div
+                    ref={doctorScrollerRef}
+                    className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2 pt-1"
+                  >
                     {visibleDoctors.map((doctor) => {
                       const clinic = clinicsData?.clinics?.find((entry) => entry.id === doctor.clinicId);
                       return (
                         <article
                           key={doctor.id}
-                          className="rounded-3xl border border-slate-100 bg-white p-5 shadow-sm"
+                          className={`${scrollerCardClass} rounded-3xl border border-slate-100 bg-white p-5 shadow-sm`}
                         >
                           <div className="flex items-start justify-between gap-3">
                             <div>
@@ -263,12 +296,35 @@ export default function Search() {
 
               {visibleClinics.length > 0 && (
                 <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-[#002D55]">{t("Clinics")}</h3>
-                  <div className="grid gap-4 md:grid-cols-2">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <h3 className="text-lg font-semibold text-[#002D55]">{t("Clinics")}</h3>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => scrollScroller(clinicScrollerRef.current, "left")}
+                        className="rounded-full border border-slate-200 p-2 text-[#002D55] shadow-sm hover:border-[#1648CE] hover:text-[#1648CE]"
+                        aria-label="Scroll clinics left"
+                      >
+                        ←
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => scrollScroller(clinicScrollerRef.current, "right")}
+                        className="rounded-full border border-slate-200 p-2 text-[#002D55] shadow-sm hover:border-[#1648CE] hover:text-[#1648CE]"
+                        aria-label="Scroll clinics right"
+                      >
+                        →
+                      </button>
+                    </div>
+                  </div>
+                  <div
+                    ref={clinicScrollerRef}
+                    className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2 pt-1"
+                  >
                     {visibleClinics.map((clinic) => (
                       <article
                         key={clinic.id}
-                        className="rounded-3xl border border-slate-100 bg-white p-5 shadow-sm"
+                        className={`${scrollerCardClass} rounded-3xl border border-slate-100 bg-white p-5 shadow-sm`}
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div>
