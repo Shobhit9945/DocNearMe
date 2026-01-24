@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { Home, Search, Calendar, User, MessageSquare, Building2 } from "lucide-react";
+import { Home, Search, Calendar, User, Building2 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
@@ -17,7 +17,7 @@ export function DesktopNav() {
   const { t } = useTranslation();
 
   return (
-    <div className="sticky top-0 hidden h-screen w-full flex-col border-r border-slate-200 bg-white p-6 lg:flex">
+    <div className="sticky top-0 hidden min-h-[100dvh] w-full flex-col border-r border-slate-200 bg-white p-6 lg:flex">
       <div className="flex items-center gap-3 mb-8">
         <img src="/applogo.png" alt="DocNearMe" className="w-12 h-12 object-contain" />
         <div>
@@ -46,17 +46,6 @@ export function DesktopNav() {
           );
         })}
       </nav>
-      <div className="mt-auto">
-        <div className="rounded-2xl bg-gradient-to-br from-[#1648CE] to-[#0089FF] p-4 text-white">
-          <div className="flex items-center gap-3">
-            <MessageSquare className="w-6 h-6" />
-            <div>
-              <p className="text-xs text-white/80">{t("Need help?")}</p>
-              <p className="text-base font-semibold">{t("DocDaisy is online")}</p>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
