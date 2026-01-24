@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { Db } from "mongodb";
-import { connectToDatabase, isMemoryDb } from "../db";
+import { connectToDatabase, isMemoryPatientDb } from "../db";
 
 const router = Router();
 
@@ -8,7 +8,7 @@ router.get("/db", async (_req, res) => {
   try {
     const db = await connectToDatabase();
 
-    if (isMemoryDb(db)) {
+    if (isMemoryPatientDb(db)) {
       return res.status(200).json({
         status: "degraded",
         detail: "in_memory_db",
