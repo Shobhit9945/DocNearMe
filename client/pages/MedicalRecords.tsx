@@ -505,7 +505,7 @@ export default function MedicalRecords() {
 
   return (
     <PageScaffold contentClassName="pb-28 lg:pb-12">
-      <header className="bg-white px-4 pt-10 pb-4 border-b border-gray-100 shadow-sm lg:px-10 lg:rounded-t-3xl lg:border-none lg:shadow-none">
+      <header className="bg-white px-4 pt-14 pb-4 border-b border-gray-100 shadow-sm lg:px-10 lg:rounded-t-3xl lg:border-none lg:shadow-none">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <h1 className="text-2xl font-bold text-[#002D55]">{t("Medical Records Vault")}</h1>

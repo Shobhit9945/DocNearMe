@@ -122,7 +122,7 @@ export default function Search() {
 
   return (
     <PageScaffold contentClassName="pb-28 lg:pb-12">
-      <header className="bg-white px-4 pt-10 pb-4 border-b border-gray-100 shadow-sm lg:px-10 lg:rounded-t-3xl lg:border-none lg:shadow-none">
+      <header className="bg-white px-4 pt-14 pb-4 border-b border-gray-100 shadow-sm lg:px-10 lg:rounded-t-3xl lg:border-none lg:shadow-none">
         <h1 className="text-2xl font-bold text-[#002D55]">{t("Search")}</h1>
         <p className="text-sm text-slate-500 mt-2">{t("specialists, clinics and hospitals nearby.")}</p>
       </header>

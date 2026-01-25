@@ -71,7 +71,7 @@ export default function ClinicDetail() {
 
   return (
     <PageScaffold contentClassName="pb-28 lg:pb-12">
-      <header className="relative overflow-hidden bg-white px-4 pt-10 pb-6 shadow-sm lg:px-12 lg:rounded-t-3xl">
+      <header className="relative overflow-hidden bg-white px-4 pt-14 pb-6 shadow-sm lg:px-12 lg:rounded-t-3xl">
         <button
           type="button"
           onClick={() => navigate("/clinics")}

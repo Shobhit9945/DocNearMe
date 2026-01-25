@@ -82,6 +82,7 @@ const EMAIL_KEY = "docnearme_user_email";
 
 const Index: React.FC = () => {
   const navigate = useNavigate();
+  const [showDocDaisyBanner, setShowDocDaisyBanner] = useState(true);
   const {
     currentLocation,
     locationError,
@@ -318,7 +319,7 @@ const Index: React.FC = () => {
 
   return (
     <PageScaffold contentClassName="pb-28 lg:pb-12">
-      <header className="bg-white px-4 pt-10 pb-4 border-b border-gray-100 shadow-sm lg:px-10 lg:rounded-t-3xl lg:border-none lg:shadow-none">
+      <header className="bg-white px-4 pt-14 pb-4 border-b border-gray-100 shadow-sm lg:px-10 lg:rounded-t-3xl lg:border-none lg:shadow-none">
         <div className="mx-auto w-full max-w-6xl">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-start gap-3">
@@ -428,7 +429,7 @@ const Index: React.FC = () => {
                 {heroSlides.map((slide) => (
                   <CarouselItem key={slide.headline}>
                     <div
-                      className={`relative flex h-[180px] flex-col justify-between overflow-hidden rounded-[20px] border border-[#D4EBFF] bg-gradient-to-br ${slide.accent} p-4 shadow-[0_1px_14px_0_#DFE8EC] sm:h-[200px] sm:p-5 lg:h-[240px] lg:p-8`}
+                      className={`relative flex min-h-[180px] flex-col justify-between overflow-hidden rounded-[20px] border border-[#D4EBFF] bg-gradient-to-br ${slide.accent} p-4 shadow-[0_1px_14px_0_#DFE8EC] sm:min-h-[200px] sm:p-5 lg:min-h-[240px] lg:p-8`}
                     >
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex-1">
@@ -496,14 +497,16 @@ const Index: React.FC = () => {
         </div>
       </main>
 
-      <motion.div
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.3 }}
-        className="fixed bottom-24 right-4 left-4 z-50 lg:hidden"
-      >
-        <DocDaisyBanner onClick={() => navigate("/docdaisy")} />
-      </motion.div>
+      {showDocDaisyBanner && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.3 }}
+          className="fixed bottom-24 right-4 left-4 z-50 lg:hidden"
+        >
+          <DocDaisyBanner onClick={() => navigate("/docdaisy")} onClose={() => setShowDocDaisyBanner(false)} />
+        </motion.div>
+      )}
 
       <div className="lg:hidden">
         <BottomNav />

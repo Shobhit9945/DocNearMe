@@ -115,13 +115,13 @@ export default function Profile() {
 
   return (
     <PageScaffold contentClassName="pb-28 lg:pb-12">
-      <header className="bg-white px-4 pt-10 pb-4 border-b border-gray-100 shadow-sm lg:px-10 lg:rounded-t-3xl lg:border-none lg:shadow-none flex justify-between items-center">
+      <header className="bg-white px-4 pt-14 pb-4 border-b border-gray-100 shadow-sm lg:px-10 lg:rounded-t-3xl lg:border-none lg:shadow-none flex justify-between items-center">
         <div>
            <h1 className="text-2xl font-bold text-[#002D55]">{t("Profile")}</h1>
            <p className="text-sm text-slate-500 mt-2">{t("Manage your personal details and preferences.")}</p>
         </div>
         {userName && (
-          <Button variant="ghost" size="sm" onClick={handleLogout} className="text-destructive hover:text-destructive hover:bg-destructive/10 gap-2">
+          <Button variant="ghost" size="sm" onClick={handleLogout} className="hidden lg:inline-flex text-destructive hover:text-destructive hover:bg-destructive/10 gap-2">
             <LogOut className="w-4 h-4" />
             {t("Sign out")}
           </Button>
@@ -328,6 +328,14 @@ export default function Profile() {
                 </a>
               </p>
             </div>
+            {userName && (
+              <div className="mt-6 lg:hidden">
+                <Button variant="ghost" size="sm" onClick={handleLogout} className="w-full text-destructive hover:text-destructive hover:bg-destructive/10 gap-2 justify-center">
+                  <LogOut className="w-4 h-4" />
+                  {t("Sign out")}
+                </Button>
+              </div>
+            )}
           </section>
 
           <aside className="hidden lg:flex lg:w-1/3 flex-col gap-4">

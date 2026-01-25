@@ -172,11 +172,11 @@ export default function Clinics() {
 
   return (
     <PageScaffold contentClassName="pb-28 lg:pb-12">
-      <header className="bg-white px-4 pt-10 pb-4 border-b border-gray-100 shadow-sm lg:px-10 lg:rounded-t-3xl lg:border-none lg:shadow-none">
+      <header className="bg-white px-4 pt-14 pb-4 border-b border-gray-100 shadow-sm lg:px-10 lg:rounded-t-3xl lg:border-none lg:shadow-none">
         <div className="flex flex-col gap-3">
           <p className="text-xs uppercase tracking-[0.2em] text-slate-400">{t("Clinics")}</p>
           <h1 className="text-3xl font-bold text-[#002D55] flex items-center gap-3">
-            <Building2 className="w-8 h-8 text-[#0089FF]" /> {t("Discover care for")} {translatedSelectedLabel}
+            <Building2 className="hidden lg:block w-8 h-8 text-[#0089FF]" /> {t("Discover care for")} {translatedSelectedLabel}
           </h1>
           <p className="text-sm text-slate-500">
             {clinics.length} {t("options in Beppu updated just now based on your specialty.")}

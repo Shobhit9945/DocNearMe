@@ -891,26 +891,22 @@ export default function Appointment() {
   if (view === "upcoming") {
     return (
       <PageScaffold contentClassName="pb-28 lg:pb-12">
-        <header className="bg-white px-4 pt-10 pb-6 border-b border-gray-100 shadow-sm lg:px-10 lg:rounded-t-3xl lg:border-none lg:shadow-none">
-          <div className="max-w-7xl mx-auto flex items-center gap-4">
-            <button
-              onClick={() => navigate("/home")}
-              className="p-2 rounded-full hover:bg-gray-100 transition-colors"
-            >
-              <ChevronLeft className="w-6 h-6 text-black" />
-            </button>
-            <div className="flex-1">
-              <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold">
+        <header className="bg-white px-4 pt-14 pb-6 border-b border-gray-100 shadow-sm lg:px-10 lg:pt-14 lg:rounded-t-3xl lg:border-none lg:shadow-none">
+          <div className="max-w-7xl mx-auto flex flex-col gap-4 lg:flex-row lg:items-center">
+            <div className="flex w-full justify-start lg:w-auto">
+              <button
+                onClick={() => navigate("/home")}
+                className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+              >
+                <ChevronLeft className="w-6 h-6 text-black" />
+              </button>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold whitespace-normal">
                 Your care plan
               </p>
               <h1 className="text-2xl font-bold text-black">Upcoming appointments</h1>
             </div>
-            <button
-              onClick={handleStartBooking}
-              className="hidden sm:inline-flex items-center gap-2 rounded-full bg-[#0089FF] px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#0077E6]"
-            >
-              Book appointment
-            </button>
           </div>
         </header>
 
@@ -1247,7 +1243,7 @@ export default function Appointment() {
 
   return (
     <PageScaffold contentClassName="pb-28 lg:pb-12">
-      <header className="bg-white px-4 pt-10 pb-6 border-b border-gray-100 shadow-sm lg:px-10 lg:rounded-t-3xl lg:border-none lg:shadow-none">
+      <header className="bg-white px-4 pt-14 pb-6 border-b border-gray-100 shadow-sm lg:px-10 lg:rounded-t-3xl lg:border-none lg:shadow-none">
         <div className="max-w-7xl mx-auto flex items-center gap-4">
           <button
             onClick={() => setView("upcoming")}
