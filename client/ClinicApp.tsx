@@ -11,10 +11,14 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
-export default function ClinicApp() {
+interface ClinicAppProps {
+  basename?: string;
+}
+
+export default function ClinicApp({ basename }: ClinicAppProps) {
   return (
     <QueryClientProvider client={queryClient}>
-        <BrowserRouter>
+        <BrowserRouter basename={basename}>
             <Routes>
                 <Route path="/login" element={<ClinicLogin />} />
                 <Route path="/" element={<ClinicLayout />}>
