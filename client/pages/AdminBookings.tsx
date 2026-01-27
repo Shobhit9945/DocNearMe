@@ -56,6 +56,7 @@ export default function AdminBookings() {
                       <TableHead>Patient</TableHead>
                       <TableHead>Specialization</TableHead>
                       <TableHead>Clinic</TableHead>
+                      <TableHead>Visa type</TableHead>
                       <TableHead>Notes</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -76,6 +77,9 @@ export default function AdminBookings() {
                           </div>
                         </TableCell>
                         <TableCell>{appt.clinicId || "global"}</TableCell>
+                        <TableCell className="text-sm text-slate-600">
+                          {appt.patientVisaType ?? "—"}
+                        </TableCell>
                         <TableCell className="max-w-xs text-sm text-slate-600">
                           {appt.notes?.trim() ? appt.notes : "—"}
                         </TableCell>

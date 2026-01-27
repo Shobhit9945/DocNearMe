@@ -4,6 +4,7 @@ import { User, ShieldCheck, Bell, LogOut } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -16,6 +17,7 @@ export default function Profile() {
   const [profileEmail, setProfileEmail] = useState("");
   const [profilePhone, setProfilePhone] = useState("");
   const [profileAddress, setProfileAddress] = useState("");
+  const [profileVisaType, setProfileVisaType] = useState("");
   const [emergencyContact, setEmergencyContact] = useState("");
   const [preferredLanguage, setPreferredLanguage] = useState("Japanese");
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
@@ -31,6 +33,7 @@ export default function Profile() {
       setProfileEmail(storedEmail);
       setProfilePhone("");
       setProfileAddress("");
+      setProfileVisaType("");
       setEmergencyContact("");
       setPreferredLanguage("Japanese");
       setNotificationsEnabled(true);
@@ -42,6 +45,7 @@ export default function Profile() {
       email?: string;
       phone?: string;
       address?: string;
+      visaType?: string;
       emergencyContact?: string;
       preferredLanguage?: string;
       notificationsEnabled?: boolean;
@@ -50,6 +54,7 @@ export default function Profile() {
     setProfileEmail(parsed.email ?? storedEmail);
     setProfilePhone(parsed.phone ?? "");
     setProfileAddress(parsed.address ?? "");
+    setProfileVisaType(parsed.visaType ?? "");
     setEmergencyContact(parsed.emergencyContact ?? "");
     setPreferredLanguage(parsed.preferredLanguage ?? "Japanese");
     setNotificationsEnabled(parsed.notificationsEnabled ?? true);
@@ -97,6 +102,7 @@ export default function Profile() {
         email: profileEmail,
         phone: profilePhone,
         address: profileAddress,
+        visaType: profileVisaType,
         emergencyContact,
         preferredLanguage,
         notificationsEnabled,
@@ -240,6 +246,30 @@ export default function Profile() {
                   className="mt-2"
                   disabled={!isEditingProfile}
                 />
+              </div>
+              <div className="grid gap-2">
+                <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Visa type
+                </label>
+                <Select
+                  value={profileVisaType}
+                  onValueChange={(value) => setProfileVisaType(value)}
+                  disabled={!isEditingProfile}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select visa type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="tourist">Tourist</SelectItem>
+                    <SelectItem value="resident-work">Resident (work visa)</SelectItem>
+                    <SelectItem value="resident-student">Resident (student visa)</SelectItem>
+                    <SelectItem value="resident-family">Resident (family/dependent)</SelectItem>
+                    <SelectItem value="resident-permanent">Resident (permanent)</SelectItem>
+                    <SelectItem value="resident-long-term">Resident (long-term)</SelectItem>
+                    <SelectItem value="resident-other">Resident (other)</SelectItem>
+                    <SelectItem value="japanese-national">Japanese national</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div>
                 <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">

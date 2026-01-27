@@ -141,6 +141,7 @@ const serializeAppointment = (appointment: Appointment) => {
     patientName: appointment.patientName,
     patientPhone: appointment.patientPhone,
     patientEmail: appointment.patientEmail,
+    patientVisaType: appointment.patientVisaType,
     createdAt: appointment.createdAt instanceof Date ? appointment.createdAt.toISOString() : appointment.createdAt,
     updatedAt: appointment.updatedAt instanceof Date ? appointment.updatedAt.toISOString() : appointment.updatedAt,
   };
@@ -231,6 +232,10 @@ export const handleRequestAppointment = async (req: Request, res: Response) => {
 
   try {
     const appointments = await getAppointmentsCollection();
+    const patients = await getPatientsCollection();
+    const patientLookupId = ObjectId.isValid(req.auth.id) ? new ObjectId(req.auth.id) : req.auth.id;
+    const patient = await patients.findOne({ _id: patientLookupId });
+    const patientVisaType = typeof patient?.visaType === "string" ? patient.visaType : undefined;
     const conflict = await findConfirmedOverlap(
       appointments,
       clinicKey,
@@ -266,6 +271,7 @@ export const handleRequestAppointment = async (req: Request, res: Response) => {
       patientName: trimmedName || req.auth.name,
       patientPhone: trimmedPhone,
       patientEmail: trimmedEmail || req.auth.email,
+      patientVisaType,
       sharedRecord: sharedRecordPayload ?? undefined,
       createdAt: now,
       updatedAt: now,
@@ -274,7 +280,6 @@ export const handleRequestAppointment = async (req: Request, res: Response) => {
     const result = await appointments.insertOne(record);
     const appointmentId = result.insertedId?.toString?.() ?? generateBookingId();
 
-    const patients = await getPatientsCollection();
     const patientAppointment: PatientAppointmentSummary = {
       appointmentId,
       date: record.date,
@@ -291,7 +296,6 @@ export const handleRequestAppointment = async (req: Request, res: Response) => {
       updatedAt: record.updatedAt,
     };
 
-    const patientLookupId = ObjectId.isValid(req.auth.id) ? new ObjectId(req.auth.id) : req.auth.id;
     await patients.updateOne(
       { _id: patientLookupId },
       {
@@ -369,6 +373,7 @@ export const handleRequestAppointment = async (req: Request, res: Response) => {
           "A new appointment request is awaiting your confirmation.",
           `Request ID: ${appointmentId}`,
           `Patient: ${record.patientName ?? "Patient"}`,
+          `Visa type: ${record.patientVisaType ?? "Not provided"}`,
           `Preferred: ${record.preferredStart} (${record.slot})`,
           "",
           `Confirm: ${confirmUrl}`,

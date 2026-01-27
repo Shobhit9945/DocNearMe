@@ -39,7 +39,7 @@ const PatientAuth = () => {
     password: "",
     dateOfBirth: "",
     nationality: "",
-    residentStatus: "",
+    visaType: "",
     photo: null as SignupPhotoPayload | null,
     consentAccepted: false,
   });
@@ -140,8 +140,8 @@ const PatientAuth = () => {
       setError("Please enter your nationality.");
       return false;
     }
-    if (signupData.residentStatus.trim().length < 2) {
-      setError("Please select your resident status.");
+    if (signupData.visaType.trim().length < 2) {
+      setError("Please select your visa type.");
       return false;
     }
     if (signupData.password.length < 8) {
@@ -761,25 +761,27 @@ const PatientAuth = () => {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label>Resident status</Label>
+                        <Label>Visa type</Label>
                         <Select
-                          value={signupData.residentStatus}
-                          onValueChange={(value) => setSignupData((prev) => ({ ...prev, residentStatus: value }))}
+                          value={signupData.visaType}
+                          onValueChange={(value) => setSignupData((prev) => ({ ...prev, visaType: value }))}
                         >
                           <SelectTrigger>
-                            <SelectValue placeholder="Select your resident status" />
+                            <SelectValue placeholder="Select your visa type" />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="tourist">Tourist</SelectItem>
-                            <SelectItem value="foreign-resident">Foreign resident</SelectItem>
-                            <SelectItem value="permanent-resident">Permanent resident</SelectItem>
-                            <SelectItem value="citizen">Citizen</SelectItem>
-                            <SelectItem value="student">Student</SelectItem>
-                            <SelectItem value="other">Other</SelectItem>
+                            <SelectItem value="resident-work">Resident (work visa)</SelectItem>
+                            <SelectItem value="resident-student">Resident (student visa)</SelectItem>
+                            <SelectItem value="resident-family">Resident (family/dependent)</SelectItem>
+                            <SelectItem value="resident-permanent">Resident (permanent)</SelectItem>
+                            <SelectItem value="resident-long-term">Resident (long-term)</SelectItem>
+                            <SelectItem value="resident-other">Resident (other)</SelectItem>
+                            <SelectItem value="japanese-national">Japanese national</SelectItem>
                           </SelectContent>
                         </Select>
                         <p className="text-xs text-slate-500">
-                          This helps us determine future options like linking a phone number.
+                          This helps clinics prepare registration paperwork ahead of your visit.
                         </p>
                       </div>
                       <div className="space-y-2">
