@@ -29,7 +29,7 @@ const dateOfBirthSchema = z
   .trim()
   .refine((value) => !Number.isNaN(Date.parse(value)), "Invalid date of birth.");
 const nationalitySchema = z.string().trim().min(2).max(80);
-const residentStatusSchema = z.string().trim().min(2).max(80);
+const visaTypeSchema = z.string().trim().min(2).max(80);
 const consentAcceptedSchema = z.literal(true);
 const photoSchema = z
   .object({
@@ -53,7 +53,7 @@ const signupSchema = z.object({
   password: passwordSchema,
   dateOfBirth: dateOfBirthSchema,
   nationality: nationalitySchema,
-  residentStatus: residentStatusSchema,
+  visaType: visaTypeSchema,
   photo: photoSchema,
   consentAccepted: consentAcceptedSchema,
 });
@@ -327,7 +327,7 @@ export const handleSignup: RequestHandler = async (req, res, next) => {
       passwordHash,
       dateOfBirth: payload.dateOfBirth,
       nationality: payload.nationality,
-      residentStatus: payload.residentStatus,
+      visaType: payload.visaType,
       photo: payload.photo ?? null,
       appointments: [],
       createdAt: new Date(),

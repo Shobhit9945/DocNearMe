@@ -31,6 +31,7 @@ export interface Appointment {
   patientName?: string;
   patientPhone?: string;
   patientEmail?: string;
+  patientVisaType?: string;
   sharedRecord?: SharedMedicalRecord;
   createdAt: Date;
   updatedAt?: Date;
@@ -68,7 +69,7 @@ export interface PatientUser {
   passwordHash: string;
   dateOfBirth?: string;
   nationality?: string;
-  residentStatus?: string;
+  visaType?: string;
   photo?: {
     dataUrl: string;
     fileName: string;

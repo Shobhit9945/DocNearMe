@@ -227,6 +227,9 @@ export default function ClinicAppointments() {
                     <p className="text-sm text-gray-500 mt-1">
                       Tel: {appointment.patientPhone ?? "Not provided"}
                     </p>
+                    <p className="text-sm text-gray-500">
+                      Visa type: {appointment.patientVisaType ?? "Not provided"}
+                    </p>
                   </div>
                   <div className="flex flex-wrap items-center gap-3">
                     <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusClass}`}>

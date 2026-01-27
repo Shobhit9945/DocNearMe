@@ -39,6 +39,7 @@ export interface AppointmentResponseItem {
   patientName?: string;
   patientPhone?: string;
   patientEmail?: string;
+  patientVisaType?: VisaType;
   createdAt: string;
   updatedAt?: string;
 }
@@ -145,10 +146,20 @@ export interface SignupRequest {
   password: string;
   dateOfBirth: string;
   nationality: string;
-  residentStatus: string;
+  visaType: VisaType;
   photo?: SignupPhotoPayload | null;
   consentAccepted: boolean;
 }
+
+export type VisaType =
+  | "tourist"
+  | "resident-work"
+  | "resident-student"
+  | "resident-family"
+  | "resident-permanent"
+  | "resident-long-term"
+  | "resident-other"
+  | "japanese-national";
 
 export interface LoginRequest {
   email: string;
