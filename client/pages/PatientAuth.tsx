@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { PageScaffold } from "@/components/PageScaffold";
 import { useTranslation } from "@/lib/i18n";
+import { countries } from "@/lib/countries";
 import type {
   AuthResponse,
   CheckEmailRequest,
@@ -760,22 +761,11 @@ const PatientAuth = () => {
                             <SelectValue placeholder={t("Select your country")} />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="Japan">{t("Japan")}</SelectItem>
-                            <SelectItem value="United States">{t("United States")}</SelectItem>
-                            <SelectItem value="Canada">{t("Canada")}</SelectItem>
-                            <SelectItem value="United Kingdom">{t("United Kingdom")}</SelectItem>
-                            <SelectItem value="Australia">{t("Australia")}</SelectItem>
-                            <SelectItem value="India">{t("India")}</SelectItem>
-                            <SelectItem value="Philippines">{t("Philippines")}</SelectItem>
-                            <SelectItem value="Indonesia">{t("Indonesia")}</SelectItem>
-                            <SelectItem value="Vietnam">{t("Vietnam")}</SelectItem>
-                            <SelectItem value="Thailand">{t("Thailand")}</SelectItem>
-                            <SelectItem value="China">{t("China")}</SelectItem>
-                            <SelectItem value="South Korea">{t("South Korea")}</SelectItem>
-                            <SelectItem value="Mexico">{t("Mexico")}</SelectItem>
-                            <SelectItem value="Brazil">{t("Brazil")}</SelectItem>
-                            <SelectItem value="Germany">{t("Germany")}</SelectItem>
-                            <SelectItem value="France">{t("France")}</SelectItem>
+                            {countries.map((country) => (
+                              <SelectItem key={country} value={country}>
+                                {t(country)}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                         <p className="text-xs text-slate-500">
