@@ -68,6 +68,9 @@ export default function ClinicAppointments() {
   const [patientDetailsOpen, setPatientDetailsOpen] = useState(false);
   const [patientDetailsLoading, setPatientDetailsLoading] = useState(false);
   const [patientDetailsError, setPatientDetailsError] = useState<string | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<AppointmentResponseItem | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const appointments = useMemo(() => data?.appointments ?? [], [data?.appointments]);
   const dialogOpen = Boolean(actionType && activeAppointment);
@@ -82,6 +85,16 @@ export default function ClinicAppointments() {
     setActionType(null);
     setActionMessage("");
     setActiveAppointment(null);
+  };
+
+  const openDeleteDialog = (appointment: AppointmentResponseItem) => {
+    setDeleteTarget(appointment);
+    setDeleteDialogOpen(true);
+  };
+
+  const closeDeleteDialog = () => {
+    setDeleteTarget(null);
+    setDeleteDialogOpen(false);
   };
 
   const handleConfirm = async (appointment: AppointmentResponseItem) => {
@@ -164,6 +177,39 @@ export default function ClinicAppointments() {
       });
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteAppointment = async () => {
+    if (!deleteTarget) return;
+    setIsDeleting(true);
+    try {
+      const response = await fetch(`/api/clinic/appointments/${deleteTarget._id}`, {
+        method: "DELETE",
+        headers: {
+          ...getClinicAuthHeader(),
+        },
+      });
+
+      if (!response.ok) {
+        const errorPayload = await response.json().catch(() => ({}));
+        throw new Error(errorPayload?.error ?? t("Unable to delete appointment."));
+      }
+
+      toast({
+        title: t("Appointment deleted"),
+        description: t("The appointment record has been removed."),
+      });
+      await refetch();
+      closeDeleteDialog();
+    } catch (err) {
+      toast({
+        title: t("Delete failed"),
+        description: err instanceof Error ? err.message : t("Please try again."),
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -292,6 +338,13 @@ export default function ClinicAppointments() {
                     >
                       {t("Cancel")}
                     </Button>
+                    <Button
+                      variant="destructive"
+                      onClick={() => openDeleteDialog(appointment)}
+                      disabled={isSubmitting || isDeleting}
+                    >
+                      {t("Delete record")}
+                    </Button>
                     <Button onClick={() => handleConfirm(appointment)} disabled={!canConfirm || isSubmitting}>
                       {t("Confirm")}
                     </Button>
@@ -340,6 +393,33 @@ export default function ClinicAppointments() {
             </Button>
             <Button type="button" onClick={handleActionSubmit} disabled={isSubmitting}>
               {isSubmitting ? t("Sending...") : t("Send message")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={deleteDialogOpen} onOpenChange={(open) => (open ? null : closeDeleteDialog())}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t("Delete appointment record?")}</DialogTitle>
+            <DialogDescription>
+              {t("This will permanently remove the appointment from your clinic records.")}
+            </DialogDescription>
+          </DialogHeader>
+          {deleteTarget ? (
+            <div className="rounded-lg bg-slate-50 p-3 text-sm text-slate-600">
+              <p className="font-medium text-slate-800">
+                {deleteTarget.patientName ?? t("Patient")}
+              </p>
+              <p>{formatAppointmentTime(deleteTarget)}</p>
+            </div>
+          ) : null}
+          <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+            <Button type="button" variant="outline" onClick={closeDeleteDialog} disabled={isDeleting}>
+              {t("Keep record")}
+            </Button>
+            <Button type="button" variant="destructive" onClick={handleDeleteAppointment} disabled={isDeleting}>
+              {isDeleting ? t("Deleting...") : t("Delete record")}
             </Button>
           </DialogFooter>
         </DialogContent>

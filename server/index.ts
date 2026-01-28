@@ -7,6 +7,7 @@ import {
   handleCancelAppointment,
   handleClinicCancelAppointment,
   handleClinicConfirmAppointment,
+  handleClinicDeleteAppointment,
   handleClinicDeclineAppointment,
   handleClinicPatientDetails,
   handleClinicRescheduleMessage,
@@ -117,6 +118,7 @@ export async function createServer(): Promise<Express> {
   app.post("/api/clinic/appointments/:id/confirm", requireClinicAuth, handleClinicConfirmAppointment);
   app.post("/api/clinic/appointments/:id/decline", requireClinicAuth, handleClinicDeclineAppointment);
   app.post("/api/clinic/appointments/:id/reschedule-message", requireClinicAuth, handleClinicRescheduleMessage);
+  app.delete("/api/clinic/appointments/:id", requireClinicAuth, handleClinicDeleteAppointment);
   app.post("/api/auth/signup", handleSignup);
   app.post("/api/auth/login", handleLogin);
   app.post("/api/auth/check-email", handleCheckEmail);
