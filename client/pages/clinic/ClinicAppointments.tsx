@@ -8,6 +8,7 @@ import { toast } from "@/components/ui/use-toast";
 import { getClinicAuthHeader, getClinicSession } from "@/lib/clinic-auth";
 import { useTranslation } from "@/lib/i18n";
 import { getSpecializationLabel } from "@/lib/specializations";
+import { formatSlotForLanguage } from "@/lib/time-format";
 import type { AppointmentListResponse, AppointmentResponseItem, ClinicPatientDetailsResponse } from "@shared/api";
 
 type ActionType = "reschedule" | "cancel";
@@ -45,21 +46,6 @@ const fetchClinicAppointments = async (): Promise<AppointmentListResponse> => {
   return response.json() as Promise<AppointmentListResponse>;
 };
 
-const formatSlotForLanguage = (slot: string, language: string) => {
-  if (language !== "ja") return slot;
-  const match = slot.trim().match(/^(\d{1,2}):(\d{2})(?:\s*(AM|PM))?$/i);
-  if (!match) return slot;
-  const hours = Number(match[1]);
-  const minutes = match[2];
-  const period = match[3]?.toUpperCase();
-  const normalizedHours =
-    period === "PM" && hours < 12 ? hours + 12 : period === "AM" && hours === 12 ? 0 : hours;
-  const displayHours = normalizedHours % 12 === 0 ? 12 : normalizedHours % 12;
-  const prefix = normalizedHours < 12 ? "午前" : "午後";
-  const minutesLabel = minutes === "00" ? "" : `${minutes}分`;
-  return `${prefix}${displayHours}時${minutesLabel}`;
-};
-
 const formatAppointmentTime = (appointment: AppointmentResponseItem, language: string) => {
   const rawDate = appointment.confirmedStart ?? appointment.preferredStart ?? appointment.date;
   const parsed = new Date(rawDate);
@@ -94,6 +80,23 @@ export default function ClinicAppointments() {
 
   const appointments = useMemo(() => data?.appointments ?? [], [data?.appointments]);
   const dialogOpen = Boolean(actionType && activeAppointment);
+  const resolveTranslatedPair = (
+    value: string | undefined,
+    translated: string | undefined,
+    fallback: string,
+  ) => {
+    const primaryFallback = value ?? translated ?? fallback;
+    if (
+      language === "ja" &&
+      translated &&
+      translated.trim().length > 0 &&
+      value &&
+      translated !== value
+    ) {
+      return { primary: translated, secondary: value };
+    }
+    return { primary: primaryFallback, secondary: null };
+  };
 
   const openDialog = (type: ActionType, appointment: AppointmentResponseItem) => {
     setActionType(type);
@@ -350,17 +353,16 @@ export default function ClinicAppointments() {
               appointment.status !== "DECLINED" &&
               appointment.status !== "CANCELLED_BY_PATIENT" &&
               appointment.status !== "CANCELLED_BY_CLINIC";
-            const notesLabel =
-              language === "ja"
-                ? appointment.notesTranslated ?? appointment.notes ?? t("No notes provided.")
-                : appointment.notes ?? t("No notes provided.");
-            const patientName = appointment.patientName ?? t("Patient");
-            const patientNameLabel =
-              language === "ja" &&
-              appointment.patientNameTranslated &&
-              appointment.patientNameTranslated !== patientName
-                ? `${appointment.patientNameTranslated} (${patientName})`
-                : patientName;
+            const { primary: patientNamePrimary, secondary: patientNameSecondary } = resolveTranslatedPair(
+              appointment.patientName,
+              appointment.patientNameTranslated,
+              t("Patient"),
+            );
+            const { primary: notesPrimary, secondary: notesSecondary } = resolveTranslatedPair(
+              appointment.notes,
+              appointment.notesTranslated,
+              t("No notes provided."),
+            );
             const specializationLabel = t(getSpecializationLabel(appointment.specialization));
 
             const actionButtonClass = "w-full sm:w-auto whitespace-normal text-center h-auto py-2 leading-tight";
@@ -373,7 +375,12 @@ export default function ClinicAppointments() {
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                   <div className="space-y-1">
                     <p className="text-sm text-gray-500">{formatAppointmentTime(appointment, language)}</p>
-                    <h2 className="text-lg font-semibold text-gray-900">{patientNameLabel}</h2>
+                    <h2 className="text-lg font-semibold text-gray-900">{patientNamePrimary}</h2>
+                    {patientNameSecondary ? (
+                      <p className="text-xs text-gray-400">
+                        {t("Original")}: {patientNameSecondary}
+                      </p>
+                    ) : null}
                     <p className="text-sm text-gray-500">{specializationLabel}</p>
                     <p className="text-sm text-gray-500 mt-1">
                       {t("Tel")}: {appointment.patientPhone ?? t("Not provided")}
@@ -431,7 +438,12 @@ export default function ClinicAppointments() {
                   <Trash2 className="h-4 w-4" />
                 </Button>
                 <div className="mt-4 space-y-2 rounded-lg bg-gray-50 p-3 text-sm text-gray-600">
-                  <p>{t("Notes")}: {notesLabel}</p>
+                  <p>{t("Notes")}: {notesPrimary}</p>
+                  {notesSecondary ? (
+                    <p className="text-xs text-gray-400">
+                      {t("Original")}: {notesSecondary}
+                    </p>
+                  ) : null}
                   {appointment.clinicMessage ? (
                     <p>
                       {t("Latest clinic message")}:{" "}
@@ -488,9 +500,23 @@ export default function ClinicAppointments() {
           </DialogHeader>
           {deleteTarget ? (
             <div className="rounded-lg bg-slate-50 p-3 text-sm text-slate-600">
-              <p className="font-medium text-slate-800">
-                {deleteTarget.patientName ?? t("Patient")}
-              </p>
+              {(() => {
+                const { primary, secondary } = resolveTranslatedPair(
+                  deleteTarget.patientName,
+                  deleteTarget.patientNameTranslated,
+                  t("Patient"),
+                );
+                return (
+                  <div className="space-y-1">
+                    <p className="font-medium text-slate-800">{primary}</p>
+                    {secondary ? (
+                      <p className="text-xs text-slate-400">
+                        {t("Original")}: {secondary}
+                      </p>
+                    ) : null}
+                  </div>
+                );
+              })()}
               <p>{formatAppointmentTime(deleteTarget, language)}</p>
             </div>
           ) : null}
@@ -529,15 +555,23 @@ export default function ClinicAppointments() {
               <div className="grid gap-3 md:grid-cols-2">
                 <div>
                   <p className="text-xs uppercase tracking-wide text-slate-500">{t("Name")}</p>
-                  <p className="font-medium">
-                    {patientDetails.patient.name
-                      ? language === "ja" &&
-                        patientDetails.patient.nameTranslated &&
-                        patientDetails.patient.nameTranslated !== patientDetails.patient.name
-                        ? `${patientDetails.patient.nameTranslated} (${patientDetails.patient.name})`
-                        : patientDetails.patient.name
-                      : t("Not provided")}
-                  </p>
+                  {(() => {
+                    const { primary, secondary } = resolveTranslatedPair(
+                      patientDetails.patient.name,
+                      patientDetails.patient.nameTranslated,
+                      t("Not provided"),
+                    );
+                    return (
+                      <div className="space-y-1">
+                        <p className="font-medium">{primary}</p>
+                        {secondary ? (
+                          <p className="text-xs text-slate-400">
+                            {t("Original")}: {secondary}
+                          </p>
+                        ) : null}
+                      </div>
+                    );
+                  })()}
                 </div>
                 <div>
                   <p className="text-xs uppercase tracking-wide text-slate-500">{t("Age")}</p>

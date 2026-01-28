@@ -152,32 +152,56 @@ const resolveAppointmentId = (appointmentId: string) =>
   ObjectId.isValid(appointmentId) ? new ObjectId(appointmentId) : appointmentId;
 
 const TRANSLATION_ENDPOINT = process.env.TRANSLATION_ENDPOINT ?? "https://libretranslate.de/translate";
+const GOOGLE_TRANSLATE_ENDPOINT =
+  "https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=ja&dt=t&q=";
 
 const containsJapanese = (text: string) => /[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9faf]/.test(text);
+
+const translateWithLibre = async (text: string) => {
+  const response = await fetch(TRANSLATION_ENDPOINT, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      q: text,
+      source: "auto",
+      target: "ja",
+      format: "text",
+    }),
+  });
+  if (!response.ok) {
+    return undefined;
+  }
+  const data = (await response.json()) as { translatedText?: string };
+  const translated = typeof data.translatedText === "string" ? data.translatedText.trim() : "";
+  if (!translated || translated === text) return undefined;
+  return translated;
+};
+
+const translateWithGoogle = async (text: string) => {
+  const response = await fetch(`${GOOGLE_TRANSLATE_ENDPOINT}${encodeURIComponent(text)}`);
+  if (!response.ok) {
+    return undefined;
+  }
+  const data = (await response.json()) as unknown;
+  if (!Array.isArray(data) || !Array.isArray(data[0])) return undefined;
+  const translated = data[0]
+    .map((chunk) => (Array.isArray(chunk) && typeof chunk[0] === "string" ? chunk[0] : ""))
+    .join("")
+    .trim();
+  if (!translated || translated === text) return undefined;
+  return translated;
+};
 
 const translateToJapanese = async (text?: string) => {
   if (!text) return undefined;
   if (containsJapanese(text)) return text;
   try {
-    const response = await fetch(TRANSLATION_ENDPOINT, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        q: text,
-        source: "auto",
-        target: "ja",
-        format: "text",
-      }),
-    });
-    if (!response.ok) {
-      return text;
-    }
-    const data = (await response.json()) as { translatedText?: string };
-    return typeof data.translatedText === "string" && data.translatedText.trim().length > 0
-      ? data.translatedText
-      : text;
+    const libreTranslation = await translateWithLibre(text);
+    if (libreTranslation) return libreTranslation;
+    const googleTranslation = await translateWithGoogle(text);
+    return googleTranslation ?? text;
   } catch (error) {
     console.error("Translation error", error);
     return text;

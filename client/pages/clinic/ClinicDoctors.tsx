@@ -5,11 +5,13 @@ import { toast } from "@/components/ui/use-toast";
 import { getClinicAuthHeader, getClinicSession } from "@/lib/clinic-auth";
 import { useClinicDoctors } from "@/lib/clinic-data";
 import { useTranslation } from "@/lib/i18n";
+import { getSpecializationLabel } from "@/lib/specializations";
+import { formatAvailabilityForLanguage } from "@/lib/time-format";
 import type { ClinicDoctor, ClinicDoctorsUpdateRequest } from "@shared/api";
 
 export default function ClinicDoctors() {
   const session = getClinicSession();
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const clinicId = session?.clinicId;
   const { data } = useClinicDoctors(clinicId);
   const [doctors, setDoctors] = useState<ClinicDoctor[]>([]);
@@ -77,7 +79,7 @@ export default function ClinicDoctors() {
         clinicId: clinicId ?? "",
         name: "",
         specialization: "",
-        languages: [t("English")],
+        languages: ["English"],
         rating: 4.5,
         nextAvailable: t("Schedule TBD"),
         availability: "",
@@ -144,8 +146,15 @@ export default function ClinicDoctors() {
       <section className="bg-white border border-gray-100 rounded-xl p-6 shadow-sm space-y-4">
         <h2 className="text-lg font-semibold text-gray-900">{t("Availability")}</h2>
         <div className="space-y-4">
-          {doctors.map((doctor, index) => (
-            <div key={doctor.id} className="border border-gray-100 rounded-lg p-4 space-y-3">
+          {doctors.map((doctor, index) => {
+            const specializationTranslation = doctor.specialization
+              ? t(getSpecializationLabel(doctor.specialization))
+              : "";
+            const availabilityTranslation = doctor.availability
+              ? formatAvailabilityForLanguage(doctor.availability, language, t)
+              : "";
+            return (
+              <div key={doctor.id} className="border border-gray-100 rounded-lg p-4 space-y-3">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <label className="text-xs font-medium text-gray-500 block mb-1">{t("Name")}</label>
@@ -162,6 +171,11 @@ export default function ClinicDoctors() {
                     onChange={(event) => handleFieldChange(index, "specialization", event.target.value)}
                     placeholder={t("Dermatology")}
                   />
+                  {language === "ja" && doctor.specialization && specializationTranslation !== doctor.specialization ? (
+                    <p className="mt-1 text-xs text-gray-400">
+                      {specializationTranslation}
+                    </p>
+                  ) : null}
                 </div>
                 <div>
                   <label className="text-xs font-medium text-gray-500 block mb-1">{t("Availability")}</label>
@@ -170,27 +184,35 @@ export default function ClinicDoctors() {
                     onChange={(event) => handleFieldChange(index, "availability", event.target.value)}
                     placeholder={t("Mon-Fri 09:00-18:00")}
                   />
+                  {language === "ja" && doctor.availability && availabilityTranslation !== doctor.availability ? (
+                    <p className="mt-1 text-xs text-gray-400">
+                      {availabilityTranslation}
+                    </p>
+                  ) : null}
                 </div>
               </div>
               <div className="space-y-2">
                 <label className="text-xs font-medium text-gray-500 block">{t("Languages spoken")}</label>
                 <div className="flex flex-wrap gap-2">
-                  {(doctor.languages ?? [t("English")]).map((language) => (
-                    <span
-                      key={language}
-                      className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-xs text-gray-600"
-                    >
-                      {language}
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveLanguage(index, language)}
-                        className="text-gray-400 hover:text-gray-600"
-                        aria-label={t("Remove {language}", `Remove ${language}`).replace("{language}", language)}
+                  {(doctor.languages ?? [t("English")]).map((languageItem) => {
+                    const label = t(languageItem);
+                    return (
+                      <span
+                        key={languageItem}
+                        className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-xs text-gray-600"
                       >
-                        ×
-                      </button>
-                    </span>
-                  ))}
+                        {label}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveLanguage(index, languageItem)}
+                          className="text-gray-400 hover:text-gray-600"
+                          aria-label={t("Remove {language}", `Remove ${label}`).replace("{language}", label)}
+                        >
+                          ×
+                        </button>
+                      </span>
+                    );
+                  })}
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <Input
@@ -209,8 +231,9 @@ export default function ClinicDoctors() {
                   {t("Remove")}
                 </Button>
               </div>
-            </div>
-          ))}
+              </div>
+            );
+          })}
         </div>
       </section>
 
