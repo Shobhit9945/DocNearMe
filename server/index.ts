@@ -60,6 +60,8 @@ import {
   handleUpdateClinicProfile,
 } from "./routes/clinic";
 import { requireClinicAuth } from "./middleware/clinic-auth";
+import { requireAdminAuth } from "./middleware/admin-auth";
+import { handleAdminAuthCheck, handleAdminCreateClinic } from "./routes/admin";
 
 export async function createServer(): Promise<Express> {
   const app = express();
@@ -73,6 +75,7 @@ export async function createServer(): Promise<Express> {
     "https://docnearme.app",
     "https://www.docnearme.app",
     "https://clinic.docnearme.app",
+    "https://admin.docnearme.app",
     "https://clinics.docnearme.app",
     "http://localhost:5173", 
     "http://localhost:3000",
@@ -132,6 +135,8 @@ export async function createServer(): Promise<Express> {
   app.post("/api/auth/reset-password", handleResetPassword);
   app.post("/api/clinic-auth/login", handleClinicLogin);
   app.get("/api/clinic-credentials", handleClinicCredentials);
+  app.get("/api/admin/auth-check", requireAdminAuth, handleAdminAuthCheck);
+  app.post("/api/admin/clinics", requireAdminAuth, handleAdminCreateClinic);
   app.get("/api/clinics", handleClinicList);
   app.get("/api/clinics/doctors", handleClinicDoctorsAll);
   app.get("/api/clinics/:clinicId", handleClinicProfile);
