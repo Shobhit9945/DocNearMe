@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "@/components/ui/use-toast";
 import { getClinicAuthHeader, getClinicSession } from "@/lib/clinic-auth";
 import { useClinicProfile } from "@/lib/clinic-data";
+import { useTranslation } from "@/lib/i18n";
 import { normalizeClinicHours } from "@/lib/scheduling";
 import type { ClinicBookingClosure, ClinicProfileUpdateRequest } from "@shared/api";
 
@@ -11,6 +12,7 @@ const DAYS_OF_WEEK = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "S
 
 export default function ClinicInfo() {
   const session = getClinicSession();
+  const { t } = useTranslation();
   const clinicId = session?.clinicId;
   const { data } = useClinicProfile(clinicId);
   const clinic = data?.clinic;
@@ -69,7 +71,7 @@ export default function ClinicInfo() {
 
   const handleSave = async () => {
     if (!clinicId) {
-      toast({ title: "Missing clinic session", variant: "destructive" });
+      toast({ title: t("Missing clinic session"), variant: "destructive" });
       return;
     }
 
@@ -106,14 +108,14 @@ export default function ClinicInfo() {
 
       if (!response.ok) {
         const error = await response.json().catch(() => ({}));
-        throw new Error(error?.error ?? "Unable to save clinic info.");
+        throw new Error(error?.error ?? t("Unable to save clinic info."));
       }
 
-      toast({ title: "Clinic info updated", description: "Changes are now visible to patients." });
+      toast({ title: t("Clinic info updated"), description: t("Changes are now visible to patients.") });
     } catch (error) {
       toast({
-        title: "Save failed",
-        description: error instanceof Error ? error.message : "Please try again.",
+        title: t("Save failed"),
+        description: error instanceof Error ? error.message : t("Please try again."),
         variant: "destructive",
       });
     } finally {
@@ -124,74 +126,78 @@ export default function ClinicInfo() {
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="text-2xl font-bold text-gray-900">Clinic info</h1>
+        <h1 className="text-2xl font-bold text-gray-900">{t("Clinic info")}</h1>
         <p className="text-gray-500 mt-1">
-          Update hours, pricing, and photos in one place.
+          {t("Update hours, pricing, and photos in one place.")}
         </p>
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <section className="bg-white border border-gray-100 rounded-xl p-6 shadow-sm space-y-4">
-          <h2 className="text-lg font-semibold text-gray-900">Basic info</h2>
+          <h2 className="text-lg font-semibold text-gray-900">{t("Basic info")}</h2>
           <div>
-            <label className="text-sm font-medium text-gray-700 block mb-2">Clinic name</label>
+            <label className="text-sm font-medium text-gray-700 block mb-2">{t("Clinic name")}</label>
             <Input value={name} onChange={(event) => setName(event.target.value)} />
           </div>
           <div>
-            <label className="text-sm font-medium text-gray-700 block mb-2">Address</label>
+            <label className="text-sm font-medium text-gray-700 block mb-2">{t("Address")}</label>
             <Input value={location} onChange={(event) => setLocation(event.target.value)} />
           </div>
           <div>
-            <label className="text-sm font-medium text-gray-700 block mb-2">Phone</label>
+            <label className="text-sm font-medium text-gray-700 block mb-2">{t("Phone")}</label>
             <Input value={phone} onChange={(event) => setPhone(event.target.value)} />
           </div>
           <div>
-            <label className="text-sm font-medium text-gray-700 block mb-2">Primary image</label>
-            <Input value={image} onChange={(event) => setImage(event.target.value)} placeholder="https://..." />
+            <label className="text-sm font-medium text-gray-700 block mb-2">{t("Primary image")}</label>
+            <Input
+              value={image}
+              onChange={(event) => setImage(event.target.value)}
+              placeholder={t("https://...")}
+            />
           </div>
           <div>
             <label className="text-sm font-medium text-gray-700 block mb-2">
-              Specializations (from doctors)
+              {t("Specializations (from doctors)")}
             </label>
             <div className="rounded-md border border-dashed border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
               {(clinic?.specializations ?? []).length > 0
                 ? clinic?.specializations?.join(", ")
-                : "Add doctor profiles to populate specialties."}
+                : t("Add doctor profiles to populate specialties.")}
             </div>
           </div>
           <div>
-            <label className="text-sm font-medium text-gray-700 block mb-2">Next availability</label>
+            <label className="text-sm font-medium text-gray-700 block mb-2">{t("Next availability")}</label>
             <div className="rounded-md border border-dashed border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
-              {clinic?.nextAvailability ?? "Schedule updates after you set hours and closures."}
+              {clinic?.nextAvailability ?? t("Schedule updates after you set hours and closures.")}
             </div>
           </div>
           <Button onClick={handleSave} disabled={isSaving}>
-            {isSaving ? "Saving..." : "Save"}
+            {isSaving ? t("Saving...") : t("Save")}
           </Button>
         </section>
 
         <section className="bg-white border border-gray-100 rounded-xl p-6 shadow-sm space-y-4">
-          <h2 className="text-lg font-semibold text-gray-900">Clinic hours</h2>
+          <h2 className="text-lg font-semibold text-gray-900">{t("Clinic hours")}</h2>
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700 block">Weekday hours</label>
+              <label className="text-sm font-medium text-gray-700 block">{t("Weekday hours")}</label>
               <div className="flex items-center gap-3">
                 <Input type="time" value={weekdayStart} onChange={(event) => setWeekdayStart(event.target.value)} />
-                <span className="text-sm text-slate-500">to</span>
+                <span className="text-sm text-slate-500">{t("to")}</span>
                 <Input type="time" value={weekdayEnd} onChange={(event) => setWeekdayEnd(event.target.value)} />
               </div>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700 block">Weekend hours</label>
+              <label className="text-sm font-medium text-gray-700 block">{t("Weekend hours")}</label>
               <div className="flex items-center gap-3">
                 <Input type="time" value={weekendStart} onChange={(event) => setWeekendStart(event.target.value)} />
-                <span className="text-sm text-slate-500">to</span>
+                <span className="text-sm text-slate-500">{t("to")}</span>
                 <Input type="time" value={weekendEnd} onChange={(event) => setWeekendEnd(event.target.value)} />
               </div>
             </div>
           </div>
           <div>
-            <label className="text-sm font-medium text-gray-700 block mb-2">Closed days</label>
+            <label className="text-sm font-medium text-gray-700 block mb-2">{t("Closed days")}</label>
             <div className="flex flex-wrap gap-2">
               {DAYS_OF_WEEK.map((day) => {
                 const checked = closedDays.includes(day);
@@ -210,14 +216,14 @@ export default function ClinicInfo() {
                         : "bg-white text-slate-600 border border-slate-200"
                     }`}
                   >
-                    {day}
+                    {t(day)}
                   </button>
                 );
               })}
             </div>
           </div>
           <div className="space-y-3">
-            <label className="text-sm font-medium text-gray-700 block">Booking closures</label>
+            <label className="text-sm font-medium text-gray-700 block">{t("Booking closures")}</label>
             <div className="grid gap-3 lg:grid-cols-[1fr_1fr_2fr_auto]">
               <Input
                 type="date"
@@ -232,7 +238,7 @@ export default function ClinicInfo() {
               <Input
                 value={closureDraft.reason ?? ""}
                 onChange={(event) => setClosureDraft((prev) => ({ ...prev, reason: event.target.value }))}
-                placeholder="Reason (optional)"
+                placeholder={t("Reason (optional)")}
               />
               <Button
                 type="button"
@@ -247,7 +253,7 @@ export default function ClinicInfo() {
                   setClosureDraft({ startDate: "", endDate: "", reason: "" });
                 }}
               >
-                Add
+                {t("Add")}
               </Button>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -258,15 +264,15 @@ export default function ClinicInfo() {
                   const today = new Date().toISOString().split("T")[0];
                   setBookingClosures((prev) => [
                     ...prev,
-                    { startDate: today, endDate: today, reason: "Closed today" },
+                    { startDate: today, endDate: today, reason: t("Closed today") },
                   ]);
                 }}
               >
-                Close today
+                {t("Close today")}
               </Button>
             </div>
             {bookingClosures.length === 0 ? (
-              <p className="text-sm text-slate-500">No upcoming closures.</p>
+              <p className="text-sm text-slate-500">{t("No upcoming closures.")}</p>
             ) : (
               <div className="space-y-2">
                 {bookingClosures.map((closure, index) => (
@@ -284,7 +290,7 @@ export default function ClinicInfo() {
                         setBookingClosures((prev) => prev.filter((_, itemIndex) => itemIndex !== index))
                       }
                     >
-                      Remove
+                      {t("Remove")}
                     </Button>
                   </div>
                 ))}
@@ -292,26 +298,26 @@ export default function ClinicInfo() {
             )}
           </div>
           <Button variant="outline" onClick={handleSave} disabled={isSaving}>
-            {isSaving ? "Saving..." : "Update hours"}
+            {isSaving ? t("Saving...") : t("Update hours")}
           </Button>
         </section>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <section className="bg-white border border-gray-100 rounded-xl p-6 shadow-sm space-y-4">
-          <h2 className="text-lg font-semibold text-gray-900">Pricing</h2>
+          <h2 className="text-lg font-semibold text-gray-900">{t("Pricing")}</h2>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-sm font-medium text-gray-700 block mb-2">First visit</label>
+              <label className="text-sm font-medium text-gray-700 block mb-2">{t("First visit")}</label>
               <Input value={firstVisit} onChange={(event) => setFirstVisit(event.target.value)} />
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700 block mb-2">Follow-up</label>
+              <label className="text-sm font-medium text-gray-700 block mb-2">{t("Follow-up")}</label>
               <Input value={followUp} onChange={(event) => setFollowUp(event.target.value)} />
             </div>
           </div>
           <div>
-            <label className="text-sm font-medium text-gray-700 block mb-2">Other services</label>
+            <label className="text-sm font-medium text-gray-700 block mb-2">{t("Other services")}</label>
             <textarea
               className="w-full min-h-[90px] rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               value={otherServices}
@@ -319,12 +325,12 @@ export default function ClinicInfo() {
             />
           </div>
           <Button onClick={handleSave} disabled={isSaving}>
-            {isSaving ? "Saving..." : "Save"}
+            {isSaving ? t("Saving...") : t("Save")}
           </Button>
         </section>
 
         <section className="bg-white border border-gray-100 rounded-xl p-6 shadow-sm space-y-4">
-          <h2 className="text-lg font-semibold text-gray-900">Photos</h2>
+          <h2 className="text-lg font-semibold text-gray-900">{t("Photos")}</h2>
           <div className="space-y-3">
             {photoUrls.map((url, index) => (
               <div key={`${index}-photo`} className="flex items-center gap-3">
@@ -335,23 +341,23 @@ export default function ClinicInfo() {
                     next[index] = event.target.value;
                     setPhotoUrls(next);
                   }}
-                  placeholder={`Photo URL ${index + 1}`}
+                  placeholder={`${t("Photo URL")} ${index + 1}`}
                 />
                 <Button
                   type="button"
                   variant="outline"
                   onClick={() => setPhotoUrls(photoUrls.filter((_, idx) => idx !== index))}
                 >
-                  Remove
+                  {t("Remove")}
                 </Button>
               </div>
             ))}
             <Button type="button" variant="outline" onClick={() => setPhotoUrls([...photoUrls, ""])}>
-              Add photo URL
+              {t("Add photo URL")}
             </Button>
           </div>
           <Button onClick={handleSave} disabled={isSaving}>
-            {isSaving ? "Saving..." : "Save"}
+            {isSaving ? t("Saving...") : t("Save")}
           </Button>
         </section>
       </div>

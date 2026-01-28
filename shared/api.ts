@@ -35,6 +35,7 @@ export interface AppointmentResponseItem {
   clinicId: string;
   serviceId?: string;
   notes?: string;
+  notesTranslated?: string;
   patientId?: string;
   patientName?: string;
   patientPhone?: string;
@@ -122,6 +123,16 @@ export interface AppointmentCancelResponse {
 
 export interface AppointmentListResponse {
   appointments: AppointmentResponseItem[];
+}
+
+export interface ClinicPatientDetailsResponse {
+  patient: {
+    name: string;
+    age?: number;
+    country?: string;
+    visaType?: VisaType;
+  };
+  sharedRecord?: SharedMedicalRecord;
 }
 
 export interface SharedMedicalRecord {

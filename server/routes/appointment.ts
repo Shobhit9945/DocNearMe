@@ -150,6 +150,52 @@ const serializeAppointment = (appointment: Appointment) => {
 const resolveAppointmentId = (appointmentId: string) =>
   ObjectId.isValid(appointmentId) ? new ObjectId(appointmentId) : appointmentId;
 
+const TRANSLATION_ENDPOINT = process.env.TRANSLATION_ENDPOINT ?? "https://libretranslate.de/translate";
+
+const containsJapanese = (text: string) => /[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9faf]/.test(text);
+
+const translateToJapanese = async (text?: string) => {
+  if (!text) return undefined;
+  if (containsJapanese(text)) return text;
+  try {
+    const response = await fetch(TRANSLATION_ENDPOINT, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        q: text,
+        source: "auto",
+        target: "ja",
+        format: "text",
+      }),
+    });
+    if (!response.ok) {
+      return text;
+    }
+    const data = (await response.json()) as { translatedText?: string };
+    return typeof data.translatedText === "string" && data.translatedText.trim().length > 0
+      ? data.translatedText
+      : text;
+  } catch (error) {
+    console.error("Translation error", error);
+    return text;
+  }
+};
+
+const calculateAge = (dateOfBirth?: string) => {
+  if (!dateOfBirth) return undefined;
+  const parsed = new Date(dateOfBirth);
+  if (Number.isNaN(parsed.getTime())) return undefined;
+  const today = new Date();
+  let age = today.getFullYear() - parsed.getFullYear();
+  const monthDiff = today.getMonth() - parsed.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < parsed.getDate())) {
+    age -= 1;
+  }
+  return age;
+};
+
 const resolveToken = (req: Request, payload: Record<string, unknown>) => {
   if (typeof payload.clinicConfirmationToken === "string") return payload.clinicConfirmationToken;
   if (typeof req.query.token === "string") return req.query.token;
@@ -447,12 +493,66 @@ export const handleListAppointmentsForClinic = async (req: Request, res: Respons
       .sort({ date: 1, slot: 1 })
       .toArray();
 
+    const translatedAppointments = await Promise.all(
+      list.map(async (appointment) => {
+        const serialized = serializeAppointment(appointment);
+        return {
+          ...serialized,
+          notesTranslated: await translateToJapanese(appointment.notes),
+        };
+      }),
+    );
+
     res.json({
-      appointments: list.map(serializeAppointment),
+      appointments: translatedAppointments,
     });
   } catch (error) {
     console.error("Clinic appointment list error", error);
     res.status(500).json({ error: "Failed to load clinic appointments" });
+  }
+};
+
+export const handleClinicPatientDetails = async (req: Request, res: Response) => {
+  if (!req.clinicAuth) {
+    return res.status(401).json({ error: "Authentication required." });
+  }
+
+  const appointmentId = req.params.id;
+
+  try {
+    const appointments = await getAppointmentsCollection();
+    const appointmentLookup = resolveAppointmentId(appointmentId);
+    const appointment = await appointments.findOne({ _id: appointmentLookup });
+
+    if (!appointment || appointment.clinicId !== req.clinicAuth.clinicId) {
+      return res.status(404).json({ error: "Appointment not found" });
+    }
+
+    const patients = await getPatientsCollection();
+    const patientLookupId = appointment.patientId
+      ? ObjectId.isValid(appointment.patientId)
+        ? new ObjectId(appointment.patientId)
+        : appointment.patientId
+      : null;
+    const patient = patientLookupId ? await patients.findOne({ _id: patientLookupId }) : null;
+
+    const patientName = appointment.patientName ?? patient?.name ?? "";
+    const patientCountry = patient?.nationality ?? undefined;
+    const patientVisaType = appointment.patientVisaType ?? patient?.visaType ?? undefined;
+    const patientAge = calculateAge(patient?.dateOfBirth);
+
+    return res.json({
+      patient: {
+        name: patientName,
+        age: patientAge,
+        country: patientCountry,
+        visaType: patientVisaType,
+      },
+      sharedRecord: appointment.sharedRecord ?? undefined,
+    });
+  } catch (error) {
+    console.error("Clinic patient details error", error);
+    return res.status(500).json({ error: "Failed to load patient details" });
   }
 };
 
