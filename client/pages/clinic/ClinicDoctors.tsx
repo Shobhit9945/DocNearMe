@@ -108,7 +108,7 @@ export default function ClinicDoctors() {
         clinicId,
         name: doctor.name.trim(),
         specialization: doctor.specialization.trim(),
-        availability: doctor.availability?.trim(),
+        availability: doctor.availability?.trim() || undefined,
         languages: (doctor.languages ?? [])
           .map((language) => language.trim())
           .filter((language) => language.length > 0),
