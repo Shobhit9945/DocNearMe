@@ -95,6 +95,55 @@ const availabilitySlotSchema = z.object({
   endTime: z.string().trim().min(4).max(10),
 });
 
+const weekdayOrder = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+const normalizeDay = (day: string) => day.trim().slice(0, 3).toLowerCase();
+
+const parseTimeMinutes = (time: string) => {
+  const [hours, minutes] = time.split(":").map(Number);
+  if (Number.isNaN(hours) || Number.isNaN(minutes)) return null;
+  return hours * 60 + minutes;
+};
+
+const formatSlotLabel = (time: string) => {
+  const minutes = parseTimeMinutes(time);
+  if (minutes === null) return null;
+  const date = new Date();
+  date.setHours(Math.floor(minutes / 60), minutes % 60, 0, 0);
+  return date.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true });
+};
+
+const computeDoctorNextAvailability = (availability?: { days: string[]; startTime: string }[]) => {
+  if (!availability || availability.length === 0) return null;
+  const now = new Date();
+  const todayMinutes = now.getHours() * 60 + now.getMinutes();
+
+  for (let offset = 0; offset < 14; offset += 1) {
+    const date = new Date(now);
+    date.setHours(0, 0, 0, 0);
+    date.setDate(date.getDate() + offset);
+    const dayLabel = normalizeDay(weekdayOrder[date.getDay()]);
+
+    const slots = availability
+      .filter((slot) => slot.days?.some((day) => normalizeDay(day) === dayLabel))
+      .map((slot) => parseTimeMinutes(slot.startTime))
+      .filter((minutes): minutes is number => typeof minutes === "number")
+      .sort((a, b) => a - b);
+
+    const nextMinutes = slots.find((minutes) => offset > 0 || minutes > todayMinutes);
+    if (nextMinutes !== undefined) {
+      const hours = String(Math.floor(nextMinutes / 60)).padStart(2, "0");
+      const minutes = String(nextMinutes % 60).padStart(2, "0");
+      const slotLabel = formatSlotLabel(`${hours}:${minutes}`);
+      if (slotLabel) {
+        return buildNextAvailabilityLabel(date, slotLabel);
+      }
+    }
+  }
+
+  return null;
+};
+
 const doctorsUpdateSchema = z.object({
   doctors: z.array(
     z.object({
@@ -450,7 +499,11 @@ export const handleUpdateClinicDoctors: RequestHandler = async (req, res, next) 
 
     await Promise.all(
       payload.doctors.map(async (doctor) => {
-        const existingDoctor = await doctors.findOne({ doctorId: doctor.id });
+        const existingDoctor = await doctors.findOne({ clinicId, doctorId: doctor.id });
+        const computedNextAvailable =
+          computeDoctorNextAvailability(doctor.availability) ??
+          doctor.nextAvailable ??
+          "Schedule TBD";
         const record = {
           clinicId,
           doctorId: doctor.id,
@@ -458,13 +511,13 @@ export const handleUpdateClinicDoctors: RequestHandler = async (req, res, next) 
           specialization: doctor.specialization,
           languages: doctor.languages,
           rating: doctor.rating,
-          nextAvailable: doctor.nextAvailable,
+          nextAvailable: computedNextAvailable,
           availability: doctor.availability,
           updatedAt: new Date(),
         };
 
         if (existingDoctor) {
-          await doctors.updateOne({ doctorId: doctor.id }, { $set: record });
+          await doctors.updateOne({ clinicId, doctorId: doctor.id }, { $set: record });
         } else {
           await doctors.insertOne(record);
         }
