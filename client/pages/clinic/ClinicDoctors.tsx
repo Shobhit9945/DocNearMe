@@ -19,6 +19,17 @@ export default function ClinicDoctors() {
   const [isSaving, setIsSaving] = useState(false);
   const [editingDoctors, setEditingDoctors] = useState<Record<string, boolean>>({});
   const [languageDrafts, setLanguageDrafts] = useState<Record<string, string>>({});
+  const createDoctorId = () => {
+    const existingIds = new Set(doctors.map((doctor) => doctor.id));
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      const candidate =
+        typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+          ? `doc-${crypto.randomUUID()}`
+          : `doc-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      if (!existingIds.has(candidate)) return candidate;
+    }
+    return `doc-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  };
   const weekdayOptions = useMemo(
     () => [
       { value: "Mon", label: t("Mon") },
@@ -181,7 +192,7 @@ export default function ClinicDoctors() {
   };
 
   const handleAdd = () => {
-    const newId = `doc-${Date.now()}`;
+    const newId = createDoctorId();
     setDoctors((prev) => [
       ...prev,
       {

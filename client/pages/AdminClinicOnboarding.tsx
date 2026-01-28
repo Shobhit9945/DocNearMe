@@ -30,7 +30,10 @@ const normalizeList = (value: string) =>
 const weekdayOptions = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 const makeDoctorDraft = (clinicId: string): DoctorDraft => ({
-  id: "",
+  id:
+    typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+      ? `doc-${crypto.randomUUID()}`
+      : `doc-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
   clinicId,
   name: "",
   specialization: "",
