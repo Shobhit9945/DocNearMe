@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getClinicAuthHeader, getClinicSession } from "@/lib/clinic-auth";
 import { useClinicProfile } from "@/lib/clinic-data";
+import { useTranslation } from "@/lib/i18n";
 import { normalizeClinicHours } from "@/lib/scheduling";
 import type { AppointmentListResponse, ClinicBookingClosure, ClinicProfileUpdateRequest } from "@shared/api";
 import { toast } from "@/components/ui/use-toast";
@@ -13,6 +14,7 @@ const DAYS_OF_WEEK = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "S
 
 export default function ClinicDashboard() {
   const session = getClinicSession();
+  const { t } = useTranslation();
   const { data: clinicData } = useClinicProfile(session?.clinicId);
   const clinic = clinicData?.clinic;
   const { data: appointmentsData } = useQuery<AppointmentListResponse>({
@@ -26,7 +28,7 @@ export default function ClinicDashboard() {
 
       if (!response.ok) {
         const error = await response.json().catch(() => ({}));
-        throw new Error(error?.error ?? "Unable to load appointments.");
+        throw new Error(error?.error ?? t("Unable to load appointments."));
       }
 
       return response.json() as Promise<AppointmentListResponse>;
@@ -79,8 +81,8 @@ export default function ClinicDashboard() {
   const clinicHours = `${normalizedHours.weekdays.start} - ${normalizedHours.weekdays.end}`;
   const todayStatus =
     clinicData?.clinic?.nextAvailability?.toLowerCase() === "closed for today"
-      ? "Closed for today"
-      : `Clinic hours: ${clinicHours}`;
+      ? t("Closed for today")
+      : t("Clinic hours: {hours}", `Clinic hours: ${clinicHours}`).replace("{hours}", clinicHours);
 
   const [weekdayStart, setWeekdayStart] = useState(normalizedHours.weekdays.start);
   const [weekdayEnd, setWeekdayEnd] = useState(normalizedHours.weekdays.end);
@@ -126,13 +128,13 @@ export default function ClinicDashboard() {
       });
       if (!response.ok) {
         const error = await response.json().catch(() => ({}));
-        throw new Error(error?.error ?? "Unable to update hours.");
+        throw new Error(error?.error ?? t("Unable to update hours."));
       }
-      toast({ title: "Availability updated", description: "Patient booking hours were refreshed." });
+      toast({ title: t("Availability updated"), description: t("Patient booking hours were refreshed.") });
     } catch (error) {
       toast({
-        title: "Update failed",
-        description: error instanceof Error ? error.message : "Please try again.",
+        title: t("Update failed"),
+        description: error instanceof Error ? error.message : t("Please try again."),
         variant: "destructive",
       });
     } finally {
@@ -142,14 +144,14 @@ export default function ClinicDashboard() {
 
   const stats = [
     {
-      label: "Appointments today",
+      label: t("Appointments today"),
       value: String(todayAppointments.length),
       icon: Calendar,
       color: "text-purple-600",
       bg: "bg-purple-50",
     },
     {
-      label: "New patients this week",
+      label: t("New patients this week"),
       value: String(newPatientsThisWeek),
       icon: Users,
       color: "text-blue-600",
@@ -161,8 +163,8 @@ export default function ClinicDashboard() {
     <div className="space-y-6">
       <header className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-gray-500">Here is a quick overview of today.</p>
+          <h1 className="text-2xl font-bold text-gray-900">{t("Dashboard")}</h1>
+          <p className="text-gray-500">{t("Here is a quick overview of today.")}</p>
         </div>
         <div className="hidden md:flex items-center gap-3 text-sm text-gray-500">
           <Clock className="h-4 w-4" />
@@ -188,13 +190,13 @@ export default function ClinicDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 bg-white rounded-xl border border-gray-100 p-6 shadow-sm">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">Today</h2>
-            <span className="text-sm text-blue-600">View all</span>
+            <h2 className="text-lg font-semibold text-gray-900">{t("Today")}</h2>
+            <span className="text-sm text-blue-600">{t("View all")}</span>
           </div>
           <div className="space-y-4">
             {todayAppointments.length === 0 ? (
               <div className="rounded-lg border border-dashed border-gray-200 bg-gray-50 p-4 text-sm text-gray-500">
-                No appointments for today yet.
+                {t("No appointments for today yet.")}
               </div>
             ) : (
               todayAppointments.map((item) => {
@@ -203,7 +205,7 @@ export default function ClinicDashboard() {
                 const timeLabel = Number.isNaN(parsed.getTime())
                   ? item.slot
                   : parsed.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
-                const statusLabel = item.status === "CONFIRMED" ? "Confirmed" : "Pending";
+                const statusLabel = item.status === "CONFIRMED" ? t("Confirmed") : t("Pending");
                 const statusStyle =
                   item.status === "CONFIRMED" ? "bg-green-50 text-green-700" : "bg-yellow-50 text-yellow-700";
 
@@ -214,7 +216,7 @@ export default function ClinicDashboard() {
                   >
                     <div>
                       <p className="text-sm text-gray-500">{timeLabel}</p>
-                      <p className="font-semibold text-gray-900">{item.patientName ?? "Patient"}</p>
+                      <p className="font-semibold text-gray-900">{item.patientName ?? t("Patient")}</p>
                       <p className="text-sm text-gray-500">{item.specialization}</p>
                     </div>
                     <div className="flex items-center gap-2 text-sm">
@@ -231,27 +233,27 @@ export default function ClinicDashboard() {
         </div>
         <div className="bg-white rounded-xl border border-gray-100 p-6 shadow-sm space-y-4">
           <div>
-            <h2 className="text-lg font-semibold text-gray-900">Availability settings</h2>
-            <p className="text-sm text-gray-500">Adjust hours, closed days, and booking blocks.</p>
+            <h2 className="text-lg font-semibold text-gray-900">{t("Availability settings")}</h2>
+            <p className="text-sm text-gray-500">{t("Adjust hours, closed days, and booking blocks.")}</p>
           </div>
           <div className="space-y-3">
-            <label className="text-sm font-medium text-gray-700 block">Weekday hours</label>
+            <label className="text-sm font-medium text-gray-700 block">{t("Weekday hours")}</label>
             <div className="flex items-center gap-3">
               <Input type="time" value={weekdayStart} onChange={(event) => setWeekdayStart(event.target.value)} />
-              <span className="text-sm text-slate-500">to</span>
+              <span className="text-sm text-slate-500">{t("to")}</span>
               <Input type="time" value={weekdayEnd} onChange={(event) => setWeekdayEnd(event.target.value)} />
             </div>
           </div>
           <div className="space-y-3">
-            <label className="text-sm font-medium text-gray-700 block">Weekend hours</label>
+            <label className="text-sm font-medium text-gray-700 block">{t("Weekend hours")}</label>
             <div className="flex items-center gap-3">
               <Input type="time" value={weekendStart} onChange={(event) => setWeekendStart(event.target.value)} />
-              <span className="text-sm text-slate-500">to</span>
+              <span className="text-sm text-slate-500">{t("to")}</span>
               <Input type="time" value={weekendEnd} onChange={(event) => setWeekendEnd(event.target.value)} />
             </div>
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700 block">Closed days</label>
+            <label className="text-sm font-medium text-gray-700 block">{t("Closed days")}</label>
             <div className="flex flex-wrap gap-2">
               {DAYS_OF_WEEK.map((day) => {
                 const checked = closedDays.includes(day);
@@ -268,14 +270,14 @@ export default function ClinicDashboard() {
                         : "bg-white text-slate-600 border border-slate-200"
                     }`}
                   >
-                    {day}
+                    {t(day)}
                   </button>
                 );
               })}
             </div>
           </div>
           <div className="space-y-3">
-            <label className="text-sm font-medium text-gray-700 block">Booking closures</label>
+            <label className="text-sm font-medium text-gray-700 block">{t("Booking closures")}</label>
             <div className="grid gap-3">
               <div className="grid gap-3 md:grid-cols-[1fr_1fr_2fr_auto]">
                 <Input
@@ -291,7 +293,7 @@ export default function ClinicDashboard() {
                 <Input
                   value={closureDraft.reason ?? ""}
                   onChange={(event) => setClosureDraft((prev) => ({ ...prev, reason: event.target.value }))}
-                  placeholder="Reason (optional)"
+                  placeholder={t("Reason (optional)")}
                 />
                 <Button
                   type="button"
@@ -303,7 +305,7 @@ export default function ClinicDashboard() {
                     setClosureDraft({ startDate: "", endDate: "", reason: "" });
                   }}
                 >
-                  Add
+                  {t("Add")}
                 </Button>
               </div>
               <Button
@@ -313,11 +315,11 @@ export default function ClinicDashboard() {
                   const today = new Date().toISOString().split("T")[0];
                   setBookingClosures((prev) => [
                     ...prev,
-                    { startDate: today, endDate: today, reason: "Closed today" },
+                    { startDate: today, endDate: today, reason: t("Closed today") },
                   ]);
                 }}
               >
-                Close today
+                {t("Close today")}
               </Button>
             </div>
             {bookingClosures.length > 0 ? (
@@ -337,17 +339,17 @@ export default function ClinicDashboard() {
                         setBookingClosures((prev) => prev.filter((_, itemIndex) => itemIndex !== index))
                       }
                     >
-                      Remove
+                      {t("Remove")}
                     </Button>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-slate-500">No upcoming closures.</p>
+              <p className="text-sm text-slate-500">{t("No upcoming closures.")}</p>
             )}
           </div>
           <Button onClick={handleSaveHours} disabled={isSaving}>
-            {isSaving ? "Saving..." : "Save availability"}
+            {isSaving ? t("Saving...") : t("Save availability")}
           </Button>
         </div>
       </div>

@@ -1,4 +1,5 @@
 import { Toaster } from "@/components/ui/toaster";
+import { TranslationProvider } from "@/lib/i18n";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { ClinicLayout } from "./components/layouts/ClinicLayout";
@@ -17,20 +18,22 @@ interface ClinicAppProps {
 
 export default function ClinicApp({ basename }: ClinicAppProps) {
   return (
-    <QueryClientProvider client={queryClient}>
+    <TranslationProvider defaultLanguage="ja" storageKey="dnm-clinic-language">
+      <QueryClientProvider client={queryClient}>
         <BrowserRouter basename={basename}>
-            <Routes>
-                <Route path="/login" element={<ClinicLogin />} />
-                <Route path="/" element={<ClinicLayout />}>
-                    <Route index element={<ClinicDashboard />} />
-                    <Route path="appointments" element={<ClinicAppointments />} />
-                    <Route path="clinic-info" element={<ClinicInfo />} />
-                    <Route path="doctors" element={<ClinicDoctors />} />
-                    <Route path="*" element={<NotFound />} />
-                </Route>
-            </Routes>
-            <Toaster />
+          <Routes>
+            <Route path="/login" element={<ClinicLogin />} />
+            <Route path="/" element={<ClinicLayout />}>
+              <Route index element={<ClinicDashboard />} />
+              <Route path="appointments" element={<ClinicAppointments />} />
+              <Route path="clinic-info" element={<ClinicInfo />} />
+              <Route path="doctors" element={<ClinicDoctors />} />
+              <Route path="*" element={<NotFound />} />
+            </Route>
+          </Routes>
+          <Toaster />
         </BrowserRouter>
-    </QueryClientProvider>
+      </QueryClientProvider>
+    </TranslationProvider>
   );
 }
