@@ -77,6 +77,22 @@ export default function ClinicInfo() {
       return;
     }
 
+    const trimmedName = name.trim();
+    const trimmedLocation = location.trim();
+    const trimmedPhone = phone.trim();
+    const trimmedImage = image.trim();
+    const trimmedFirstVisit = firstVisit.trim();
+    const trimmedFollowUp = followUp.trim();
+    const trimmedOtherServices = otherServices.trim();
+    const hasPricing = Boolean(trimmedFirstVisit || trimmedFollowUp || trimmedOtherServices);
+    if (hasPricing && (!trimmedFirstVisit || !trimmedFollowUp || !trimmedOtherServices)) {
+      toast({
+        title: t("Complete all pricing fields to save pricing."),
+        variant: "destructive",
+      });
+      return;
+    }
+
     const sanitizedClosures = bookingClosures.map((closure) => ({
       ...closure,
       startTime: closure.startTime?.trim() || undefined,
@@ -84,10 +100,10 @@ export default function ClinicInfo() {
     }));
 
     const payload: ClinicProfileUpdateRequest = {
-      name: name.trim(),
-      location: location.trim(),
-      phone: phone.trim(),
-      image: image.trim(),
+      name: trimmedName || undefined,
+      location: trimmedLocation || undefined,
+      phone: trimmedPhone || undefined,
+      image: trimmedImage || undefined,
       hours: {
         weekdays: { start: weekdayStart, end: weekdayEnd },
         weekend: { start: weekendStart, end: weekendEnd },
@@ -95,11 +111,13 @@ export default function ClinicInfo() {
         slotMinutes: 30,
       },
       bookingClosures: sanitizedClosures,
-      pricing: {
-        firstVisit: firstVisit.trim(),
-        followUp: followUp.trim(),
-        otherServices: otherServices.trim(),
-      },
+      pricing: hasPricing
+        ? {
+            firstVisit: trimmedFirstVisit,
+            followUp: trimmedFollowUp,
+            otherServices: trimmedOtherServices,
+          }
+        : undefined,
       photos: normalizedPhotos,
     };
 

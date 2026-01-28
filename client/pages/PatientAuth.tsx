@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { PageScaffold } from "@/components/PageScaffold";
+import { useTranslation } from "@/lib/i18n";
 import type {
   AuthResponse,
   CheckEmailRequest,
@@ -65,6 +66,7 @@ const PatientAuth = () => {
   const [resetOtpLoading, setResetOtpLoading] = useState(false);
   const [resetPasswordLoading, setResetPasswordLoading] = useState(false);
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const setError = (message: string) => setStatus({ type: "error", message });
   const setSuccess = (message: string) => setStatus({ type: "success", message });
@@ -137,7 +139,7 @@ const PatientAuth = () => {
       return false;
     }
     if (signupData.nationality.trim().length < 2) {
-      setError("Please enter your nationality.");
+      setError(t("Please select your country."));
       return false;
     }
     if (signupData.visaType.trim().length < 2) {
@@ -749,16 +751,36 @@ const PatientAuth = () => {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="signup-nationality">Nationality</Label>
-                        <Input
-                          id="signup-nationality"
-                          type="text"
-                          placeholder="e.g. Japanese"
+                        <Label>{t("Country")}</Label>
+                        <Select
                           value={signupData.nationality}
-                          onChange={(event) =>
-                            setSignupData((prev) => ({ ...prev, nationality: event.target.value }))
-                          }
-                        />
+                          onValueChange={(value) => setSignupData((prev) => ({ ...prev, nationality: value }))}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder={t("Select your country")} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Japan">{t("Japan")}</SelectItem>
+                            <SelectItem value="United States">{t("United States")}</SelectItem>
+                            <SelectItem value="Canada">{t("Canada")}</SelectItem>
+                            <SelectItem value="United Kingdom">{t("United Kingdom")}</SelectItem>
+                            <SelectItem value="Australia">{t("Australia")}</SelectItem>
+                            <SelectItem value="India">{t("India")}</SelectItem>
+                            <SelectItem value="Philippines">{t("Philippines")}</SelectItem>
+                            <SelectItem value="Indonesia">{t("Indonesia")}</SelectItem>
+                            <SelectItem value="Vietnam">{t("Vietnam")}</SelectItem>
+                            <SelectItem value="Thailand">{t("Thailand")}</SelectItem>
+                            <SelectItem value="China">{t("China")}</SelectItem>
+                            <SelectItem value="South Korea">{t("South Korea")}</SelectItem>
+                            <SelectItem value="Mexico">{t("Mexico")}</SelectItem>
+                            <SelectItem value="Brazil">{t("Brazil")}</SelectItem>
+                            <SelectItem value="Germany">{t("Germany")}</SelectItem>
+                            <SelectItem value="France">{t("France")}</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <p className="text-xs text-slate-500">
+                          {t("Select your country from the list.")}
+                        </p>
                       </div>
                       <div className="space-y-2">
                         <Label>Visa type</Label>
