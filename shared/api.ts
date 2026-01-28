@@ -390,6 +390,24 @@ export interface ClinicDoctorsUpdateRequest {
   doctors: ClinicDoctor[];
 }
 
+export interface AdminAuthCheckResponse {
+  ok: boolean;
+}
+
+export interface AdminCreateClinicRequest {
+  clinic: ClinicProfile;
+  doctors?: ClinicDoctor[];
+  adminUserId?: string;
+  adminPassword?: string;
+}
+
+export interface AdminCreateClinicResponse {
+  clinicId: string;
+  clinicName: string;
+  adminUserId: string;
+  adminPassword: string;
+}
+
 export interface MedicalConsentRequest {
   consentVersion: string;
   consentText: string;
