@@ -306,7 +306,13 @@ export const CLINIC_SEED: ClinicProfile[] = [
   },
 ];
 
-const defaultAvailability = "Mon-Fri 09:00-18:00";
+const defaultAvailability = [
+  {
+    days: ["Mon", "Tue", "Wed", "Thu", "Fri"],
+    startTime: "09:00",
+    endTime: "18:00",
+  },
+];
 
 export const DOCTOR_SEED: ClinicDoctor[] = [
   {

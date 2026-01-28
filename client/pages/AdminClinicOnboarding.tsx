@@ -27,6 +27,8 @@ const normalizeList = (value: string) =>
     .map((item) => item.trim())
     .filter(Boolean);
 
+const weekdayOptions = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
 const makeDoctorDraft = (clinicId: string): DoctorDraft => ({
   id: "",
   clinicId,
@@ -36,7 +38,7 @@ const makeDoctorDraft = (clinicId: string): DoctorDraft => ({
   languagesText: "",
   rating: 4.5,
   nextAvailable: "",
-  availability: "",
+  availability: [],
 });
 
 export default function AdminClinicOnboarding() {
@@ -171,6 +173,76 @@ export default function AdminClinicOnboarding() {
     setDoctors((prev) => prev.filter((_, idx) => idx !== index));
   };
 
+  const handleAddDoctorAvailabilitySlot = (index: number) => {
+    setDoctors((prev) =>
+      prev.map((doctor, idx) =>
+        idx === index
+          ? {
+              ...doctor,
+              availability: [
+                ...(doctor.availability ?? []),
+                {
+                  days: [],
+                  startTime: "",
+                  endTime: "",
+                },
+              ],
+            }
+          : doctor,
+      ),
+    );
+  };
+
+  const handleRemoveDoctorAvailabilitySlot = (doctorIndex: number, slotIndex: number) => {
+    setDoctors((prev) =>
+      prev.map((doctor, idx) =>
+        idx === doctorIndex
+          ? {
+              ...doctor,
+              availability: (doctor.availability ?? []).filter((_, index) => index !== slotIndex),
+            }
+          : doctor,
+      ),
+    );
+  };
+
+  const handleDoctorAvailabilityTimeChange = (
+    doctorIndex: number,
+    slotIndex: number,
+    field: "startTime" | "endTime",
+    value: string,
+  ) => {
+    setDoctors((prev) =>
+      prev.map((doctor, idx) => {
+        if (idx !== doctorIndex) return doctor;
+        const availability = [...(doctor.availability ?? [])];
+        const slot = availability[slotIndex];
+        if (!slot) return doctor;
+        availability[slotIndex] = { ...slot, [field]: value };
+        return { ...doctor, availability };
+      }),
+    );
+  };
+
+  const handleToggleDoctorAvailabilityDay = (doctorIndex: number, slotIndex: number, day: string) => {
+    setDoctors((prev) =>
+      prev.map((doctor, idx) => {
+        if (idx !== doctorIndex) return doctor;
+        const availability = [...(doctor.availability ?? [])];
+        const slot = availability[slotIndex];
+        if (!slot) return doctor;
+        const days = new Set(slot.days ?? []);
+        if (days.has(day)) {
+          days.delete(day);
+        } else {
+          days.add(day);
+        }
+        availability[slotIndex] = { ...slot, days: Array.from(days) };
+        return { ...doctor, availability };
+      }),
+    );
+  };
+
   const handleAddPhoto = () => {
     setPhotos((prev) => [...prev, { label: "", url: "" }]);
   };
@@ -241,7 +313,14 @@ export default function AdminClinicOnboarding() {
           languages: normalizeList(doctor.languagesText),
           rating: Number(doctor.rating),
           nextAvailable: doctor.nextAvailable,
-          availability: doctor.availability || undefined,
+          availability:
+            doctor.availability
+              ?.map((slot) => ({
+                days: (slot.days ?? []).map((day) => day.trim()).filter(Boolean),
+                startTime: slot.startTime.trim(),
+                endTime: slot.endTime.trim(),
+              }))
+              .filter((slot) => slot.days.length > 0 && slot.startTime && slot.endTime) ?? undefined,
         })),
       adminUserId: adminUserId || undefined,
       adminPassword: adminPassword || undefined,
@@ -789,12 +868,77 @@ export default function AdminClinicOnboarding() {
                           handleUpdateDoctor(index, { nextAvailable: event.target.value })
                         }
                       />
-                      <input
-                        className="md:col-span-2 rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                        placeholder="Availability notes (optional)"
-                        value={doctor.availability ?? ""}
-                        onChange={(event) => handleUpdateDoctor(index, { availability: event.target.value })}
-                      />
+                    </div>
+                    <div className="mt-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-medium text-slate-700">Availability schedule</p>
+                        <button
+                          type="button"
+                          onClick={() => handleAddDoctorAvailabilitySlot(index)}
+                          className="rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-600 hover:bg-slate-50"
+                        >
+                          Add slot
+                        </button>
+                      </div>
+                      {(doctor.availability ?? []).length === 0 ? (
+                        <p className="text-xs text-slate-500">No availability set.</p>
+                      ) : null}
+                      {(doctor.availability ?? []).map((slot, slotIndex) => (
+                        <div key={`doctor-${index}-slot-${slotIndex}`} className="rounded-lg border border-slate-200 p-3">
+                          <div className="flex flex-wrap gap-2">
+                            {weekdayOptions.map((day) => {
+                              const isSelected = slot.days?.includes(day);
+                              return (
+                                <button
+                                  key={`${index}-${slotIndex}-${day}`}
+                                  type="button"
+                                  onClick={() => handleToggleDoctorAvailabilityDay(index, slotIndex, day)}
+                                  className={`rounded-full border px-3 py-1 text-xs transition ${
+                                    isSelected
+                                      ? "border-blue-500 bg-blue-50 text-blue-600"
+                                      : "border-slate-200 bg-white text-slate-500 hover:border-slate-300"
+                                  }`}
+                                >
+                                  {day}
+                                </button>
+                              );
+                            })}
+                          </div>
+                          <div className="mt-3 grid gap-3 md:grid-cols-2">
+                            <div>
+                              <label className="text-xs font-medium text-slate-600">Start time</label>
+                              <input
+                                type="time"
+                                className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                                value={slot.startTime}
+                                onChange={(event) =>
+                                  handleDoctorAvailabilityTimeChange(index, slotIndex, "startTime", event.target.value)
+                                }
+                              />
+                            </div>
+                            <div>
+                              <label className="text-xs font-medium text-slate-600">End time</label>
+                              <input
+                                type="time"
+                                className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                                value={slot.endTime}
+                                onChange={(event) =>
+                                  handleDoctorAvailabilityTimeChange(index, slotIndex, "endTime", event.target.value)
+                                }
+                              />
+                            </div>
+                          </div>
+                          <div className="mt-3 flex justify-end">
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveDoctorAvailabilitySlot(index, slotIndex)}
+                              className="rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-500 hover:bg-slate-50"
+                            >
+                              Remove slot
+                            </button>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                     <div className="mt-3">
                       <button

@@ -19,7 +19,7 @@ const fetchJson = async <T>(url: string): Promise<T> => {
 
 const fallbackDoctors = DOCTORS.map((doctor) => ({
   ...doctor,
-  availability: doctor.nextAvailable,
+  availability: [],
 })) as ClinicDoctor[];
 const fallbackSpecializations = fallbackDoctors.reduce((map, doctor) => {
   const specialization = doctor.specialization.trim();
