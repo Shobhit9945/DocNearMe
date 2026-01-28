@@ -1,5 +1,15 @@
 import React, { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
@@ -407,6 +417,89 @@ export default function ClinicAppointments() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={patientDetailsOpen} onOpenChange={(open) => setPatientDetailsOpen(open)}>
+        <DialogContent className="max-w-xl">
+          <DialogHeader>
+            <DialogTitle>{t("Patient details")}</DialogTitle>
+            <DialogDescription>{t("Review patient information and shared documents.")}</DialogDescription>
+          </DialogHeader>
+          {patientDetailsLoading ? (
+            <p className="text-sm text-slate-500">{t("Loading patient details...")}</p>
+          ) : patientDetailsError ? (
+            <p className="text-sm text-red-500">{patientDetailsError}</p>
+          ) : patientDetails ? (
+            <div className="space-y-4 text-sm text-slate-700">
+              <div className="grid gap-3 md:grid-cols-2">
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-slate-500">{t("Name")}</p>
+                  <p className="font-medium">{patientDetails.patient.name || t("Not provided")}</p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-slate-500">{t("Age")}</p>
+                  <p className="font-medium">
+                    {patientDetails.patient.age !== undefined && patientDetails.patient.age !== null
+                      ? patientDetails.patient.age
+                      : t("Not provided")}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-slate-500">{t("Country")}</p>
+                  <p className="font-medium">{patientDetails.patient.country || t("Not provided")}</p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-slate-500">{t("Visa type")}</p>
+                  <p className="font-medium">{patientDetails.patient.visaType || t("Not provided")}</p>
+                </div>
+              </div>
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 space-y-2">
+                <p className="text-xs uppercase tracking-wide text-slate-500">{t("Shared medical document")}</p>
+                {patientDetails.sharedRecord ? (
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <p className="font-medium">{patientDetails.sharedRecord.name}</p>
+                      <p className="text-xs text-slate-500">
+                        {patientDetails.sharedRecord.type} ·{" "}
+                        {Math.round(patientDetails.sharedRecord.size / 1024)} KB
+                      </p>
+                    </div>
+                    <Button type="button" variant="outline" onClick={() => handleDownloadSharedRecord(patientDetails.sharedRecord)}>
+                      {t("Download document")}
+                    </Button>
+                  </div>
+                ) : (
+                  <p className="text-sm text-slate-500">{t("No document shared.")}</p>
+                )}
+              </div>
+            </div>
+          ) : null}
+          <DialogFooter className="flex justify-end">
+            <Button type="button" variant="outline" onClick={() => setPatientDetailsOpen(false)}>
+              {t("Close")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog
+        open={Boolean(appointmentToDelete)}
+        onOpenChange={(open) => (open ? null : setAppointmentToDelete(null))}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("Delete appointment record?")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("This removes the appointment record from the clinic and patient history.")}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>{t("Cancel")}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteAppointment} disabled={isDeleting}>
+              {isDeleting ? t("Deleting...") : t("Delete")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

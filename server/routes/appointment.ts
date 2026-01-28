@@ -239,6 +239,20 @@ const updatePatientAppointmentSummary = async (
   );
 };
 
+const removePatientAppointmentSummary = async (appointmentId: string, patientId: string | undefined) => {
+  if (!patientId) return;
+  const patients = await getPatientsCollection();
+  const patientLookupId = ObjectId.isValid(patientId) ? new ObjectId(patientId) : patientId;
+  await patients.updateOne(
+    { _id: patientLookupId },
+    {
+      $pull: {
+        appointments: { appointmentId },
+      },
+    },
+  );
+};
+
 export const handleRequestAppointment = async (req: Request, res: Response) => {
   const payload = parseRequestBody(req.body);
   const {
