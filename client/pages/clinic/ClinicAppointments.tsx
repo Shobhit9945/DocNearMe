@@ -87,6 +87,7 @@ export default function ClinicAppointments() {
   const [patientDetailsOpen, setPatientDetailsOpen] = useState(false);
   const [patientDetailsLoading, setPatientDetailsLoading] = useState(false);
   const [patientDetailsError, setPatientDetailsError] = useState<string | null>(null);
+  const [patientDetailsAppointmentId, setPatientDetailsAppointmentId] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<AppointmentResponseItem | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -237,6 +238,7 @@ export default function ClinicAppointments() {
     setPatientDetails(null);
     setPatientDetailsError(null);
     setPatientDetailsLoading(true);
+    setPatientDetailsAppointmentId(appointment._id);
     try {
       const response = await fetch(`/api/clinic/appointments/${appointment._id}/patient`, {
         headers: {
@@ -256,9 +258,45 @@ export default function ClinicAppointments() {
     }
   };
 
-  const handleDownloadSharedRecord = (record: ClinicPatientDetailsResponse["sharedRecord"]) => {
+  const handleDownloadSharedRecord = async (record: ClinicPatientDetailsResponse["sharedRecord"]) => {
     if (!record) return;
-    const byteCharacters = atob(record.data);
+    let recordData = record.data;
+    if (!recordData && patientDetailsAppointmentId) {
+      try {
+        const response = await fetch(
+          `/api/clinic/appointments/${patientDetailsAppointmentId}/patient?includeRecordData=true`,
+          {
+            headers: {
+              ...getClinicAuthHeader(),
+            },
+          },
+        );
+        if (!response.ok) {
+          const errorPayload = await response.json().catch(() => ({}));
+          throw new Error(errorPayload?.error ?? t("Unable to load the shared document."));
+        }
+        const data = (await response.json()) as ClinicPatientDetailsResponse;
+        recordData = data.sharedRecord?.data;
+      } catch (error) {
+        toast({
+          title: t("Download failed"),
+          description: error instanceof Error ? error.message : t("Unable to load the shared document."),
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
+    if (!recordData) {
+      toast({
+        title: t("Download failed"),
+        description: t("Shared document data is unavailable."),
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const byteCharacters = atob(recordData);
     const byteNumbers = new Array(byteCharacters.length);
     for (let i = 0; i < byteCharacters.length; i += 1) {
       byteNumbers[i] = byteCharacters.charCodeAt(i);
@@ -466,7 +504,15 @@ export default function ClinicAppointments() {
       </Dialog>
 
 
-      <Dialog open={patientDetailsOpen} onOpenChange={(open) => setPatientDetailsOpen(open)}>
+      <Dialog
+        open={patientDetailsOpen}
+        onOpenChange={(open) => {
+          setPatientDetailsOpen(open);
+          if (!open) {
+            setPatientDetailsAppointmentId(null);
+          }
+        }}
+      >
         <DialogContent className="max-w-xl">
           <DialogHeader>
             <DialogTitle>{t("Patient details")}</DialogTitle>

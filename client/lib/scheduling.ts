@@ -57,13 +57,41 @@ export const normalizeClinicHours = (hours?: ClinicHours | null): NormalizedClin
   };
 };
 
-export const getDateKey = (date: Date) => date.toISOString().split("T")[0];
+export const getDateKey = (date: Date) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+
+const resolveTimeMinutes = (time?: string) => {
+  if (!time) return null;
+  const [hours, minutes] = time.split(":").map(Number);
+  if (Number.isNaN(hours) || Number.isNaN(minutes)) return null;
+  return hours * 60 + minutes;
+};
+
+const isFullDayClosure = (dateKey: string, closure: ClinicBookingClosure) => {
+  const start = closure.startDate;
+  const end = closure.endDate || closure.startDate;
+  if (dateKey < start || dateKey > end) return false;
+  const startMinutes = resolveTimeMinutes(closure.startTime);
+  const endMinutes = resolveTimeMinutes(closure.endTime);
+  const hasTimeRange =
+    typeof startMinutes === "number" && typeof endMinutes === "number" && endMinutes > startMinutes;
+
+  if (start === end) {
+    return !hasTimeRange;
+  }
+  if (dateKey > start && dateKey < end) {
+    return true;
+  }
+  if (dateKey === start) {
+    return !hasTimeRange;
+  }
+  if (dateKey === end) {
+    return !hasTimeRange;
+  }
+  return false;
+};
 
 export const isDateWithinClosure = (date: Date, closures: ClinicBookingClosure[]) => {
   const dateKey = getDateKey(date);
-  return closures.find((closure) => {
-    const start = closure.startDate;
-    const end = closure.endDate || closure.startDate;
-    return start <= dateKey && dateKey <= end;
-  });
+  return closures.find((closure) => isFullDayClosure(dateKey, closure));
 };

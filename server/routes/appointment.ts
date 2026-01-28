@@ -5,6 +5,7 @@ import { getAppointmentsCollection, getPatientsCollection } from "../db";
 import { Appointment, AppointmentStatus, PatientAppointmentSummary, SharedMedicalRecord } from "../types";
 import { sendEmail } from "../services/mailer";
 import { findConfirmedOverlap } from "./appointment-utils";
+import { getDateKey } from "../lib/scheduling";
 
 const parseRequestBody = (body: unknown): Record<string, unknown> => {
   if (body instanceof Buffer) {
@@ -79,7 +80,7 @@ const resolvePreferredTimes = (payload: Record<string, unknown>, slotFallback?: 
   }
 
   const slot = typeof payload.slot === "string" ? payload.slot : slotFallback ?? formatSlotLabel(preferredStart);
-  const dateKey = preferredStart.toISOString().split("T")[0];
+  const dateKey = getDateKey(preferredStart);
 
   return {
     preferredStart,
@@ -533,6 +534,7 @@ export const handleClinicPatientDetails = async (req: Request, res: Response) =>
   }
 
   const appointmentId = req.params.id;
+  const includeRecordData = req.query.includeRecordData === "true";
 
   try {
     const appointments = await getAppointmentsCollection();
@@ -557,6 +559,13 @@ export const handleClinicPatientDetails = async (req: Request, res: Response) =>
     const patientAge = calculateAge(patient?.dateOfBirth);
     const patientNameTranslated = await translateToJapanese(patientName);
 
+    const sharedRecord = appointment.sharedRecord
+      ? {
+          ...appointment.sharedRecord,
+          data: includeRecordData ? appointment.sharedRecord.data : undefined,
+        }
+      : undefined;
+
     return res.json({
       patient: {
         name: patientName,
@@ -565,7 +574,7 @@ export const handleClinicPatientDetails = async (req: Request, res: Response) =>
         country: patientCountry,
         visaType: patientVisaType,
       },
-      sharedRecord: appointment.sharedRecord ?? undefined,
+      sharedRecord,
     });
   } catch (error) {
     console.error("Clinic patient details error", error);
@@ -614,7 +623,7 @@ export const handleClinicConfirmAppointment = async (req: Request, res: Response
       return res.status(409).json({ error: "Confirmed time overlaps another appointment." });
     }
 
-    const dateKey = confirmTimes.confirmedStart.toISOString().split("T")[0];
+    const dateKey = getDateKey(confirmTimes.confirmedStart);
     const slot = formatSlotLabel(confirmTimes.confirmedStart);
     const now = new Date();
 
@@ -1301,7 +1310,7 @@ export const handleConfirmAppointment = async (req: Request, res: Response) => {
       return res.status(409).json({ error: "Confirmed time overlaps another appointment." });
     }
 
-    const dateKey = confirmTimes.confirmedStart.toISOString().split("T")[0];
+    const dateKey = getDateKey(confirmTimes.confirmedStart);
     const slot = formatSlotLabel(confirmTimes.confirmedStart);
     const now = new Date();
 

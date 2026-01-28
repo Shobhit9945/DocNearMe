@@ -21,6 +21,23 @@ export const DEFAULT_CLINIC_HOURS: NormalizedClinicHours = {
 
 const dayFormatter = new Intl.DateTimeFormat("en-US", { weekday: "long" });
 
+const formatDateKey = (year: number, month: number, day: number) =>
+  `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+
+export const parseDateKey = (value: string) => {
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (match) {
+    const year = Number(match[1]);
+    const month = Number(match[2]);
+    const day = Number(match[3]);
+    if (!Number.isNaN(year) && !Number.isNaN(month) && !Number.isNaN(day)) {
+      return new Date(year, month - 1, day);
+    }
+  }
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
 const parseRangeString = (value: string): DailyHours | null => {
   const match = value.trim().match(/^(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})$/);
   if (!match) return null;
@@ -97,7 +114,62 @@ export const buildSlotsForDate = (date: Date, hours: NormalizedClinicHours): str
   return slots;
 };
 
-export const getDateKey = (date: Date) => date.toISOString().split("T")[0];
+export const getDateKey = (date: Date) =>
+  formatDateKey(date.getFullYear(), date.getMonth() + 1, date.getDate());
+
+const resolveTimeMinutes = (time?: string) => (time ? timeToMinutes(time) : null);
+
+const buildClosureWindow = (
+  dateKey: string,
+  closure: ClinicInfo["bookingClosures"][number],
+) => {
+  const startDate = closure.startDate;
+  const endDate = closure.endDate || closure.startDate;
+  if (dateKey < startDate || dateKey > endDate) return null;
+
+  const startTimeMinutes = resolveTimeMinutes(closure.startTime);
+  const endTimeMinutes = resolveTimeMinutes(closure.endTime);
+  const hasTimeRange =
+    typeof startTimeMinutes === "number" && typeof endTimeMinutes === "number" && endTimeMinutes > startTimeMinutes;
+
+  if (startDate === endDate) {
+    if (!hasTimeRange) {
+      return { fullDay: true, reason: closure.reason?.trim() || "Clinic closed" };
+    }
+    return { fullDay: false, startMinutes: startTimeMinutes, endMinutes: endTimeMinutes, reason: closure.reason };
+  }
+
+  if (dateKey > startDate && dateKey < endDate) {
+    return { fullDay: true, reason: closure.reason?.trim() || "Clinic closed" };
+  }
+
+  if (dateKey === startDate) {
+    if (!hasTimeRange) {
+      return { fullDay: true, reason: closure.reason?.trim() || "Clinic closed" };
+    }
+    return {
+      fullDay: false,
+      startMinutes: startTimeMinutes,
+      endMinutes: 24 * 60,
+      reason: closure.reason,
+    };
+  }
+
+  if (dateKey === endDate) {
+    if (!hasTimeRange) {
+      return { fullDay: true, reason: closure.reason?.trim() || "Clinic closed" };
+    }
+    return { fullDay: false, startMinutes: 0, endMinutes: endTimeMinutes, reason: closure.reason };
+  }
+
+  return null;
+};
+
+const getSlotMinutes = (date: Date, slotLabel: string) => {
+  const slotDate = getSlotDateTime(date, slotLabel);
+  if (!slotDate) return null;
+  return slotDate.getHours() * 60 + slotDate.getMinutes();
+};
 
 export const isClinicClosedOnDate = (
   date: Date,
@@ -113,9 +185,8 @@ export const isClinicClosedOnDate = (
   }
   const dateKey = getDateKey(date);
   const match = (closures ?? []).find((closure) => {
-    const start = closure.startDate;
-    const end = closure.endDate || closure.startDate;
-    return start <= dateKey && dateKey <= end;
+    const window = buildClosureWindow(dateKey, closure);
+    return window?.fullDay;
   });
   if (match) {
     return {
@@ -124,6 +195,42 @@ export const isClinicClosedOnDate = (
     };
   }
   return { closed: false, reason: "" };
+};
+
+export const applyBookingClosuresToSlots = (
+  date: Date,
+  slots: string[],
+  closures?: ClinicInfo["bookingClosures"],
+) => {
+  if (!closures || closures.length === 0) return { slots, isClosed: false, reason: "" };
+  const dateKey = getDateKey(date);
+  let filteredSlots = [...slots];
+  let closureReason = "";
+
+  for (const closure of closures) {
+    const window = buildClosureWindow(dateKey, closure);
+    if (!window) continue;
+    if (window.fullDay) {
+      return { slots: [], isClosed: true, reason: window.reason ?? "Clinic closed" };
+    }
+    const startMinutes = window.startMinutes ?? 0;
+    const endMinutes = window.endMinutes ?? 0;
+    if (!Number.isFinite(startMinutes) || !Number.isFinite(endMinutes)) continue;
+    filteredSlots = filteredSlots.filter((slot) => {
+      const minutes = getSlotMinutes(date, slot);
+      if (minutes === null) return true;
+      return minutes < startMinutes || minutes >= endMinutes;
+    });
+    if (!closureReason && window.reason) {
+      closureReason = window.reason;
+    }
+  }
+
+  if (filteredSlots.length === 0) {
+    return { slots: [], isClosed: true, reason: closureReason || "Clinic closed" };
+  }
+
+  return { slots: filteredSlots, isClosed: false, reason: "" };
 };
 
 export const buildNextAvailabilityLabel = (

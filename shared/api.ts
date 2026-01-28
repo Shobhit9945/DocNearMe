@@ -143,7 +143,7 @@ export interface SharedMedicalRecord {
   type: string;
   size: number;
   iv: string;
-  data: string;
+  data?: string;
 }
 
 export interface SignupPhotoPayload {
@@ -294,6 +294,8 @@ export interface ClinicHours {
 export interface ClinicBookingClosure {
   startDate: string;
   endDate: string;
+  startTime?: string;
+  endTime?: string;
   reason?: string;
 }
 
