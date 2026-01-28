@@ -7,18 +7,29 @@ import { getClinicAuthHeader, getClinicSession } from "@/lib/clinic-auth";
 import { useClinicDoctors } from "@/lib/clinic-data";
 import { useTranslation } from "@/lib/i18n";
 import { SPECIALIZATION_OPTIONS, matchSpecialization } from "@/lib/specializations";
-import { formatAvailabilityForLanguage } from "@/lib/time-format";
 import { supportedLanguages } from "@/lib/translations";
 import type { ClinicDoctor, ClinicDoctorsUpdateRequest } from "@shared/api";
 
 export default function ClinicDoctors() {
   const session = getClinicSession();
-  const { t, language } = useTranslation();
+  const { t } = useTranslation();
   const clinicId = session?.clinicId;
   const { data } = useClinicDoctors(clinicId);
   const [doctors, setDoctors] = useState<ClinicDoctor[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [languageDrafts, setLanguageDrafts] = useState<Record<string, string>>({});
+  const weekdayOptions = useMemo(
+    () => [
+      { value: "Mon", label: t("Mon") },
+      { value: "Tue", label: t("Tue") },
+      { value: "Wed", label: t("Wed") },
+      { value: "Thu", label: t("Thu") },
+      { value: "Fri", label: t("Fri") },
+      { value: "Sat", label: t("Sat") },
+      { value: "Sun", label: t("Sun") },
+    ],
+    [t],
+  );
   const languageOptions = useMemo(() => {
     const options = new Set(supportedLanguages.map(({ label }) => label));
     doctors.forEach((doctor) => {
@@ -29,7 +40,12 @@ export default function ClinicDoctors() {
 
   useEffect(() => {
     if (!data?.doctors) return;
-    setDoctors(data.doctors);
+    setDoctors(
+      data.doctors.map((doctor) => ({
+        ...doctor,
+        availability: Array.isArray(doctor.availability) ? doctor.availability : [],
+      })),
+    );
   }, [data]);
 
   const handleFieldChange = (index: number, field: keyof ClinicDoctor, value: string) => {
@@ -79,6 +95,74 @@ export default function ClinicDoctors() {
     setDoctors((prev) => prev.filter((_, idx) => idx !== index));
   };
 
+  const handleAddAvailabilitySlot = (index: number) => {
+    setDoctors((prev) => {
+      const next = [...prev];
+      const doctor = next[index];
+      next[index] = {
+        ...doctor,
+        availability: [
+          ...(doctor.availability ?? []),
+          {
+            days: [],
+            startTime: "",
+            endTime: "",
+          },
+        ],
+      };
+      return next;
+    });
+  };
+
+  const handleRemoveAvailabilitySlot = (doctorIndex: number, slotIndex: number) => {
+    setDoctors((prev) => {
+      const next = [...prev];
+      const doctor = next[doctorIndex];
+      next[doctorIndex] = {
+        ...doctor,
+        availability: (doctor.availability ?? []).filter((_, index) => index !== slotIndex),
+      };
+      return next;
+    });
+  };
+
+  const handleAvailabilityTimeChange = (
+    doctorIndex: number,
+    slotIndex: number,
+    field: "startTime" | "endTime",
+    value: string,
+  ) => {
+    setDoctors((prev) => {
+      const next = [...prev];
+      const doctor = next[doctorIndex];
+      const availability = [...(doctor.availability ?? [])];
+      const slot = availability[slotIndex];
+      if (!slot) return prev;
+      availability[slotIndex] = { ...slot, [field]: value };
+      next[doctorIndex] = { ...doctor, availability };
+      return next;
+    });
+  };
+
+  const handleToggleAvailabilityDay = (doctorIndex: number, slotIndex: number, day: string) => {
+    setDoctors((prev) => {
+      const next = [...prev];
+      const doctor = next[doctorIndex];
+      const availability = [...(doctor.availability ?? [])];
+      const slot = availability[slotIndex];
+      if (!slot) return prev;
+      const days = new Set(slot.days ?? []);
+      if (days.has(day)) {
+        days.delete(day);
+      } else {
+        days.add(day);
+      }
+      availability[slotIndex] = { ...slot, days: Array.from(days) };
+      next[doctorIndex] = { ...doctor, availability };
+      return next;
+    });
+  };
+
   const handleAdd = () => {
     const newId = `doc-${Date.now()}`;
     setDoctors((prev) => [
@@ -91,7 +175,7 @@ export default function ClinicDoctors() {
         languages: ["English"],
         rating: 4.5,
         nextAvailable: t("Schedule TBD"),
-        availability: "",
+        availability: [],
       },
     ]);
   };
@@ -108,7 +192,14 @@ export default function ClinicDoctors() {
         clinicId,
         name: doctor.name.trim(),
         specialization: doctor.specialization.trim(),
-        availability: doctor.availability?.trim() || undefined,
+        availability:
+          doctor.availability
+            ?.map((slot) => ({
+              days: (slot.days ?? []).map((day) => day.trim()).filter(Boolean),
+              startTime: slot.startTime.trim(),
+              endTime: slot.endTime.trim(),
+            }))
+            .filter((slot) => slot.days.length > 0 && slot.startTime && slot.endTime) ?? undefined,
         languages: (doctor.languages ?? [])
           .map((language) => language.trim())
           .filter((language) => language.length > 0),
@@ -156,9 +247,6 @@ export default function ClinicDoctors() {
         <h2 className="text-lg font-semibold text-gray-900">{t("Availability")}</h2>
         <div className="space-y-4">
           {doctors.map((doctor, index) => {
-            const availabilityTranslation = doctor.availability
-              ? formatAvailabilityForLanguage(doctor.availability, language, t)
-              : "";
             const matchedSpecializationId = matchSpecialization(doctor.specialization ?? "");
             const matchedSpecialization =
               SPECIALIZATION_OPTIONS.find((spec) => spec.id === matchedSpecializationId) ??
@@ -195,15 +283,81 @@ export default function ClinicDoctors() {
                     </Select>
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-gray-500 block mb-1">{t("Availability")}</label>
-                    <Input
-                      value={doctor.availability ?? ""}
-                      onChange={(event) => handleFieldChange(index, "availability", event.target.value)}
-                      placeholder={t("Mon-Fri 09:00-18:00")}
-                    />
-                    {language === "ja" && doctor.availability && availabilityTranslation !== doctor.availability ? (
-                      <p className="mt-1 text-xs text-gray-400">{availabilityTranslation}</p>
-                    ) : null}
+                    <label className="text-xs font-medium text-gray-500 block mb-1">
+                      {t("Availability schedule")}
+                    </label>
+                    <div className="space-y-3">
+                      {(doctor.availability ?? []).length === 0 ? (
+                        <p className="text-xs text-gray-400">{t("No availability set")}</p>
+                      ) : null}
+                      {(doctor.availability ?? []).map((slot, slotIndex) => (
+                        <div key={`${doctor.id}-slot-${slotIndex}`} className="rounded-lg border border-gray-100 p-3">
+                          <div className="space-y-3">
+                            <div>
+                              <p className="text-xs font-medium text-gray-500">{t("Days")}</p>
+                              <div className="mt-2 flex flex-wrap gap-2">
+                                {weekdayOptions.map((day) => {
+                                  const isSelected = slot.days?.includes(day.value);
+                                  return (
+                                    <button
+                                      key={`${doctor.id}-${slotIndex}-${day.value}`}
+                                      type="button"
+                                      onClick={() => handleToggleAvailabilityDay(index, slotIndex, day.value)}
+                                      className={`rounded-full border px-3 py-1 text-xs transition ${
+                                        isSelected
+                                          ? "border-blue-500 bg-blue-50 text-blue-600"
+                                          : "border-gray-200 bg-white text-gray-500 hover:border-gray-300"
+                                      }`}
+                                    >
+                                      {day.label}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                              <div>
+                                <label className="text-xs font-medium text-gray-500 block mb-1">
+                                  {t("Start time")}
+                                </label>
+                                <Input
+                                  type="time"
+                                  value={slot.startTime}
+                                  onChange={(event) =>
+                                    handleAvailabilityTimeChange(index, slotIndex, "startTime", event.target.value)
+                                  }
+                                />
+                              </div>
+                              <div>
+                                <label className="text-xs font-medium text-gray-500 block mb-1">
+                                  {t("End time")}
+                                </label>
+                                <Input
+                                  type="time"
+                                  value={slot.endTime}
+                                  onChange={(event) =>
+                                    handleAvailabilityTimeChange(index, slotIndex, "endTime", event.target.value)
+                                  }
+                                />
+                              </div>
+                            </div>
+                            <div className="flex justify-end">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleRemoveAvailabilitySlot(index, slotIndex)}
+                              >
+                                {t("Remove slot")}
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                      <Button type="button" variant="outline" onClick={() => handleAddAvailabilitySlot(index)}>
+                        {t("Add availability slot")}
+                      </Button>
+                    </div>
                   </div>
                 </div>
                 <div className="space-y-2">

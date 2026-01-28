@@ -310,6 +310,12 @@ export interface ClinicPhoto {
   url: string;
 }
 
+export interface ClinicDoctorAvailabilitySlot {
+  days: string[];
+  startTime: string;
+  endTime: string;
+}
+
 export interface ClinicDoctor {
   id: string;
   name: string;
@@ -318,7 +324,7 @@ export interface ClinicDoctor {
   languages: string[];
   rating: number;
   nextAvailable: string;
-  availability?: string;
+  availability?: ClinicDoctorAvailabilitySlot[];
 }
 
 export interface ClinicProfile {

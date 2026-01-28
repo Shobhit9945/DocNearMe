@@ -89,6 +89,12 @@ const clinicUpdateSchema = z.object({
     .optional(),
 });
 
+const availabilitySlotSchema = z.object({
+  days: z.array(z.string().trim().min(2).max(10)).min(1),
+  startTime: z.string().trim().min(4).max(10),
+  endTime: z.string().trim().min(4).max(10),
+});
+
 const doctorsUpdateSchema = z.object({
   doctors: z.array(
     z.object({
@@ -99,7 +105,7 @@ const doctorsUpdateSchema = z.object({
       languages: z.array(z.string().trim().min(2).max(60)),
       rating: z.number().min(0).max(5),
       nextAvailable: z.string().trim().min(2).max(80),
-      availability: z.string().trim().min(1).max(120).optional(),
+      availability: z.array(availabilitySlotSchema).optional(),
     }),
   ),
 });

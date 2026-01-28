@@ -198,6 +198,10 @@ export interface ClinicDoctorRecord {
   languages: string[];
   rating: number;
   nextAvailable: string;
-  availability?: string;
+  availability?: {
+    days: string[];
+    startTime: string;
+    endTime: string;
+  }[];
   updatedAt?: Date;
 }
