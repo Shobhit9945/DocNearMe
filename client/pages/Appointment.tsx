@@ -14,6 +14,7 @@ import { DocDaisyBanner } from "@/components/DocDaisyBanner";
 import { PageScaffold } from "@/components/PageScaffold";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Calendar } from "@/components/ui/calendar";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -22,6 +23,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { generateGoogleCalendarLink, generateICSFile, CalendarEvent } from "@/lib/CalendarUtils";
 import { BottomNav } from "@/components/BottomNav";
 import { useQuery } from "@tanstack/react-query";
@@ -124,6 +135,8 @@ export default function Appointment() {
   const [selectedVaultRecord, setSelectedVaultRecord] = useState<MedicalRecordDetail | null>(null);
   const [vaultRecordError, setVaultRecordError] = useState<string | null>(null);
   const [isVaultRecordLoading, setIsVaultRecordLoading] = useState(false);
+  const [recordToDelete, setRecordToDelete] = useState<MedicalRecordDetail | null>(null);
+  const [isDeletingRecord, setIsDeletingRecord] = useState(false);
   const [intakeReason, setIntakeReason] = useState("");
   const [intakeConsent, setIntakeConsent] = useState(false);
   const [intakeAllergies, setIntakeAllergies] = useState("");
@@ -344,7 +357,11 @@ export default function Appointment() {
     },
   });
 
-  const { data: vaultRecordsData, isLoading: isLoadingVaultRecords } = useQuery({
+  const {
+    data: vaultRecordsData,
+    isLoading: isLoadingVaultRecords,
+    refetch: refetchVaultRecords,
+  } = useQuery({
     queryKey: ["medical-records", authSession?.token],
     enabled: isAuthenticated,
     queryFn: async () => {
@@ -467,6 +484,41 @@ export default function Appointment() {
         setIsVaultRecordLoading(false);
       });
   }, [authSession?.token, selectedVaultRecordId]);
+
+  const handleDeleteVaultRecord = async () => {
+    if (!recordToDelete || !authSession?.token) return;
+    setIsDeletingRecord(true);
+    try {
+      const response = await fetch(`/api/medical-records/${recordToDelete.id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${authSession.token}`,
+        },
+      });
+      if (!response.ok) {
+        const errorPayload = await response.json().catch(() => ({}));
+        throw new Error(errorPayload?.error ?? t("Unable to delete record right now."));
+      }
+      toast({
+        title: t("Record deleted"),
+        description: t("The medical record was removed from your vault."),
+      });
+      if (selectedVaultRecordId === recordToDelete.id) {
+        setSelectedVaultRecordId("");
+        setSelectedVaultRecord(null);
+      }
+      await refetchVaultRecords();
+      setRecordToDelete(null);
+    } catch (error) {
+      toast({
+        title: t("Delete failed"),
+        description: error instanceof Error ? error.message : t("Unable to delete record right now."),
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeletingRecord(false);
+    }
+  };
 
   const calendarEvent: CalendarEvent | null = useMemo(() => {
     if (!selectedDate || !selectedSlot) return null;
@@ -1615,7 +1667,18 @@ export default function Appointment() {
                       )}
                       {vaultRecordError && <p className="text-xs text-red-500">{vaultRecordError}</p>}
                       {selectedVaultRecord ? (
-                        <p className="text-sm text-slate-600">Selected: {selectedVaultRecord.name}</p>
+                        <div className="flex flex-wrap items-center gap-3">
+                          <p className="text-sm text-slate-600">
+                            {t("Selected")}: {selectedVaultRecord.name}
+                          </p>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setRecordToDelete(selectedVaultRecord)}
+                          >
+                            {t("Delete record")}
+                          </Button>
+                        </div>
                       ) : null}
                       <p className="text-xs text-slate-500">
                         We'll send an encrypted copy to the clinic. DocNearMe cannot read your file.
@@ -1800,6 +1863,23 @@ export default function Appointment() {
       <div className="lg:hidden">
         <BottomNav />
       </div>
+
+      <AlertDialog open={Boolean(recordToDelete)} onOpenChange={(open) => (open ? null : setRecordToDelete(null))}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("Delete medical record?")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("This permanently deletes the encrypted record from your vault.")}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeletingRecord}>{t("Cancel")}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteVaultRecord} disabled={isDeletingRecord}>
+              {isDeletingRecord ? t("Deleting...") : t("Delete")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </PageScaffold>
   );
 }

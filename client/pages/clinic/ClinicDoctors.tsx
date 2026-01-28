@@ -4,10 +4,12 @@ import { Input } from "@/components/ui/input";
 import { toast } from "@/components/ui/use-toast";
 import { getClinicAuthHeader, getClinicSession } from "@/lib/clinic-auth";
 import { useClinicDoctors } from "@/lib/clinic-data";
+import { useTranslation } from "@/lib/i18n";
 import type { ClinicDoctor, ClinicDoctorsUpdateRequest } from "@shared/api";
 
 export default function ClinicDoctors() {
   const session = getClinicSession();
+  const { t } = useTranslation();
   const clinicId = session?.clinicId;
   const { data } = useClinicDoctors(clinicId);
   const [doctors, setDoctors] = useState<ClinicDoctor[]>([]);
@@ -75,9 +77,9 @@ export default function ClinicDoctors() {
         clinicId: clinicId ?? "",
         name: "",
         specialization: "",
-        languages: ["English"],
+        languages: [t("English")],
         rating: 4.5,
-        nextAvailable: "Schedule TBD",
+        nextAvailable: t("Schedule TBD"),
         availability: "",
       },
     ]);
@@ -85,7 +87,7 @@ export default function ClinicDoctors() {
 
   const handleSave = async () => {
     if (!clinicId) {
-      toast({ title: "Missing clinic session", variant: "destructive" });
+      toast({ title: t("Missing clinic session"), variant: "destructive" });
       return;
     }
 
@@ -115,14 +117,14 @@ export default function ClinicDoctors() {
 
       if (!response.ok) {
         const error = await response.json().catch(() => ({}));
-        throw new Error(error?.error ?? "Unable to save doctors.");
+        throw new Error(error?.error ?? t("Unable to save doctors."));
       }
 
-      toast({ title: "Doctors updated", description: "Patient view is now up to date." });
+      toast({ title: t("Doctors updated"), description: t("Patient view is now up to date.") });
     } catch (error) {
       toast({
-        title: "Save failed",
-        description: error instanceof Error ? error.message : "Please try again.",
+        title: t("Save failed"),
+        description: error instanceof Error ? error.message : t("Please try again."),
         variant: "destructive",
       });
     } finally {
@@ -133,47 +135,47 @@ export default function ClinicDoctors() {
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="text-2xl font-bold text-gray-900">Doctors & staff</h1>
+        <h1 className="text-2xl font-bold text-gray-900">{t("Doctors & staff")}</h1>
         <p className="text-gray-500 mt-1">
-          Keep schedules up to date so patients see the right availability.
+          {t("Keep schedules up to date so patients see the right availability.")}
         </p>
       </header>
 
       <section className="bg-white border border-gray-100 rounded-xl p-6 shadow-sm space-y-4">
-        <h2 className="text-lg font-semibold text-gray-900">Availability</h2>
+        <h2 className="text-lg font-semibold text-gray-900">{t("Availability")}</h2>
         <div className="space-y-4">
           {doctors.map((doctor, index) => (
             <div key={doctor.id} className="border border-gray-100 rounded-lg p-4 space-y-3">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="text-xs font-medium text-gray-500 block mb-1">Name</label>
+                  <label className="text-xs font-medium text-gray-500 block mb-1">{t("Name")}</label>
                   <Input
                     value={doctor.name}
                     onChange={(event) => handleFieldChange(index, "name", event.target.value)}
-                    placeholder="Dr. Name"
+                    placeholder={t("Dr. Name")}
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-gray-500 block mb-1">Specialization</label>
+                  <label className="text-xs font-medium text-gray-500 block mb-1">{t("Specialization")}</label>
                   <Input
                     value={doctor.specialization}
                     onChange={(event) => handleFieldChange(index, "specialization", event.target.value)}
-                    placeholder="Dermatology"
+                    placeholder={t("Dermatology")}
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-gray-500 block mb-1">Availability</label>
+                  <label className="text-xs font-medium text-gray-500 block mb-1">{t("Availability")}</label>
                   <Input
                     value={doctor.availability ?? ""}
                     onChange={(event) => handleFieldChange(index, "availability", event.target.value)}
-                    placeholder="Mon-Fri 09:00-18:00"
+                    placeholder={t("Mon-Fri 09:00-18:00")}
                   />
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="text-xs font-medium text-gray-500 block">Languages spoken</label>
+                <label className="text-xs font-medium text-gray-500 block">{t("Languages spoken")}</label>
                 <div className="flex flex-wrap gap-2">
-                  {(doctor.languages ?? ["English"]).map((language) => (
+                  {(doctor.languages ?? [t("English")]).map((language) => (
                     <span
                       key={language}
                       className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-xs text-gray-600"
@@ -183,7 +185,7 @@ export default function ClinicDoctors() {
                         type="button"
                         onClick={() => handleRemoveLanguage(index, language)}
                         className="text-gray-400 hover:text-gray-600"
-                        aria-label={`Remove ${language}`}
+                        aria-label={t("Remove {language}", `Remove ${language}`).replace("{language}", language)}
                       >
                         ×
                       </button>
@@ -194,17 +196,17 @@ export default function ClinicDoctors() {
                   <Input
                     value={languageDrafts[doctor.id] ?? ""}
                     onChange={(event) => handleLanguageDraftChange(doctor.id, event.target.value)}
-                    placeholder="Add language"
+                    placeholder={t("Add language")}
                     className="max-w-xs"
                   />
                   <Button type="button" variant="outline" onClick={() => handleAddLanguage(index)}>
-                    + Add
+                    {t("+ Add")}
                   </Button>
                 </div>
               </div>
               <div className="flex items-center justify-end text-xs text-gray-500">
                 <Button type="button" variant="outline" onClick={() => handleRemove(index)}>
-                  Remove
+                  {t("Remove")}
                 </Button>
               </div>
             </div>
@@ -213,14 +215,14 @@ export default function ClinicDoctors() {
       </section>
 
       <section className="bg-white border border-gray-100 rounded-xl p-6 shadow-sm space-y-4">
-        <h2 className="text-lg font-semibold text-gray-900">Add doctor</h2>
-        <p className="text-sm text-gray-500">Add new clinicians to display in the patient directory.</p>
+        <h2 className="text-lg font-semibold text-gray-900">{t("Add doctor")}</h2>
+        <p className="text-sm text-gray-500">{t("Add new clinicians to display in the patient directory.")}</p>
         <div className="flex flex-wrap gap-3">
           <Button type="button" onClick={handleAdd}>
-            Add doctor
+            {t("Add doctor")}
           </Button>
           <Button type="button" variant="outline" onClick={handleSave} disabled={isSaving}>
-            {isSaving ? "Saving..." : "Save changes"}
+            {isSaving ? t("Saving...") : t("Save changes")}
           </Button>
         </div>
       </section>

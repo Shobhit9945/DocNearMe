@@ -10,26 +10,36 @@ interface TranslationContextValue {
 
 const TranslationContext = createContext<TranslationContextValue | null>(null);
 
-function getInitialLanguage(): Language {
+interface TranslationProviderProps {
+  children: ReactNode;
+  defaultLanguage?: Language;
+  storageKey?: string;
+}
+
+function getInitialLanguage(defaultLanguage: Language, storageKey: string): Language {
   if (typeof localStorage !== "undefined") {
-    const saved = localStorage.getItem("dnm-language");
+    const saved = localStorage.getItem(storageKey);
     const match = supportedLanguages.find((lang) => lang.code === saved);
     if (match) return match.code;
   }
-  return "en";
+  return defaultLanguage;
 }
 
-export function TranslationProvider({ children }: { children: ReactNode }) {
-  const [language, setLanguage] = useState<Language>(getInitialLanguage);
+export function TranslationProvider({
+  children,
+  defaultLanguage = "en",
+  storageKey = "dnm-language",
+}: TranslationProviderProps) {
+  const [language, setLanguage] = useState<Language>(() => getInitialLanguage(defaultLanguage, storageKey));
 
   useEffect(() => {
     if (typeof document !== "undefined") {
       document.documentElement.lang = language;
     }
     if (typeof localStorage !== "undefined") {
-      localStorage.setItem("dnm-language", language);
+      localStorage.setItem(storageKey, language);
     }
-  }, [language]);
+  }, [language, storageKey]);
 
   const t = useMemo(
     () =>

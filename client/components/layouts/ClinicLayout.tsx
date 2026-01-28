@@ -2,10 +2,12 @@ import React, { useEffect } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { LayoutDashboard, Calendar, UserSquare2, Users, LogOut } from "lucide-react";
 import { clearClinicSession, getClinicSession } from "@/lib/clinic-auth";
+import { useTranslation } from "@/lib/i18n";
 
 export function ClinicLayout() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { language, setLanguage, t } = useTranslation();
   const isActive = (path: string) => location.pathname === path;
 
   useEffect(() => {
@@ -20,6 +22,10 @@ export function ClinicLayout() {
     navigate("/login");
   };
 
+  const toggleLanguage = () => {
+    setLanguage(language === "ja" ? "en" : "ja");
+  };
+
   return (
     <div className="flex h-screen bg-gray-50">
       {/* Sidebar */}
@@ -27,9 +33,16 @@ export function ClinicLayout() {
         <div className="p-6">
           <h1 className="text-2xl font-bold text-blue-600">DocNearMe</h1>
           <p className="text-xs text-gray-500 font-medium tracking-wider uppercase mt-1">
-            Clinic Portal
+            {t("Clinic Portal")}
           </p>
-          <p className="text-xs text-gray-400 mt-2">English (preview)</p>
+          <p className="text-xs text-gray-400 mt-2">{t("Clinic interface language")}</p>
+          <button
+            type="button"
+            onClick={toggleLanguage}
+            className="mt-3 inline-flex w-full items-center justify-center rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-600 transition-colors hover:border-blue-500 hover:text-blue-600"
+          >
+            {language === "ja" ? t("Switch to English") : t("Switch to Japanese")}
+          </button>
         </div>
 
         <nav className="flex-1 px-4 space-y-1">
@@ -42,7 +55,7 @@ export function ClinicLayout() {
             }`}
           >
             <LayoutDashboard size={20} />
-            Dashboard
+            {t("Dashboard")}
           </Link>
           <Link
             to="/appointments"
@@ -53,7 +66,7 @@ export function ClinicLayout() {
             }`}
           >
             <Calendar size={20} />
-            Appointments
+            {t("Appointments")}
           </Link>
           <Link
             to="/clinic-info"
@@ -64,7 +77,7 @@ export function ClinicLayout() {
             }`}
           >
             <UserSquare2 size={20} />
-            Clinic info
+            {t("Clinic info")}
           </Link>
           <Link
             to="/doctors"
@@ -75,7 +88,7 @@ export function ClinicLayout() {
             }`}
           >
             <Users size={20} />
-            Doctors
+            {t("Doctors")}
           </Link>
         </nav>
 
@@ -85,7 +98,7 @@ export function ClinicLayout() {
             className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-red-600 rounded-lg hover:bg-red-50 w-full transition-colors"
           >
             <LogOut size={20} />
-            Sign out
+            {t("Sign out")}
           </button>
         </div>
       </aside>
