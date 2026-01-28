@@ -953,7 +953,6 @@ const baseTranslations: Record<string, TranslationEntry> = {
   "Appointment cancelled": { ja: "予約をキャンセルしました" },
   "Reschedule message sent": { ja: "日程変更メッセージを送信しました" },
   "Unable to load patient details.": { ja: "患者情報を取得できません。" },
-  "Unable to delete appointment record.": { ja: "予約記録を削除できません。" },
   "Review and respond to appointment requests from your patients.": {
     ja: "患者からの予約リクエストを確認・対応します。",
   },
@@ -969,7 +968,6 @@ const baseTranslations: Record<string, TranslationEntry> = {
   "View patient details": { ja: "患者情報を表示" },
   Reschedule: { ja: "日程変更" },
   Cancel: { ja: "キャンセル" },
-  "Delete appointment record": { ja: "予約記録を削除" },
   Confirm: { ja: "確定" },
   Notes: { ja: "メモ" },
   "No notes provided.": { ja: "メモはありません。" },
@@ -1005,12 +1003,6 @@ const baseTranslations: Record<string, TranslationEntry> = {
   "This permanently deletes the encrypted record from your vault.": { ja: "暗号化された記録をボールトから完全に削除します。" },
   "Deleting...": { ja: "削除中..." },
   Delete: { ja: "削除" },
-  "Appointment deleted": { ja: "予約記録を削除しました" },
-  "The appointment record was removed.": { ja: "予約記録が削除されました。" },
-  "Delete appointment record?": { ja: "予約記録を削除しますか？" },
-  "This removes the appointment record from the clinic and patient history.": {
-    ja: "この操作でクリニックと患者の履歴から予約記録が削除されます。",
-  },
 };
 
 export const translations: Record<string, TranslationEntry> = Object.fromEntries(

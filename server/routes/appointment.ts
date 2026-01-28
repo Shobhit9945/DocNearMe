@@ -570,32 +570,6 @@ export const handleClinicPatientDetails = async (req: Request, res: Response) =>
   }
 };
 
-export const handleClinicDeleteAppointment = async (req: Request, res: Response) => {
-  if (!req.clinicAuth) {
-    return res.status(401).json({ error: "Authentication required." });
-  }
-
-  const appointmentId = req.params.id;
-
-  try {
-    const appointments = await getAppointmentsCollection();
-    const appointmentLookup = resolveAppointmentId(appointmentId);
-    const appointment = await appointments.findOne({ _id: appointmentLookup });
-
-    if (!appointment || appointment.clinicId !== req.clinicAuth.clinicId) {
-      return res.status(404).json({ error: "Appointment not found" });
-    }
-
-    await appointments.deleteOne({ _id: appointmentLookup });
-    await removePatientAppointmentSummary(appointmentId, appointment.patientId);
-
-    return res.json({ success: true, message: "Appointment deleted." });
-  } catch (error) {
-    console.error("Clinic appointment delete error", error);
-    return res.status(500).json({ error: "Failed to delete appointment." });
-  }
-};
-
 export const handleClinicConfirmAppointment = async (req: Request, res: Response) => {
   if (!req.clinicAuth) {
     return res.status(401).json({ error: "Authentication required." });

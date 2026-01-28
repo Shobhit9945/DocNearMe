@@ -78,8 +78,6 @@ export default function ClinicAppointments() {
   const [patientDetailsOpen, setPatientDetailsOpen] = useState(false);
   const [patientDetailsLoading, setPatientDetailsLoading] = useState(false);
   const [patientDetailsError, setPatientDetailsError] = useState<string | null>(null);
-  const [appointmentToDelete, setAppointmentToDelete] = useState<AppointmentResponseItem | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
 
   const appointments = useMemo(() => data?.appointments ?? [], [data?.appointments]);
   const dialogOpen = Boolean(actionType && activeAppointment);
@@ -219,37 +217,6 @@ export default function ClinicAppointments() {
     URL.revokeObjectURL(link.href);
   };
 
-  const handleDeleteAppointment = async () => {
-    if (!appointmentToDelete) return;
-    setIsDeleting(true);
-    try {
-      const response = await fetch(`/api/clinic/appointments/${appointmentToDelete._id}`, {
-        method: "DELETE",
-        headers: {
-          ...getClinicAuthHeader(),
-        },
-      });
-      if (!response.ok) {
-        const errorPayload = await response.json().catch(() => ({}));
-        throw new Error(errorPayload?.error ?? t("Unable to delete appointment record."));
-      }
-      toast({
-        title: t("Appointment deleted"),
-        description: t("The appointment record was removed."),
-      });
-      await refetch();
-      setAppointmentToDelete(null);
-    } catch (err) {
-      toast({
-        title: t("Delete failed"),
-        description: err instanceof Error ? err.message : t("Unable to delete appointment record."),
-        variant: "destructive",
-      });
-    } finally {
-      setIsDeleting(false);
-    }
-  };
-
   return (
     <div className="space-y-6">
       <header>
@@ -335,13 +302,6 @@ export default function ClinicAppointments() {
                     >
                       {t("Cancel")}
                     </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => setAppointmentToDelete(appointment)}
-                      disabled={isSubmitting}
-                    >
-                      {t("Delete appointment record")}
-                    </Button>
                     <Button onClick={() => handleConfirm(appointment)} disabled={!canConfirm || isSubmitting}>
                       {t("Confirm")}
                     </Button>
@@ -390,6 +350,69 @@ export default function ClinicAppointments() {
             </Button>
             <Button type="button" onClick={handleActionSubmit} disabled={isSubmitting}>
               {isSubmitting ? t("Sending...") : t("Send message")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={patientDetailsOpen} onOpenChange={(open) => setPatientDetailsOpen(open)}>
+        <DialogContent className="max-w-xl">
+          <DialogHeader>
+            <DialogTitle>{t("Patient details")}</DialogTitle>
+            <DialogDescription>{t("Review patient information and shared documents.")}</DialogDescription>
+          </DialogHeader>
+          {patientDetailsLoading ? (
+            <p className="text-sm text-slate-500">{t("Loading patient details...")}</p>
+          ) : patientDetailsError ? (
+            <p className="text-sm text-red-500">{patientDetailsError}</p>
+          ) : patientDetails ? (
+            <div className="space-y-4 text-sm text-slate-700">
+              <div className="grid gap-3 md:grid-cols-2">
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-slate-500">{t("Name")}</p>
+                  <p className="font-medium">{patientDetails.patient.name || t("Not provided")}</p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-slate-500">{t("Age")}</p>
+                  <p className="font-medium">
+                    {patientDetails.patient.age !== undefined && patientDetails.patient.age !== null
+                      ? patientDetails.patient.age
+                      : t("Not provided")}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-slate-500">{t("Country")}</p>
+                  <p className="font-medium">{patientDetails.patient.country || t("Not provided")}</p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-slate-500">{t("Visa type")}</p>
+                  <p className="font-medium">{patientDetails.patient.visaType || t("Not provided")}</p>
+                </div>
+              </div>
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 space-y-2">
+                <p className="text-xs uppercase tracking-wide text-slate-500">{t("Shared medical document")}</p>
+                {patientDetails.sharedRecord ? (
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <p className="font-medium">{patientDetails.sharedRecord.name}</p>
+                      <p className="text-xs text-slate-500">
+                        {patientDetails.sharedRecord.type} ·{" "}
+                        {Math.round(patientDetails.sharedRecord.size / 1024)} KB
+                      </p>
+                    </div>
+                    <Button type="button" variant="outline" onClick={() => handleDownloadSharedRecord(patientDetails.sharedRecord)}>
+                      {t("Download document")}
+                    </Button>
+                  </div>
+                ) : (
+                  <p className="text-sm text-slate-500">{t("No document shared.")}</p>
+                )}
+              </div>
+            </div>
+          ) : null}
+          <DialogFooter className="flex justify-end">
+            <Button type="button" variant="outline" onClick={() => setPatientDetailsOpen(false)}>
+              {t("Close")}
             </Button>
           </DialogFooter>
         </DialogContent>
