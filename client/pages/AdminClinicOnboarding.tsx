@@ -86,6 +86,20 @@ export default function AdminClinicOnboarding() {
   const [adminPassword, setAdminPassword] = useState("");
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+    const stored = window.localStorage.getItem("dnm-admin-credentials");
+    if (!stored) return;
+    try {
+      const parsed = JSON.parse(stored) as { username: string; password: string };
+      if (!parsed.username || !parsed.password) return;
+      setCredentials(parsed);
+      setFormCredentials(parsed);
+    } catch {
+      window.localStorage.removeItem("dnm-admin-credentials");
+    }
+  }, []);
+
+  useEffect(() => {
     if (!credentials.username || !credentials.password) return;
     setIsChecking(true);
     setAuthError("");
@@ -100,6 +114,7 @@ export default function AdminClinicOnboarding() {
       })
       .then(() => {
         setIsAuthed(true);
+        window.localStorage.setItem("dnm-admin-credentials", JSON.stringify(credentials));
       })
       .catch((error) => {
         setIsAuthed(false);
