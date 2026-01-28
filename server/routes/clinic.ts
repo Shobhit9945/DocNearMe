@@ -489,6 +489,9 @@ export const handleUpdateClinicDoctors: RequestHandler = async (req, res, next) 
     const doctors = await getClinicDoctorsCollection();
     const existing = await doctors.find({ clinicId }).toArray();
     const incomingIds = new Set(payload.doctors.map((doctor) => doctor.id));
+    if (incomingIds.size !== payload.doctors.length) {
+      return res.status(400).json({ error: "Doctor IDs must be unique per clinic." });
+    }
 
     for (const record of existing) {
       const recordId = record.doctorId ?? record.id;
