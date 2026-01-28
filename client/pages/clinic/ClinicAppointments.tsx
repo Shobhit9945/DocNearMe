@@ -1,11 +1,13 @@
 import React, { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/components/ui/use-toast";
 import { getClinicAuthHeader, getClinicSession } from "@/lib/clinic-auth";
 import { useTranslation } from "@/lib/i18n";
+import { getSpecializationLabel } from "@/lib/specializations";
 import type { AppointmentListResponse, AppointmentResponseItem, ClinicPatientDetailsResponse } from "@shared/api";
 
 type ActionType = "reschedule" | "cancel";
@@ -43,13 +45,30 @@ const fetchClinicAppointments = async (): Promise<AppointmentListResponse> => {
   return response.json() as Promise<AppointmentListResponse>;
 };
 
-const formatAppointmentTime = (appointment: AppointmentResponseItem) => {
+const formatSlotForLanguage = (slot: string, language: string) => {
+  if (language !== "ja") return slot;
+  const match = slot.trim().match(/^(\d{1,2}):(\d{2})(?:\s*(AM|PM))?$/i);
+  if (!match) return slot;
+  const hours = Number(match[1]);
+  const minutes = match[2];
+  const period = match[3]?.toUpperCase();
+  const normalizedHours =
+    period === "PM" && hours < 12 ? hours + 12 : period === "AM" && hours === 12 ? 0 : hours;
+  const displayHours = normalizedHours % 12 === 0 ? 12 : normalizedHours % 12;
+  const prefix = normalizedHours < 12 ? "午前" : "午後";
+  const minutesLabel = minutes === "00" ? "" : `${minutes}分`;
+  return `${prefix}${displayHours}時${minutesLabel}`;
+};
+
+const formatAppointmentTime = (appointment: AppointmentResponseItem, language: string) => {
   const rawDate = appointment.confirmedStart ?? appointment.preferredStart ?? appointment.date;
   const parsed = new Date(rawDate);
+  const locale = language === "ja" ? "ja-JP" : undefined;
   const dateLabel = Number.isNaN(parsed.getTime())
     ? appointment.date
-    : parsed.toLocaleDateString(undefined, { month: "short", day: "numeric" });
-  return `${dateLabel} · ${appointment.slot}`;
+    : parsed.toLocaleDateString(locale, { month: "short", day: "numeric" });
+  const slotLabel = formatSlotForLanguage(appointment.slot, language);
+  return `${dateLabel} · ${slotLabel}`;
 };
 
 export default function ClinicAppointments() {
@@ -297,19 +316,25 @@ export default function ClinicAppointments() {
               language === "ja"
                 ? appointment.notesTranslated ?? appointment.notes ?? t("No notes provided.")
                 : appointment.notes ?? t("No notes provided.");
+            const patientName = appointment.patientName ?? t("Patient");
+            const patientNameLabel =
+              language === "ja" &&
+              appointment.patientNameTranslated &&
+              appointment.patientNameTranslated !== patientName
+                ? `${appointment.patientNameTranslated} (${patientName})`
+                : patientName;
+            const specializationLabel = t(getSpecializationLabel(appointment.specialization));
 
             return (
               <div
                 key={appointment._id}
-                className="bg-white border border-gray-100 rounded-xl p-5 shadow-sm"
+                className="relative bg-white border border-gray-100 rounded-xl p-5 shadow-sm"
               >
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                  <div>
-                    <p className="text-sm text-gray-500">{formatAppointmentTime(appointment)}</p>
-                    <h2 className="text-lg font-semibold text-gray-900">
-                      {appointment.patientName ?? t("Patient")}
-                    </h2>
-                    <p className="text-sm text-gray-500">{appointment.specialization}</p>
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="space-y-1">
+                    <p className="text-sm text-gray-500">{formatAppointmentTime(appointment, language)}</p>
+                    <h2 className="text-lg font-semibold text-gray-900">{patientNameLabel}</h2>
+                    <p className="text-sm text-gray-500">{specializationLabel}</p>
                     <p className="text-sm text-gray-500 mt-1">
                       {t("Tel")}: {appointment.patientPhone ?? t("Not provided")}
                     </p>
@@ -317,39 +342,54 @@ export default function ClinicAppointments() {
                       {t("Visa type")}: {appointment.patientVisaType ?? t("Not provided")}
                     </p>
                   </div>
-                  <div className="flex flex-wrap items-center gap-3">
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusClass}`}>
+                  <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center sm:justify-end sm:gap-3">
+                    <span className={`col-span-2 w-fit px-3 py-1 rounded-full text-xs font-medium ${statusClass}`}>
                       {statusLabel}
                     </span>
-                    <Button variant="outline" onClick={() => handleViewPatientDetails(appointment)}>
+                    <Button
+                      variant="outline"
+                      onClick={() => handleViewPatientDetails(appointment)}
+                      className="w-full sm:w-auto"
+                    >
                       {t("View patient details")}
                     </Button>
                     <Button
                       variant="outline"
                       onClick={() => openDialog("reschedule", appointment)}
                       disabled={!canMessage || isSubmitting}
+                      className="w-full sm:w-auto"
                     >
-                      {t("Reschedule")}
+                      {t("Request a reschedule")}
                     </Button>
                     <Button
                       variant="outline"
                       onClick={() => openDialog("cancel", appointment)}
                       disabled={!canCancel || isSubmitting}
+                      className="w-full sm:w-auto"
                     >
-                      {t("Cancel")}
+                      {t("Cancel appointment")}
                     </Button>
                     <Button
-                      variant="destructive"
-                      onClick={() => openDeleteDialog(appointment)}
-                      disabled={isSubmitting || isDeleting}
+                      onClick={() => handleConfirm(appointment)}
+                      disabled={!canConfirm || isSubmitting}
+                      className="w-full sm:w-auto"
                     >
-                      {t("Delete record")}
-                    </Button>
-                    <Button onClick={() => handleConfirm(appointment)} disabled={!canConfirm || isSubmitting}>
-                      {t("Confirm")}
+                      {t("Confirm appointment")}
                     </Button>
                   </div>
                 </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-3 top-3 text-slate-400 hover:text-red-500"
+                  onClick={() => openDeleteDialog(appointment)}
+                  disabled={isSubmitting || isDeleting}
+                  aria-label={t("Delete appointment record")}
+                  title={t("Delete appointment record")}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
                 <div className="mt-4 space-y-2 rounded-lg bg-gray-50 p-3 text-sm text-gray-600">
                   <p>{t("Notes")}: {notesLabel}</p>
                   {appointment.clinicMessage ? (
@@ -411,7 +451,7 @@ export default function ClinicAppointments() {
               <p className="font-medium text-slate-800">
                 {deleteTarget.patientName ?? t("Patient")}
               </p>
-              <p>{formatAppointmentTime(deleteTarget)}</p>
+              <p>{formatAppointmentTime(deleteTarget, language)}</p>
             </div>
           ) : null}
           <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-end">
@@ -419,7 +459,7 @@ export default function ClinicAppointments() {
               {t("Keep record")}
             </Button>
             <Button type="button" variant="destructive" onClick={handleDeleteAppointment} disabled={isDeleting}>
-              {isDeleting ? t("Deleting...") : t("Delete record")}
+              {isDeleting ? t("Deleting...") : t("Delete appointment record")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -441,7 +481,15 @@ export default function ClinicAppointments() {
               <div className="grid gap-3 md:grid-cols-2">
                 <div>
                   <p className="text-xs uppercase tracking-wide text-slate-500">{t("Name")}</p>
-                  <p className="font-medium">{patientDetails.patient.name || t("Not provided")}</p>
+                  <p className="font-medium">
+                    {patientDetails.patient.name
+                      ? language === "ja" &&
+                        patientDetails.patient.nameTranslated &&
+                        patientDetails.patient.nameTranslated !== patientDetails.patient.name
+                        ? `${patientDetails.patient.nameTranslated} (${patientDetails.patient.name})`
+                        : patientDetails.patient.name
+                      : t("Not provided")}
+                  </p>
                 </div>
                 <div>
                   <p className="text-xs uppercase tracking-wide text-slate-500">{t("Age")}</p>

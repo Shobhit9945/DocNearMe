@@ -38,6 +38,7 @@ export interface AppointmentResponseItem {
   notesTranslated?: string;
   patientId?: string;
   patientName?: string;
+  patientNameTranslated?: string;
   patientPhone?: string;
   patientEmail?: string;
   patientVisaType?: VisaType;
@@ -128,6 +129,7 @@ export interface AppointmentListResponse {
 export interface ClinicPatientDetailsResponse {
   patient: {
     name: string;
+    nameTranslated?: string;
     age?: number;
     country?: string;
     visaType?: VisaType;

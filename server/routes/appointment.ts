@@ -512,6 +512,7 @@ export const handleListAppointmentsForClinic = async (req: Request, res: Respons
         const serialized = serializeAppointment(appointment);
         return {
           ...serialized,
+          patientNameTranslated: await translateToJapanese(appointment.patientName),
           notesTranslated: await translateToJapanese(appointment.notes),
         };
       }),
@@ -554,10 +555,12 @@ export const handleClinicPatientDetails = async (req: Request, res: Response) =>
     const patientCountry = patient?.nationality ?? undefined;
     const patientVisaType = appointment.patientVisaType ?? patient?.visaType ?? undefined;
     const patientAge = calculateAge(patient?.dateOfBirth);
+    const patientNameTranslated = await translateToJapanese(patientName);
 
     return res.json({
       patient: {
         name: patientName,
+        nameTranslated: patientNameTranslated,
         age: patientAge,
         country: patientCountry,
         visaType: patientVisaType,
