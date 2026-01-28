@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Calendar, UserSquare2, Users, LogOut } from "lucide-react";
+import { LayoutDashboard, Calendar, UserSquare2, Users, LogOut, ClipboardList } from "lucide-react";
 import { clearClinicSession, getClinicSession } from "@/lib/clinic-auth";
 import { useTranslation } from "@/lib/i18n";
 
@@ -90,6 +90,17 @@ export function ClinicLayout() {
             <Users size={20} />
             {t("Doctors")}
           </Link>
+          <Link
+            to="/intake-form"
+            className={`flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
+              isActive("/intake-form")
+                ? "bg-blue-50 text-blue-700"
+                : "text-gray-700 hover:bg-gray-50"
+            }`}
+          >
+            <ClipboardList size={20} />
+            {t("Intake form")}
+          </Link>
         </nav>
 
         <div className="p-4 border-t border-gray-100">
@@ -134,7 +145,7 @@ export function ClinicLayout() {
         </div>
       </main>
       <nav className="fixed bottom-0 left-0 right-0 z-20 border-t border-gray-200 bg-white lg:hidden">
-        <div className="grid grid-cols-4 gap-1 px-2 py-2 text-xs font-medium text-gray-600">
+        <div className="grid grid-cols-5 gap-1 px-2 py-2 text-xs font-medium text-gray-600">
           <Link
             to="/"
             className={`flex flex-col items-center justify-center gap-1 rounded-lg py-2 transition-colors ${
@@ -178,6 +189,17 @@ export function ClinicLayout() {
           >
             <Users size={18} />
             {t("Doctors")}
+          </Link>
+          <Link
+            to="/intake-form"
+            className={`flex flex-col items-center justify-center gap-1 rounded-lg py-2 transition-colors ${
+              isActive("/intake-form")
+                ? "bg-blue-50 text-blue-700"
+                : "text-gray-600 hover:bg-gray-50"
+            }`}
+          >
+            <ClipboardList size={18} />
+            {t("Intake form")}
           </Link>
         </div>
       </nav>
