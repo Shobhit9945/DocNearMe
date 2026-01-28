@@ -1,6 +1,13 @@
 import { Request, Response } from "express";
 import { getAppointmentsCollection, getClinicInfoCollection } from "../db";
-import { buildSlotsForDate, getDateKey, isClinicClosedOnDate, normalizeClinicHours } from "../lib/scheduling";
+import {
+  applyBookingClosuresToSlots,
+  buildSlotsForDate,
+  getDateKey,
+  isClinicClosedOnDate,
+  normalizeClinicHours,
+  parseDateKey,
+} from "../lib/scheduling";
 
 export const handleAvailability = async (req: Request, res: Response) => {
   const { date, clinicId } = req.query;
@@ -9,7 +16,10 @@ export const handleAvailability = async (req: Request, res: Response) => {
     return res.status(400).json({ error: "Date parameter is required" });
   }
 
-  const selectedDate = new Date(date as string);
+  const selectedDate = parseDateKey(date as string);
+  if (!selectedDate) {
+    return res.status(400).json({ error: "Invalid date parameter" });
+  }
   const dateKey = getDateKey(selectedDate);
   const clinicKey = (clinicId as string) || "global";
   let availableSlots: string[] = [];
@@ -25,6 +35,17 @@ export const handleAvailability = async (req: Request, res: Response) => {
     }
 
     availableSlots = buildSlotsForDate(selectedDate, hours);
+    const closureSlots = applyBookingClosuresToSlots(selectedDate, availableSlots, clinic?.bookingClosures);
+    if (closureSlots.isClosed) {
+      return res.json({
+        date: dateKey,
+        clinicId: clinicKey,
+        slots: [],
+        isClosed: true,
+        reason: closureSlots.reason || "Clinic closed",
+      });
+    }
+    availableSlots = closureSlots.slots;
 
     const appointments = await getAppointmentsCollection();
     const bookedAppointments = await appointments

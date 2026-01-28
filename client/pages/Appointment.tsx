@@ -47,7 +47,8 @@ import {
   SPECIALIZATION_OPTIONS,
 } from "@/lib/specializations";
 import { useTranslation } from "@/lib/i18n";
-import { isDateWithinClosure, normalizeClinicHours } from "@/lib/scheduling";
+import { getDateKey, isDateWithinClosure, normalizeClinicHours } from "@/lib/scheduling";
+import { arrayBufferToBase64, base64ToArrayBuffer, getStoredVaultKey } from "@/lib/medicalVault";
 import type {
   AppointmentCancelRequest,
   AppointmentCancelResponse,
@@ -312,9 +313,7 @@ export default function Appointment() {
     queryFn: async () => {
       if (!selectedDate || !selectedClinicId) return { slots: [] as string[] };
       const activeClinicId = selectedClinicId;
-      const res = await fetch(
-        `/api/availability?date=${selectedDate.toISOString()}&clinicId=${activeClinicId}`
-      );
+      const res = await fetch(`/api/availability?date=${getDateKey(selectedDate)}&clinicId=${activeClinicId}`);
       if (!res.ok) throw new Error("Failed to fetch slots");
       const data = await res.json();
       return data as { slots: string[]; isClosed?: boolean; reason?: string };
@@ -329,9 +328,7 @@ export default function Appointment() {
     queryKey: ["availability", actionDate?.toISOString(), actionClinicId, "action"],
     queryFn: async () => {
       if (!actionDate || !actionClinicId) return { slots: [] as string[] };
-      const res = await fetch(
-        `/api/availability?date=${actionDate.toISOString()}&clinicId=${actionClinicId}`
-      );
+      const res = await fetch(`/api/availability?date=${getDateKey(actionDate)}&clinicId=${actionClinicId}`);
       if (!res.ok) throw new Error("Failed to fetch slots");
       const data = await res.json();
       return data as { slots: string[]; isClosed?: boolean; reason?: string };
@@ -642,16 +639,44 @@ export default function Appointment() {
     setIsBooking(true);
     const doctorLabel = doctorDisplayName;
     const clinicKey = selectedClinicId;
-    const sharedRecordPayload: SharedMedicalRecord | undefined = selectedVaultRecord
-      ? {
+    let sharedRecordPayload: SharedMedicalRecord | undefined;
+    if (selectedVaultRecord) {
+      if (!selectedVaultRecord.iv || !selectedVaultRecord.data) {
+        setAuthError("Selected medical record is missing encryption data.");
+        setIsBooking(false);
+        return;
+      }
+      const vaultEmail = authSession?.email ?? localStorage.getItem(EMAIL_KEY) ?? undefined;
+      const vaultKey = await getStoredVaultKey(vaultEmail);
+      if (!vaultKey) {
+        setAuthError("Unlock your vault on this device to share medical records.");
+        setIsBooking(false);
+        return;
+      }
+      try {
+        const decrypted = await window.crypto.subtle.decrypt(
+          { name: "AES-GCM", iv: new Uint8Array(base64ToArrayBuffer(selectedVaultRecord.iv)) },
+          vaultKey,
+          base64ToArrayBuffer(selectedVaultRecord.data),
+        );
+        sharedRecordPayload = {
           recordId: selectedVaultRecord.id,
           name: selectedVaultRecord.name,
           type: selectedVaultRecord.type,
           size: selectedVaultRecord.size,
           iv: selectedVaultRecord.iv,
-          data: selectedVaultRecord.data,
-        }
-      : undefined;
+          data: arrayBufferToBase64(decrypted),
+        };
+      } catch (error) {
+        setAuthError(
+          error instanceof Error && error.message
+            ? error.message
+            : "Unable to decrypt the selected record on this device.",
+        );
+        setIsBooking(false);
+        return;
+      }
+    }
     const preferredStart = buildDateTimeFromSlot(selectedDate, selectedSlot);
     const preferredEnd = new Date(preferredStart.getTime() + 30 * 60 * 1000);
     const payload: AppointmentCreateRequest = {

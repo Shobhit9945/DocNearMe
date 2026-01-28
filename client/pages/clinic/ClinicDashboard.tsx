@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { getClinicAuthHeader, getClinicSession } from "@/lib/clinic-auth";
 import { useClinicProfile } from "@/lib/clinic-data";
 import { useTranslation } from "@/lib/i18n";
-import { normalizeClinicHours } from "@/lib/scheduling";
+import { getDateKey, normalizeClinicHours } from "@/lib/scheduling";
 import type { AppointmentListResponse, ClinicBookingClosure, ClinicProfileUpdateRequest } from "@shared/api";
 import { toast } from "@/components/ui/use-toast";
 
@@ -37,7 +37,7 @@ export default function ClinicDashboard() {
   });
 
   const appointments = appointmentsData?.appointments ?? [];
-  const todayKey = new Date().toISOString().split("T")[0];
+  const todayKey = getDateKey(new Date());
   const todayAppointments = useMemo(() => {
     return appointments.filter((appointment) => {
       if (
@@ -50,7 +50,7 @@ export default function ClinicDashboard() {
       const rawDate = appointment.confirmedStart ?? appointment.preferredStart ?? appointment.date;
       const parsed = new Date(rawDate);
       if (!Number.isNaN(parsed.getTime())) {
-        return parsed.toISOString().split("T")[0] === todayKey;
+        return getDateKey(parsed) === todayKey;
       }
       return appointment.dateKey === todayKey;
     });
@@ -90,7 +90,13 @@ export default function ClinicDashboard() {
   const [weekendEnd, setWeekendEnd] = useState(normalizedHours.weekend.end);
   const [closedDays, setClosedDays] = useState<string[]>(normalizedHours.closedDays);
   const [bookingClosures, setBookingClosures] = useState<ClinicBookingClosure[]>(clinic?.bookingClosures ?? []);
-  const [closureDraft, setClosureDraft] = useState<ClinicBookingClosure>({ startDate: "", endDate: "", reason: "" });
+  const [closureDraft, setClosureDraft] = useState<ClinicBookingClosure>({
+    startDate: "",
+    endDate: "",
+    startTime: "",
+    endTime: "",
+    reason: "",
+  });
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
@@ -107,6 +113,11 @@ export default function ClinicDashboard() {
   const handleSaveHours = async () => {
     const clinicId = session?.clinicId;
     if (!clinicId) return;
+    const sanitizedClosures = bookingClosures.map((closure) => ({
+      ...closure,
+      startTime: closure.startTime?.trim() || undefined,
+      endTime: closure.endTime?.trim() || undefined,
+    }));
     const payload: ClinicProfileUpdateRequest = {
       hours: {
         weekdays: { start: weekdayStart, end: weekdayEnd },
@@ -114,7 +125,7 @@ export default function ClinicDashboard() {
         closedDays,
         slotMinutes: 30,
       },
-      bookingClosures,
+      bookingClosures: sanitizedClosures,
     };
     setIsSaving(true);
     try {
@@ -279,7 +290,7 @@ export default function ClinicDashboard() {
           <div className="space-y-3">
             <label className="text-sm font-medium text-gray-700 block">{t("Booking closures")}</label>
             <div className="grid gap-3">
-              <div className="grid gap-3 md:grid-cols-[1fr_1fr_2fr_auto]">
+              <div className="grid gap-3 md:grid-cols-[1fr_1fr_1fr_1fr_2fr_auto]">
                 <Input
                   type="date"
                   value={closureDraft.startDate}
@@ -289,6 +300,18 @@ export default function ClinicDashboard() {
                   type="date"
                   value={closureDraft.endDate}
                   onChange={(event) => setClosureDraft((prev) => ({ ...prev, endDate: event.target.value }))}
+                />
+                <Input
+                  type="time"
+                  value={closureDraft.startTime ?? ""}
+                  onChange={(event) => setClosureDraft((prev) => ({ ...prev, startTime: event.target.value }))}
+                  aria-label={t("Closure start time")}
+                />
+                <Input
+                  type="time"
+                  value={closureDraft.endTime ?? ""}
+                  onChange={(event) => setClosureDraft((prev) => ({ ...prev, endTime: event.target.value }))}
+                  aria-label={t("Closure end time")}
                 />
                 <Input
                   value={closureDraft.reason ?? ""}
@@ -301,8 +324,20 @@ export default function ClinicDashboard() {
                   onClick={() => {
                     if (!closureDraft.startDate) return;
                     const endDate = closureDraft.endDate || closureDraft.startDate;
-                    setBookingClosures((prev) => [...prev, { ...closureDraft, endDate }]);
-                    setClosureDraft({ startDate: "", endDate: "", reason: "" });
+                    const startTime = closureDraft.startTime?.trim() || "";
+                    const endTime = closureDraft.endTime?.trim() || "";
+                    if ((startTime || endTime) && (!startTime || !endTime)) {
+                      toast({
+                        title: t("Select both start and end time for a partial closure."),
+                        variant: "destructive",
+                      });
+                      return;
+                    }
+                    setBookingClosures((prev) => [
+                      ...prev,
+                      { ...closureDraft, endDate, startTime: startTime || undefined, endTime: endTime || undefined },
+                    ]);
+                    setClosureDraft({ startDate: "", endDate: "", startTime: "", endTime: "", reason: "" });
                   }}
                 >
                   {t("Add")}
@@ -312,7 +347,7 @@ export default function ClinicDashboard() {
                 type="button"
                 variant="ghost"
                 onClick={() => {
-                  const today = new Date().toISOString().split("T")[0];
+                  const today = getDateKey(new Date());
                   setBookingClosures((prev) => [
                     ...prev,
                     { startDate: today, endDate: today, reason: t("Closed today") },
@@ -330,7 +365,9 @@ export default function ClinicDashboard() {
                     className="flex items-center justify-between rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600"
                   >
                     <span>
-                      {closure.startDate} → {closure.endDate} {closure.reason ? `(${closure.reason})` : ""}
+                      {closure.startDate}
+                      {closure.startTime ? ` ${closure.startTime}` : ""} → {closure.endDate}
+                      {closure.endTime ? ` ${closure.endTime}` : ""} {closure.reason ? `(${closure.reason})` : ""}
                     </span>
                     <Button
                       type="button"

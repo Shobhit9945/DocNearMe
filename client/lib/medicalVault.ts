@@ -67,6 +67,13 @@ export const unwrapVaultKey = async (payload: MedicalRecordKeyUpsertRequest, pas
 export const getKeyStorageKey = (email?: string) =>
   `docnearme_medical_records_key_${email ? email.toLowerCase() : "unknown"}`;
 
+export const getStoredVaultKey = async (email?: string) => {
+  const storedKey = localStorage.getItem(getKeyStorageKey(email));
+  if (!storedKey) return null;
+  const rawKey = base64ToArrayBuffer(storedKey);
+  return window.crypto.subtle.importKey("raw", rawKey, "AES-GCM", true, ["encrypt", "decrypt"]);
+};
+
 export const storeLocalVaultKey = async (email: string | undefined, key: CryptoKey) => {
   const rawKey = await window.crypto.subtle.exportKey("raw", key);
   localStorage.setItem(getKeyStorageKey(email), arrayBufferToBase64(rawKey));

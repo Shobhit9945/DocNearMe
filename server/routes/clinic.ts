@@ -9,6 +9,7 @@ import {
   getAppointmentsCollection,
 } from "../db";
 import {
+  applyBookingClosuresToSlots,
   buildNextAvailabilityLabel,
   buildSlotsForDate,
   getDateKey,
@@ -65,6 +66,8 @@ const clinicUpdateSchema = z.object({
       z.object({
         startDate: z.string().trim().min(10).max(10),
         endDate: z.string().trim().min(10).max(10),
+        startTime: z.string().trim().min(4).max(10).optional(),
+        endTime: z.string().trim().min(4).max(10).optional(),
         reason: z.string().trim().max(200).optional(),
       }),
     )
@@ -199,6 +202,9 @@ const computeNextAvailability = (clinic: any, appointments: any[]) => {
     if (closureCheck.closed) continue;
 
     let slots = buildSlotsForDate(date, hours);
+    const closureSlots = applyBookingClosuresToSlots(date, slots, clinic.bookingClosures);
+    if (closureSlots.isClosed) continue;
+    slots = closureSlots.slots;
     const dateKey = getDateKey(date);
     const bookedSlots = bookedByDate.get(dateKey) ?? new Set<string>();
     slots = slots.filter((slot) => !bookedSlots.has(slot));

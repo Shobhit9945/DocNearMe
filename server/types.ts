@@ -173,6 +173,8 @@ export interface ClinicInfo {
   bookingClosures?: {
     startDate: string;
     endDate: string;
+    startTime?: string;
+    endTime?: string;
     reason?: string;
   }[];
   pricing?: {

@@ -5,7 +5,7 @@ import { toast } from "@/components/ui/use-toast";
 import { getClinicAuthHeader, getClinicSession } from "@/lib/clinic-auth";
 import { useClinicProfile } from "@/lib/clinic-data";
 import { useTranslation } from "@/lib/i18n";
-import { normalizeClinicHours } from "@/lib/scheduling";
+import { getDateKey, normalizeClinicHours } from "@/lib/scheduling";
 import type { ClinicBookingClosure, ClinicProfileUpdateRequest } from "@shared/api";
 
 const DAYS_OF_WEEK = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
@@ -30,6 +30,8 @@ export default function ClinicInfo() {
   const [closureDraft, setClosureDraft] = useState<ClinicBookingClosure>({
     startDate: "",
     endDate: "",
+    startTime: "",
+    endTime: "",
     reason: "",
   });
   const [firstVisit, setFirstVisit] = useState("");
@@ -75,6 +77,12 @@ export default function ClinicInfo() {
       return;
     }
 
+    const sanitizedClosures = bookingClosures.map((closure) => ({
+      ...closure,
+      startTime: closure.startTime?.trim() || undefined,
+      endTime: closure.endTime?.trim() || undefined,
+    }));
+
     const payload: ClinicProfileUpdateRequest = {
       name: name.trim(),
       location: location.trim(),
@@ -86,7 +94,7 @@ export default function ClinicInfo() {
         closedDays,
         slotMinutes: 30,
       },
-      bookingClosures,
+      bookingClosures: sanitizedClosures,
       pricing: {
         firstVisit: firstVisit.trim(),
         followUp: followUp.trim(),
@@ -224,7 +232,7 @@ export default function ClinicInfo() {
           </div>
           <div className="space-y-3">
             <label className="text-sm font-medium text-gray-700 block">{t("Booking closures")}</label>
-            <div className="grid gap-3 lg:grid-cols-[1fr_1fr_2fr_auto]">
+            <div className="grid gap-3 lg:grid-cols-[1fr_1fr_1fr_1fr_2fr_auto]">
               <Input
                 type="date"
                 value={closureDraft.startDate}
@@ -234,6 +242,18 @@ export default function ClinicInfo() {
                 type="date"
                 value={closureDraft.endDate}
                 onChange={(event) => setClosureDraft((prev) => ({ ...prev, endDate: event.target.value }))}
+              />
+              <Input
+                type="time"
+                value={closureDraft.startTime ?? ""}
+                onChange={(event) => setClosureDraft((prev) => ({ ...prev, startTime: event.target.value }))}
+                aria-label={t("Closure start time")}
+              />
+              <Input
+                type="time"
+                value={closureDraft.endTime ?? ""}
+                onChange={(event) => setClosureDraft((prev) => ({ ...prev, endTime: event.target.value }))}
+                aria-label={t("Closure end time")}
               />
               <Input
                 value={closureDraft.reason ?? ""}
@@ -246,11 +266,20 @@ export default function ClinicInfo() {
                 onClick={() => {
                   if (!closureDraft.startDate) return;
                   const endDate = closureDraft.endDate || closureDraft.startDate;
+                  const startTime = closureDraft.startTime?.trim() || "";
+                  const endTime = closureDraft.endTime?.trim() || "";
+                  if ((startTime || endTime) && (!startTime || !endTime)) {
+                    toast({
+                      title: t("Select both start and end time for a partial closure."),
+                      variant: "destructive",
+                    });
+                    return;
+                  }
                   setBookingClosures((prev) => [
                     ...prev,
-                    { ...closureDraft, endDate },
+                    { ...closureDraft, endDate, startTime: startTime || undefined, endTime: endTime || undefined },
                   ]);
-                  setClosureDraft({ startDate: "", endDate: "", reason: "" });
+                  setClosureDraft({ startDate: "", endDate: "", startTime: "", endTime: "", reason: "" });
                 }}
               >
                 {t("Add")}
@@ -261,7 +290,7 @@ export default function ClinicInfo() {
                 type="button"
                 variant="ghost"
                 onClick={() => {
-                  const today = new Date().toISOString().split("T")[0];
+                  const today = getDateKey(new Date());
                   setBookingClosures((prev) => [
                     ...prev,
                     { startDate: today, endDate: today, reason: t("Closed today") },
@@ -281,7 +310,9 @@ export default function ClinicInfo() {
                     className="flex items-center justify-between rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600"
                   >
                     <span>
-                      {closure.startDate} → {closure.endDate} {closure.reason ? `(${closure.reason})` : ""}
+                      {closure.startDate}
+                      {closure.startTime ? ` ${closure.startTime}` : ""} → {closure.endDate}
+                      {closure.endTime ? ` ${closure.endTime}` : ""} {closure.reason ? `(${closure.reason})` : ""}
                     </span>
                     <Button
                       type="button"
