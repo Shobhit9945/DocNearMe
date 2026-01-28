@@ -37,6 +37,59 @@ export interface Appointment {
   updatedAt?: Date;
 }
 
+export type IntakeQuestionType =
+  | "short-text"
+  | "long-text"
+  | "single-choice"
+  | "multiple-choice"
+  | "number"
+  | "date"
+  | "boolean"
+  | "file";
+
+export type IntakeDataType = "string" | "number" | "date" | "boolean" | "email" | "phone" | "file";
+
+export type IntakeDeliveryTiming = "booking" | "reminder" | "checkin";
+
+export type IntakeAnswerValue = string | string[] | number | boolean | null;
+
+export interface IntakeQuestion {
+  id: string;
+  label: string;
+  description?: string;
+  questionType: IntakeQuestionType;
+  dataType: IntakeDataType;
+  required: boolean;
+  options: string[];
+}
+
+export interface ClinicIntakeForm {
+  _id?: unknown;
+  clinicId: string;
+  isRequired: boolean;
+  deliveryTiming: IntakeDeliveryTiming;
+  questions: IntakeQuestion[];
+  updatedAt?: Date;
+}
+
+export interface IntakeFormAnswer {
+  questionId: string;
+  label: string;
+  questionType: IntakeQuestionType;
+  dataType: IntakeDataType;
+  value: IntakeAnswerValue;
+}
+
+export interface IntakeFormResponse {
+  _id?: unknown;
+  appointmentId: string;
+  clinicId: string;
+  patientId?: string;
+  responses: IntakeFormAnswer[];
+  createdAt: Date;
+  updatedAt?: Date;
+}
+
 export interface SharedMedicalRecord {
   recordId: string;
   name: string;
