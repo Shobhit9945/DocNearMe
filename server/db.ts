@@ -262,7 +262,7 @@ async function prepareClinicOnce(db: Db | InMemoryClinicDb) {
     clinicAccounts.createIndex({ userId: 1 }, { unique: true }),
     clinicInfo.createIndex({ clinicId: 1 }, { unique: true }),
     clinicDoctors.createIndex({ clinicId: 1 }),
-    clinicDoctors.createIndex({ doctorId: 1 }, { unique: true }),
+    clinicDoctors.createIndex({ clinicId: 1, doctorId: 1 }, { unique: true }),
   ]);
 
   await seedClinicData(db);
