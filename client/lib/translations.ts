@@ -995,6 +995,8 @@ const baseTranslations: Record<string, TranslationEntry> = {
   Tel: { ja: "電話" },
   "Not provided": { ja: "未提供" },
   Selected: { ja: "選択中" },
+  "Delete appointment record": { ja: "予約記録を削除" },
+  "Delete appointment record?": { ja: "予約記録を削除しますか？" },
   "Delete record": { ja: "記録を削除" },
   "Record deleted": { ja: "記録を削除しました" },
   "The medical record was removed from your vault.": { ja: "診療記録がボールトから削除されました。" },
