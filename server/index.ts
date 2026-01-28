@@ -19,6 +19,11 @@ import {
   handleRequestAppointment,
   handleRescheduleAppointment,
 } from "./routes/appointment";
+import {
+  handleGetClinicIntakeForm,
+  handleGetClinicIntakeFormForClinic,
+  handleUpdateClinicIntakeForm,
+} from "./routes/intake";
 import docDaisyRouter from "./routes/docdaisy";
 import healthRouter from "./routes/health";
 import {
@@ -126,6 +131,8 @@ export async function createServer(): Promise<Express> {
   app.post("/api/clinic/appointments/:id/decline", requireClinicAuth, handleClinicDeclineAppointment);
   app.post("/api/clinic/appointments/:id/reschedule-message", requireClinicAuth, handleClinicRescheduleMessage);
   app.delete("/api/clinic/appointments/:id", requireClinicAuth, handleClinicDeleteAppointment);
+  app.get("/api/clinic/intake-form", requireClinicAuth, handleGetClinicIntakeFormForClinic);
+  app.put("/api/clinic/intake-form", requireClinicAuth, handleUpdateClinicIntakeForm);
   app.post("/api/auth/signup", handleSignup);
   app.post("/api/auth/login", handleLogin);
   app.post("/api/auth/check-email", handleCheckEmail);
@@ -140,6 +147,7 @@ export async function createServer(): Promise<Express> {
   app.get("/api/clinics", handleClinicList);
   app.get("/api/clinics/doctors", handleClinicDoctorsAll);
   app.get("/api/clinics/:clinicId", handleClinicProfile);
+  app.get("/api/clinics/:clinicId/intake-form", handleGetClinicIntakeForm);
   app.get("/api/clinics/:clinicId/doctors", handleClinicDoctors);
   app.put("/api/clinics/:clinicId", requireClinicAuth, handleUpdateClinicProfile);
   app.put("/api/clinics/:clinicId/doctors", requireClinicAuth, handleUpdateClinicDoctors);

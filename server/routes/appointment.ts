@@ -1,8 +1,17 @@
 import crypto from "crypto";
 import { Request, Response } from "express";
 import { ObjectId } from "mongodb";
-import { getAppointmentsCollection, getPatientsCollection } from "../db";
-import { Appointment, AppointmentStatus, PatientAppointmentSummary, SharedMedicalRecord } from "../types";
+import { getAppointmentsCollection, getClinicIntakeFormsCollection, getIntakeResponsesCollection, getPatientsCollection } from "../db";
+import {
+  Appointment,
+  AppointmentStatus,
+  ClinicIntakeForm,
+  IntakeAnswerValue,
+  IntakeFormAnswer,
+  IntakeQuestion,
+  PatientAppointmentSummary,
+  SharedMedicalRecord,
+} from "../types";
 import { sendEmail } from "../services/mailer";
 import { findConfirmedOverlap } from "./appointment-utils";
 import { getDateKey } from "../lib/scheduling";
@@ -57,6 +66,106 @@ const parseDateOrNull = (value: unknown) => {
   if (typeof value !== "string") return null;
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? null : date;
+};
+
+const normalizeString = (value: unknown) => (typeof value === "string" ? value.trim() : "");
+
+const sanitizeChoice = (options: string[], value: string) =>
+  options.length > 0 ? (options.includes(value) ? value : "") : value;
+
+const sanitizeIntakeAnswerValue = (question: IntakeQuestion, rawValue: unknown): IntakeAnswerValue => {
+  switch (question.questionType) {
+    case "short-text":
+    case "long-text": {
+      const value = normalizeString(rawValue);
+      return value.length ? value : null;
+    }
+    case "single-choice": {
+      const value = normalizeString(rawValue);
+      if (!value) return null;
+      const sanitized = sanitizeChoice(question.options ?? [], value);
+      return sanitized ? sanitized : null;
+    }
+    case "multiple-choice": {
+      if (!Array.isArray(rawValue)) return null;
+      const sanitized = rawValue
+        .map((entry) => normalizeString(entry))
+        .filter(Boolean)
+        .filter((entry, index, arr) => arr.indexOf(entry) === index);
+      if (question.options?.length) {
+        const allowed = sanitized.filter((entry) => question.options.includes(entry));
+        return allowed.length ? allowed : null;
+      }
+      return sanitized.length ? sanitized : null;
+    }
+    case "number": {
+      const value = typeof rawValue === "number" ? rawValue : Number(rawValue);
+      if (Number.isNaN(value)) return null;
+      return value;
+    }
+    case "date": {
+      const value = normalizeString(rawValue);
+      return value.length ? value : null;
+    }
+    case "boolean": {
+      if (typeof rawValue === "boolean") return rawValue;
+      return null;
+    }
+    case "file":
+    default:
+      return null;
+  }
+};
+
+const isAnswerProvided = (question: IntakeQuestion, value: IntakeAnswerValue) => {
+  if (question.questionType === "boolean") {
+    return typeof value === "boolean";
+  }
+  if (question.questionType === "multiple-choice") {
+    return Array.isArray(value) && value.length > 0;
+  }
+  if (question.questionType === "number") {
+    return typeof value === "number" && !Number.isNaN(value);
+  }
+  if (question.questionType === "date") {
+    return typeof value === "string" && value.trim().length > 0;
+  }
+  return typeof value === "string" && value.trim().length > 0;
+};
+
+const sanitizeIntakeResponses = (
+  form: ClinicIntakeForm,
+  payload: unknown,
+): { responses: IntakeFormAnswer[]; missingRequired: IntakeQuestion[] } => {
+  const rawResponses = payload && typeof payload === "object" && Array.isArray((payload as any).responses)
+    ? ((payload as any).responses as unknown[])
+    : [];
+  const questionMap = new Map(form.questions.map((question) => [question.id, question]));
+  const responses: IntakeFormAnswer[] = [];
+
+  rawResponses.forEach((entry) => {
+    if (!entry || typeof entry !== "object") return;
+    const questionId = normalizeString((entry as any).questionId);
+    if (!questionId) return;
+    const question = questionMap.get(questionId);
+    if (!question) return;
+    const sanitizedValue = sanitizeIntakeAnswerValue(question, (entry as any).value);
+    if (sanitizedValue === null) return;
+    responses.push({
+      questionId,
+      label: question.label,
+      questionType: question.questionType,
+      dataType: question.dataType,
+      value: sanitizedValue,
+    });
+  });
+
+  const responseMap = new Map(responses.map((response) => [response.questionId, response]));
+  const missingRequired = form.questions.filter(
+    (question) => question.required && !isAnswerProvided(question, responseMap.get(question.id)?.value ?? null),
+  );
+
+  return { responses, missingRequired };
 };
 
 const resolvePreferredTimes = (payload: Record<string, unknown>, slotFallback?: string) => {
@@ -278,6 +387,11 @@ const removePatientAppointmentSummary = async (appointmentId: string, patientId:
   );
 };
 
+const removeIntakeResponseForAppointment = async (appointmentId: string) => {
+  const intakeResponses = await getIntakeResponsesCollection();
+  await intakeResponses.deleteOne({ appointmentId });
+};
+
 export const handleRequestAppointment = async (req: Request, res: Response) => {
   const payload = parseRequestBody(req.body);
   const {
@@ -318,6 +432,7 @@ export const handleRequestAppointment = async (req: Request, res: Response) => {
   try {
     const appointments = await getAppointmentsCollection();
     const patients = await getPatientsCollection();
+    const clinicIntakeForms = await getClinicIntakeFormsCollection();
     const patientLookupId = ObjectId.isValid(req.auth.id) ? new ObjectId(req.auth.id) : req.auth.id;
     const patient = await patients.findOne({ _id: patientLookupId });
     const patientVisaType = typeof patient?.visaType === "string" ? patient.visaType : undefined;
@@ -329,6 +444,19 @@ export const handleRequestAppointment = async (req: Request, res: Response) => {
     );
     if (conflict) {
       return res.status(409).json({ error: "Slot already booked" });
+    }
+
+    const clinicIntakeForm = await clinicIntakeForms.findOne({ clinicId: clinicKey });
+    let intakeResponses: IntakeFormAnswer[] = [];
+    if (clinicIntakeForm && clinicIntakeForm.deliveryTiming === "booking" && clinicIntakeForm.questions.length) {
+      const { responses, missingRequired } = sanitizeIntakeResponses(
+        clinicIntakeForm,
+        payload?.intakeResponse,
+      );
+      if (clinicIntakeForm.isRequired && missingRequired.length > 0) {
+        return res.status(400).json({ error: "Intake form responses are required." });
+      }
+      intakeResponses = responses;
     }
 
     const rawToken = crypto.randomBytes(CONFIRMATION_TOKEN_BYTES).toString("hex");
@@ -364,6 +492,18 @@ export const handleRequestAppointment = async (req: Request, res: Response) => {
 
     const result = await appointments.insertOne(record);
     const appointmentId = result.insertedId?.toString?.() ?? generateBookingId();
+
+    if (intakeResponses.length > 0) {
+      const intakeResponsesCollection = await getIntakeResponsesCollection();
+      await intakeResponsesCollection.insertOne({
+        appointmentId,
+        clinicId: clinicKey,
+        patientId: req.auth.id,
+        responses: intakeResponses,
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
 
     const patientAppointment: PatientAppointmentSummary = {
       appointmentId,
@@ -590,6 +730,12 @@ export const handleClinicPatientDetails = async (req: Request, res: Response) =>
         }
       : undefined;
 
+    const intakeResponses = await getIntakeResponsesCollection();
+    const intakeResponse = await intakeResponses.findOne({
+      appointmentId,
+      clinicId: req.clinicAuth.clinicId,
+    });
+
     return res.json({
       patient: {
         name: patientName,
@@ -599,6 +745,12 @@ export const handleClinicPatientDetails = async (req: Request, res: Response) =>
         visaType: patientVisaType,
       },
       sharedRecord,
+      intakeResponse: intakeResponse
+        ? {
+            responses: intakeResponse.responses,
+            submittedAt: intakeResponse.createdAt instanceof Date ? intakeResponse.createdAt.toISOString() : undefined,
+          }
+        : undefined,
     });
   } catch (error) {
     console.error("Clinic patient details error", error);
@@ -992,6 +1144,8 @@ export const handleClinicCancelAppointment = async (req: Request, res: Response)
       updatedAt: now,
     });
 
+    await removeIntakeResponseForAppointment(appointmentId);
+
     if (appointment.patientEmail) {
       try {
         await sendEmail({
@@ -1065,6 +1219,7 @@ export const handleClinicDeleteAppointment = async (req: Request, res: Response)
     }
 
     await removePatientAppointmentSummary(appointmentId, appointment.patientId);
+    await removeIntakeResponseForAppointment(appointmentId);
 
     return res.json({ success: true, message: "Appointment deleted" });
   } catch (error) {
@@ -1269,6 +1424,8 @@ export const handleCancelAppointment = async (req: Request, res: Response) => {
         },
       );
     }
+
+    await removeIntakeResponseForAppointment(appointmentId);
 
     res.json({
       success: true,

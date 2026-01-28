@@ -9,7 +9,12 @@ import { getClinicAuthHeader, getClinicSession } from "@/lib/clinic-auth";
 import { useTranslation } from "@/lib/i18n";
 import { getSpecializationLabel } from "@/lib/specializations";
 import { formatSlotForLanguage } from "@/lib/time-format";
-import type { AppointmentListResponse, AppointmentResponseItem, ClinicPatientDetailsResponse } from "@shared/api";
+import type {
+  AppointmentListResponse,
+  AppointmentResponseItem,
+  ClinicPatientDetailsResponse,
+  IntakeAnswerValue,
+} from "@shared/api";
 
 type ActionType = "reschedule" | "cancel";
 
@@ -55,6 +60,22 @@ const formatAppointmentTime = (appointment: AppointmentResponseItem, language: s
     : parsed.toLocaleDateString(locale, { month: "short", day: "numeric" });
   const slotLabel = formatSlotForLanguage(appointment.slot, language);
   return `${dateLabel} · ${slotLabel}`;
+};
+
+const formatIntakeValue = (value: IntakeAnswerValue) => {
+  if (Array.isArray(value)) {
+    return value.length ? value.join(", ") : "Not provided";
+  }
+  if (typeof value === "boolean") {
+    return value ? "Yes" : "No";
+  }
+  if (typeof value === "number") {
+    return Number.isNaN(value) ? "Not provided" : String(value);
+  }
+  if (typeof value === "string") {
+    return value.trim() ? value : "Not provided";
+  }
+  return "Not provided";
 };
 
 export default function ClinicAppointments() {
@@ -609,6 +630,30 @@ export default function ClinicAppointments() {
                   <p className="text-sm text-slate-500">{t("No document shared.")}</p>
                 )}
               </div>
+              {patientDetails.intakeResponse ? (
+                <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs uppercase tracking-wide text-slate-500">{t("Intake form responses")}</p>
+                    {patientDetails.intakeResponse.submittedAt ? (
+                      <span className="text-xs text-slate-400">
+                        {new Date(patientDetails.intakeResponse.submittedAt).toLocaleDateString()}
+                      </span>
+                    ) : null}
+                  </div>
+                  {patientDetails.intakeResponse.responses.length > 0 ? (
+                    <div className="space-y-2">
+                      {patientDetails.intakeResponse.responses.map((response) => (
+                        <div key={response.questionId} className="text-sm text-slate-700">
+                          <p className="font-medium text-slate-800">{response.label}</p>
+                          <p>{formatIntakeValue(response.value)}</p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-slate-500">{t("No intake responses submitted.")}</p>
+                  )}
+                </div>
+              ) : null}
             </div>
           ) : null}
           <DialogFooter className="flex justify-end">

@@ -4,11 +4,13 @@ import bcryptjs from "bcryptjs";
 import { MongoClient, Db, Collection, ObjectId } from "mongodb";
 import {
   Appointment,
+  ClinicIntakeForm,
   ClinicReview,
   ClinicAccount,
   ClinicDoctorRecord,
   ClinicInfo,
   EmailOtp,
+  IntakeFormResponse,
   MedicalConsent,
   MedicalRecord,
   MedicalRecordKey,
@@ -160,6 +162,7 @@ export type InMemoryPatientDb = {
     medicalRecords: InMemoryCollection<MedicalRecord>;
     medicalConsents: InMemoryCollection<MedicalConsent>;
     medicalRecordKeys: InMemoryCollection<MedicalRecordKey>;
+    intakeResponses: InMemoryCollection<IntakeFormResponse>;
   };
 };
 
@@ -170,6 +173,7 @@ export type InMemoryClinicDb = {
     clinicAccounts: InMemoryCollection<ClinicAccount>;
     clinicInfo: InMemoryCollection<ClinicInfo>;
     clinicDoctors: InMemoryCollection<ClinicDoctorRecord>;
+    clinicIntakeForms: InMemoryCollection<ClinicIntakeForm>;
   };
 };
 
@@ -182,6 +186,7 @@ const inMemoryPatientDb: InMemoryPatientDb = {
     medicalRecords: new InMemoryCollection<MedicalRecord>([]),
     medicalConsents: new InMemoryCollection<MedicalConsent>([]),
     medicalRecordKeys: new InMemoryCollection<MedicalRecordKey>([]),
+    intakeResponses: new InMemoryCollection<IntakeFormResponse>([]),
   },
 };
 
@@ -192,6 +197,7 @@ const inMemoryClinicDb: InMemoryClinicDb = {
     clinicAccounts: new InMemoryCollection<ClinicAccount>([]),
     clinicInfo: new InMemoryCollection<ClinicInfo>([]),
     clinicDoctors: new InMemoryCollection<ClinicDoctorRecord>([]),
+    clinicIntakeForms: new InMemoryCollection<ClinicIntakeForm>([]),
   },
 };
 
@@ -202,12 +208,19 @@ export const isMemoryClinicDb = (db: Db | InMemoryClinicDb): db is InMemoryClini
 
 const getPatientCollection = <T>(
   db: Db | InMemoryPatientDb,
-  name: "appointments" | "patients" | "emailOtps" | "medicalRecords" | "medicalConsents" | "medicalRecordKeys",
+  name:
+    | "appointments"
+    | "patients"
+    | "emailOtps"
+    | "medicalRecords"
+    | "medicalConsents"
+    | "medicalRecordKeys"
+    | "intakeResponses",
 ) => (isMemoryPatientDb(db) ? db.collections[name] : db.collection<T>(name));
 
 const getClinicCollection = <T>(
   db: Db | InMemoryClinicDb,
-  name: "clinicReviews" | "clinicAccounts" | "clinicInfo" | "clinicDoctors",
+  name: "clinicReviews" | "clinicAccounts" | "clinicInfo" | "clinicDoctors" | "clinicIntakeForms",
 ) => (isMemoryClinicDb(db) ? db.collections[name] : db.collection<T>(name));
 
 // Short, serverless-friendly timeouts. Keep pools tiny.
@@ -232,6 +245,7 @@ async function preparePatientOnce(db: Db | InMemoryPatientDb) {
   const medicalRecords = getPatientCollection<MedicalRecord>(db, "medicalRecords");
   const medicalConsents = getPatientCollection<MedicalConsent>(db, "medicalConsents");
   const medicalRecordKeys = getPatientCollection<MedicalRecordKey>(db, "medicalRecordKeys");
+  const intakeResponses = getPatientCollection<IntakeFormResponse>(db, "intakeResponses");
 
   // Run in parallel, but only once per warm container
   await Promise.all([
@@ -243,6 +257,8 @@ async function preparePatientOnce(db: Db | InMemoryPatientDb) {
     medicalRecords.createIndex({ patientId: 1, createdAt: -1 }),
     medicalConsents.createIndex({ patientId: 1, consentVersion: 1 }, { unique: true }),
     medicalRecordKeys.createIndex({ patientId: 1 }, { unique: true }),
+    intakeResponses.createIndex({ appointmentId: 1 }, { unique: true }),
+    intakeResponses.createIndex({ clinicId: 1, createdAt: -1 }),
   ]);
 
   cache.preparedPatients = true;
@@ -255,6 +271,7 @@ async function prepareClinicOnce(db: Db | InMemoryClinicDb) {
   const clinicAccounts = getClinicCollection<ClinicAccount>(db, "clinicAccounts");
   const clinicInfo = getClinicCollection<ClinicInfo>(db, "clinicInfo");
   const clinicDoctors = getClinicCollection<ClinicDoctorRecord>(db, "clinicDoctors");
+  const clinicIntakeForms = getClinicCollection<ClinicIntakeForm>(db, "clinicIntakeForms");
 
   await Promise.all([
     clinicReviews.createIndex({ clinicId: 1, createdAt: -1 }),
@@ -263,6 +280,7 @@ async function prepareClinicOnce(db: Db | InMemoryClinicDb) {
     clinicInfo.createIndex({ clinicId: 1 }, { unique: true }),
     clinicDoctors.createIndex({ clinicId: 1 }),
     clinicDoctors.createIndex({ clinicId: 1, doctorId: 1 }, { unique: true }),
+    clinicIntakeForms.createIndex({ clinicId: 1 }, { unique: true }),
   ]);
 
   await seedClinicData(db);
@@ -441,6 +459,15 @@ export async function getMedicalRecordKeysCollection(): Promise<
     | InMemoryCollection<MedicalRecordKey>;
 }
 
+export async function getIntakeResponsesCollection(): Promise<
+  Collection<IntakeFormResponse> | InMemoryCollection<IntakeFormResponse>
+> {
+  const db = await connectToDatabase();
+  return getPatientCollection<IntakeFormResponse>(db, "intakeResponses") as
+    | Collection<IntakeFormResponse>
+    | InMemoryCollection<IntakeFormResponse>;
+}
+
 export async function getClinicReviewsCollection(): Promise<
   Collection<ClinicReview> | InMemoryCollection<ClinicReview>
 > {
@@ -471,6 +498,15 @@ export async function getClinicDoctorsCollection(): Promise<
   return getClinicCollection<ClinicDoctorRecord>(db, "clinicDoctors") as
     | Collection<ClinicDoctorRecord>
     | InMemoryCollection<ClinicDoctorRecord>;
+}
+
+export async function getClinicIntakeFormsCollection(): Promise<
+  Collection<ClinicIntakeForm> | InMemoryCollection<ClinicIntakeForm>
+> {
+  const db = await connectToClinicDatabase();
+  return getClinicCollection<ClinicIntakeForm>(db, "clinicIntakeForms") as
+    | Collection<ClinicIntakeForm>
+    | InMemoryCollection<ClinicIntakeForm>;
 }
 
 export async function connectToClinicDatabase(): Promise<Db | InMemoryClinicDb> {

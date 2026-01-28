@@ -46,6 +46,57 @@ export interface AppointmentResponseItem {
   updatedAt?: string;
 }
 
+export type IntakeQuestionType =
+  | "short-text"
+  | "long-text"
+  | "single-choice"
+  | "multiple-choice"
+  | "number"
+  | "date"
+  | "boolean"
+  | "file";
+
+export type IntakeDataType = "string" | "number" | "date" | "boolean" | "email" | "phone" | "file";
+
+export type IntakeDeliveryTiming = "booking" | "reminder" | "checkin";
+
+export type IntakeAnswerValue = string | string[] | number | boolean | null;
+
+export interface IntakeQuestion {
+  id: string;
+  label: string;
+  description?: string;
+  questionType: IntakeQuestionType;
+  dataType: IntakeDataType;
+  required: boolean;
+  options: string[];
+}
+
+export interface IntakeFormConfig {
+  clinicId: string;
+  isRequired: boolean;
+  deliveryTiming: IntakeDeliveryTiming;
+  questions: IntakeQuestion[];
+  updatedAt?: string;
+}
+
+export interface IntakeFormAnswer {
+  questionId: string;
+  label: string;
+  questionType: IntakeQuestionType;
+  dataType: IntakeDataType;
+  value: IntakeAnswerValue;
+}
+
+export interface IntakeFormResponsePayload {
+  responses: IntakeFormAnswer[];
+  submittedAt?: string;
+}
+
+export interface ClinicIntakeFormResponse {
+  form: IntakeFormConfig | null;
+}
+
 export interface AppointmentCreateRequest {
   clinicId: string;
   preferredStart: string;
@@ -59,6 +110,7 @@ export interface AppointmentCreateRequest {
   doctorName?: string;
   slot?: string;
   sharedRecord?: SharedMedicalRecord;
+  intakeResponse?: IntakeFormResponsePayload;
 }
 
 export interface AppointmentCreateResponse {
@@ -135,6 +187,7 @@ export interface ClinicPatientDetailsResponse {
     visaType?: VisaType;
   };
   sharedRecord?: SharedMedicalRecord;
+  intakeResponse?: IntakeFormResponsePayload;
 }
 
 export interface SharedMedicalRecord {

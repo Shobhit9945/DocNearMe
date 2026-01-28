@@ -61,6 +61,10 @@ import type {
   MedicalRecordDetail,
   MedicalRecordListResponse,
   SharedMedicalRecord,
+  ClinicIntakeFormResponse,
+  IntakeAnswerValue,
+  IntakeFormAnswer,
+  IntakeFormConfig,
 } from "@shared/api";
 import { toast } from "@/components/ui/use-toast";
 
@@ -101,8 +105,6 @@ type UpcomingAppointment = {
   notes?: string;
 };
 
-const FORM_REQUIRED_CLINICS = new Set(["noguchi", "harbor-womens", "beppu-medical"]);
-
 export default function Appointment() {
   const navigate = useNavigate();
   const { t } = useTranslation();
@@ -138,9 +140,8 @@ export default function Appointment() {
   const [isVaultRecordLoading, setIsVaultRecordLoading] = useState(false);
   const [recordToDelete, setRecordToDelete] = useState<MedicalRecordDetail | null>(null);
   const [isDeletingRecord, setIsDeletingRecord] = useState(false);
-  const [intakeReason, setIntakeReason] = useState("");
-  const [intakeConsent, setIntakeConsent] = useState(false);
-  const [intakeAllergies, setIntakeAllergies] = useState("");
+  const [intakeResponses, setIntakeResponses] = useState<Record<string, IntakeAnswerValue>>({});
+  const [intakeFieldErrors, setIntakeFieldErrors] = useState<Record<string, string>>({});
   const [confirmationDetails, setConfirmationDetails] = useState<ConfirmationDetails | null>(null);
   const [detailsAppointment, setDetailsAppointment] = useState<UpcomingAppointment | null>(null);
   const [actionAppointment, setActionAppointment] = useState<UpcomingAppointment | null>(null);
@@ -162,7 +163,6 @@ export default function Appointment() {
     date?: string;
     slot?: string;
     intake?: string;
-    intakeReason?: string;
   }>({});
   const [isBooking, setIsBooking] = useState(false);
   const [authSession, setAuthSession] = useState<AuthSession | null>(null);
@@ -194,6 +194,33 @@ export default function Appointment() {
 
   const clearFieldError = (field: keyof typeof fieldErrors) => {
     setFieldErrors((prev) => ({ ...prev, [field]: undefined }));
+  };
+
+  const updateIntakeResponse = (questionId: string, value: IntakeAnswerValue) => {
+    setIntakeResponses((prev) => ({ ...prev, [questionId]: value }));
+    if (intakeFieldErrors[questionId]) {
+      setIntakeFieldErrors((prev) => {
+        const next = { ...prev };
+        delete next[questionId];
+        return next;
+      });
+    }
+  };
+
+  const toggleMultiChoice = (questionId: string, option: string) => {
+    setIntakeResponses((prev) => {
+      const current = Array.isArray(prev[questionId]) ? (prev[questionId] as string[]) : [];
+      const exists = current.includes(option);
+      const next = exists ? current.filter((value) => value !== option) : [...current, option];
+      return { ...prev, [questionId]: next };
+    });
+    if (intakeFieldErrors[questionId]) {
+      setIntakeFieldErrors((prev) => {
+        const next = { ...prev };
+        delete next[questionId];
+        return next;
+      });
+    }
   };
 
   useEffect(() => {
@@ -376,11 +403,34 @@ export default function Appointment() {
 
   const vaultRecords = vaultRecordsData?.records ?? [];
 
+  const { data: intakeFormData } = useQuery({
+    queryKey: ["clinic-intake-form", selectedClinicId],
+    enabled: Boolean(selectedClinicId),
+    queryFn: async () => {
+      if (!selectedClinicId) {
+        return { form: null } as ClinicIntakeFormResponse;
+      }
+      const response = await fetch(`/api/clinics/${selectedClinicId}/intake-form`);
+      if (!response.ok) {
+        throw new Error("Unable to load clinic intake form.");
+      }
+      return (await response.json()) as ClinicIntakeFormResponse;
+    },
+  });
+
+  const intakeForm = intakeFormData?.form ?? null;
+
   useEffect(() => {
     if (normalizedParam) {
       setSelectedSpecialization(normalizedParam);
     }
   }, [normalizedParam]);
+
+  useEffect(() => {
+    setIntakeResponses({});
+    setIntakeFieldErrors({});
+    setFieldErrors((prev) => ({ ...prev, intake: undefined }));
+  }, [selectedClinicId, intakeForm?.updatedAt]);
 
   useEffect(() => {
     if (!authSession) return;
@@ -410,15 +460,6 @@ export default function Appointment() {
       setSelectedSpecialization(specializationOptions[0]?.id ?? fallbackSpecializationId);
     }
   }, [fallbackSpecializationId, selectedSpecializationId, specializationOptions]);
-
-  useEffect(() => {
-    if (!FORM_REQUIRED_CLINICS.has(selectedClinicId)) {
-      setIntakeReason("");
-      setIntakeAllergies("");
-      setIntakeConsent(false);
-      setFieldErrors((prev) => ({ ...prev, intake: undefined, intakeReason: undefined }));
-    }
-  }, [selectedClinicId]);
 
   useEffect(() => {
     setSelectedDoctorId(null);
@@ -542,6 +583,8 @@ export default function Appointment() {
     };
   }, [selectedDate, selectedSlot, selectedSpecializationLabel, clinicLabel, notes, doctorDisplayName]);
 
+  const intakeRequiresBooking = intakeForm?.deliveryTiming === "booking" && intakeForm.questions.length > 0;
+
   const appointments = useMemo<UpcomingAppointment[]>(() => {
     const items = appointmentsData?.appointments ?? [];
     return items
@@ -582,6 +625,54 @@ export default function Appointment() {
     setConfirmationDetails(null);
   };
 
+  const isIntakeAnswerProvided = (question: IntakeFormConfig["questions"][number], value?: IntakeAnswerValue) => {
+    if (question.questionType === "boolean") {
+      return typeof value === "boolean";
+    }
+    if (question.questionType === "multiple-choice") {
+      return Array.isArray(value) && value.length > 0;
+    }
+    if (question.questionType === "number") {
+      return typeof value === "number" && !Number.isNaN(value);
+    }
+    if (question.questionType === "date") {
+      return typeof value === "string" && value.trim().length > 0;
+    }
+    return typeof value === "string" && value.trim().length > 0;
+  };
+
+  const buildIntakeResponsesPayload = () => {
+    if (!intakeForm) return [] as IntakeFormAnswer[];
+    return intakeForm.questions.reduce<IntakeFormAnswer[]>((acc, question) => {
+      const value = intakeResponses[question.id];
+      const hasValue =
+        value !== undefined &&
+        (question.questionType === "boolean"
+          ? typeof value === "boolean"
+          : question.questionType === "multiple-choice"
+            ? Array.isArray(value) && value.length > 0
+            : question.questionType === "number"
+              ? typeof value === "number" && !Number.isNaN(value)
+              : typeof value === "string" && value.trim().length > 0);
+      if (!hasValue) return acc;
+      acc.push({
+        questionId: question.id,
+        label: question.label,
+        questionType: question.questionType,
+        dataType: question.dataType,
+        value,
+      });
+      return acc;
+    }, []);
+  };
+
+  const intakeMissingRequired = useMemo(() => {
+    if (!intakeForm || !intakeRequiresBooking || !intakeForm.isRequired) return false;
+    return intakeForm.questions.some(
+      (question) => question.required && !isIntakeAnswerProvided(question, intakeResponses[question.id]),
+    );
+  }, [intakeForm, intakeRequiresBooking, intakeResponses]);
+
   const handleConfirm = async () => {
     setAuthError(null);
     if (!isAuthenticated) {
@@ -619,13 +710,23 @@ export default function Appointment() {
       errors.slot = "Please select an appointment time.";
     }
 
-    if (FORM_REQUIRED_CLINICS.has(selectedClinicId)) {
-      if (!intakeReason) {
-        errors.intakeReason = "Please select a reason for your visit.";
+    const intakeActive =
+      intakeForm && intakeForm.deliveryTiming === "booking" && intakeForm.questions.length > 0;
+    if (intakeActive && intakeForm?.isRequired) {
+      const intakeErrors: Record<string, string> = {};
+      intakeForm.questions.forEach((question) => {
+        if (!question.required) return;
+        const value = intakeResponses[question.id];
+        if (!isIntakeAnswerProvided(question, value)) {
+          intakeErrors[question.id] = "This field is required.";
+        }
+      });
+      setIntakeFieldErrors(intakeErrors);
+      if (Object.keys(intakeErrors).length > 0) {
+        errors.intake = "Please complete the required intake questions.";
       }
-      if (!intakeConsent) {
-        errors.intake = "Please confirm the intake form acknowledgment.";
-      }
+    } else {
+      setIntakeFieldErrors({});
     }
 
     setFieldErrors(errors);
@@ -679,6 +780,8 @@ export default function Appointment() {
     }
     const preferredStart = buildDateTimeFromSlot(selectedDate, selectedSlot);
     const preferredEnd = new Date(preferredStart.getTime() + 30 * 60 * 1000);
+    const intakePayload =
+      intakeForm && intakeForm.deliveryTiming === "booking" ? buildIntakeResponsesPayload() : [];
     const payload: AppointmentCreateRequest = {
       clinicId: clinicKey,
       preferredStart: preferredStart.toISOString(),
@@ -691,6 +794,10 @@ export default function Appointment() {
       doctorName: doctorDisplayName,
       slot: selectedSlot,
       sharedRecord: sharedRecordPayload,
+      intakeResponse:
+        intakeForm && intakeForm.deliveryTiming === "booking" && intakePayload.length
+          ? { responses: intakePayload }
+          : undefined,
     };
 
     try {
@@ -1719,67 +1826,155 @@ export default function Appointment() {
                   )}
                 </div>
 
-                {FORM_REQUIRED_CLINICS.has(selectedClinicId) ? (
-                  <div className="rounded-2xl border border-dashed border-[#0089FF]/40 bg-[#0089FF]/5 p-4 space-y-3">
-                    <div>
-                      <p className="text-xs uppercase tracking-wide text-[#0089FF] font-semibold">
-                        Quick intake form (prototype)
-                      </p>
-                      <p className="text-sm text-slate-600">
-                        This clinic requires a short intake form before confirming.
-                      </p>
-                    </div>
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-slate-700" htmlFor="intake-reason">
-                          Reason for visit
-                        </label>
-                        <select
-                          id="intake-reason"
-                          value={intakeReason}
-                          onChange={(e) => {
-                            setIntakeReason(e.target.value);
-                            if (fieldErrors.intakeReason) clearFieldError("intakeReason");
-                          }}
-                          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:border-[#0089FF] focus:outline-none focus:ring-2 focus:ring-[#0089FF]/20"
-                        >
-                          <option value="">Select a reason</option>
-                          <option value="new-patient">New patient evaluation</option>
-                          <option value="follow-up">Follow-up appointment</option>
-                          <option value="consult">Specialist consult</option>
-                        </select>
-                        {fieldErrors.intakeReason ? (
-                          <p className="text-sm text-red-500">{fieldErrors.intakeReason}</p>
-                        ) : null}
+                {intakeForm && intakeForm.questions.length > 0 ? (
+                  intakeForm.deliveryTiming === "booking" ? (
+                    <div className="rounded-2xl border border-dashed border-[#0089FF]/40 bg-[#0089FF]/5 p-4 space-y-4">
+                      <div className="space-y-1">
+                        <p className="text-xs uppercase tracking-wide text-[#0089FF] font-semibold">
+                          {intakeForm.isRequired ? "Intake form required" : "Optional intake form"}
+                        </p>
+                        <p className="text-sm text-slate-600">
+                          This clinic collects a short intake form before confirming your appointment.
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          Responses are shared only with the clinic and removed if the appointment is cancelled.
+                        </p>
                       </div>
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-slate-700" htmlFor="intake-allergies">
-                          Allergies (optional)
-                        </label>
-                        <Input
-                          id="intake-allergies"
-                          value={intakeAllergies}
-                          onChange={(e) => setIntakeAllergies(e.target.value)}
-                          placeholder="Penicillin, pollen, etc."
-                        />
+                      <div className="space-y-4">
+                        {intakeForm.questions.map((question) => {
+                          const value = intakeResponses[question.id];
+                          const error = intakeFieldErrors[question.id];
+                          const renderInput = () => {
+                            switch (question.questionType) {
+                              case "short-text":
+                                return (
+                                  <Input
+                                    value={typeof value === "string" ? value : ""}
+                                    onChange={(event) => updateIntakeResponse(question.id, event.target.value)}
+                                    placeholder={question.label}
+                                  />
+                                );
+                              case "long-text":
+                                return (
+                                  <Textarea
+                                    value={typeof value === "string" ? value : ""}
+                                    onChange={(event) => updateIntakeResponse(question.id, event.target.value)}
+                                    placeholder={question.label}
+                                    className="min-h-[90px]"
+                                  />
+                                );
+                              case "number":
+                                return (
+                                  <Input
+                                    type="number"
+                                    value={typeof value === "number" ? String(value) : ""}
+                                    onChange={(event) => {
+                                      const nextValue = event.target.value;
+                                      updateIntakeResponse(
+                                        question.id,
+                                        nextValue === "" ? null : Number(nextValue),
+                                      );
+                                    }}
+                                    placeholder="0"
+                                  />
+                                );
+                              case "date":
+                                return (
+                                  <Input
+                                    type="date"
+                                    value={typeof value === "string" ? value : ""}
+                                    onChange={(event) => updateIntakeResponse(question.id, event.target.value)}
+                                  />
+                                );
+                              case "boolean":
+                                return (
+                                  <select
+                                    value={value === true ? "yes" : value === false ? "no" : ""}
+                                    onChange={(event) => {
+                                      const next =
+                                        event.target.value === "yes"
+                                          ? true
+                                          : event.target.value === "no"
+                                            ? false
+                                            : null;
+                                      updateIntakeResponse(question.id, next);
+                                    }}
+                                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:border-[#0089FF] focus:outline-none focus:ring-2 focus:ring-[#0089FF]/20"
+                                  >
+                                    <option value="">Select an option</option>
+                                    <option value="yes">Yes</option>
+                                    <option value="no">No</option>
+                                  </select>
+                                );
+                              case "single-choice":
+                                return (
+                                  <select
+                                    value={typeof value === "string" ? value : ""}
+                                    onChange={(event) => updateIntakeResponse(question.id, event.target.value)}
+                                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:border-[#0089FF] focus:outline-none focus:ring-2 focus:ring-[#0089FF]/20"
+                                  >
+                                    <option value="">Select an option</option>
+                                    {question.options.map((option) => (
+                                      <option key={`${question.id}-${option}`} value={option}>
+                                        {option}
+                                      </option>
+                                    ))}
+                                  </select>
+                                );
+                              case "multiple-choice":
+                                return (
+                                  <div className="space-y-2">
+                                    {question.options.map((option) => (
+                                      <label key={`${question.id}-${option}`} className="flex items-center gap-2 text-sm text-slate-600">
+                                        <input
+                                          type="checkbox"
+                                          checked={Array.isArray(value) ? value.includes(option) : false}
+                                          onChange={() => toggleMultiChoice(question.id, option)}
+                                          className="h-4 w-4 rounded border-slate-300 text-[#0089FF] focus:ring-[#0089FF]"
+                                        />
+                                        {option}
+                                      </label>
+                                    ))}
+                                  </div>
+                                );
+                              case "file":
+                                return (
+                                  <div className="rounded-xl border border-dashed border-slate-200 bg-white px-3 py-2 text-xs text-slate-500">
+                                    File uploads are collected directly by the clinic after confirmation.
+                                  </div>
+                                );
+                              default:
+                                return null;
+                            }
+                          };
+
+                          return (
+                            <div key={question.id} className="space-y-2">
+                              <div className="flex items-center justify-between">
+                                <label className="text-sm font-medium text-slate-700">{question.label}</label>
+                                <span className="text-xs text-slate-500">
+                                  {question.required ? "Required" : "Optional"}
+                                </span>
+                              </div>
+                              {question.description ? (
+                                <p className="text-xs text-slate-500">{question.description}</p>
+                              ) : null}
+                              {renderInput()}
+                              {error ? <p className="text-sm text-red-500">{error}</p> : null}
+                            </div>
+                          );
+                        })}
                       </div>
+                      {fieldErrors.intake ? (
+                        <p className="text-sm text-red-500">{fieldErrors.intake}</p>
+                      ) : null}
                     </div>
-                    <label className="flex items-start gap-2 text-sm text-slate-600">
-                      <input
-                        type="checkbox"
-                        checked={intakeConsent}
-                        onChange={(e) => {
-                          setIntakeConsent(e.target.checked);
-                          if (fieldErrors.intake) clearFieldError("intake");
-                        }}
-                        className="mt-1 h-4 w-4 rounded border-slate-300 text-[#0089FF] focus:ring-[#0089FF]"
-                      />
-                      I confirm the information is correct for this clinic intake form.
-                    </label>
-                    {fieldErrors.intake ? (
-                      <p className="text-sm text-red-500">{fieldErrors.intake}</p>
-                    ) : null}
-                  </div>
+                  ) : (
+                    <div className="rounded-2xl border border-dashed border-[#0089FF]/30 bg-[#0089FF]/5 p-4 text-sm text-slate-600">
+                      This clinic will send the intake form{" "}
+                      {intakeForm.deliveryTiming === "reminder" ? "24 hours before your visit." : "at check-in."}
+                    </div>
+                  )
                 ) : null}
               </div>
             </div>
@@ -1837,9 +2032,15 @@ export default function Appointment() {
                   </div>
                 </div>
 
-                {FORM_REQUIRED_CLINICS.has(selectedClinicId) ? (
+                {intakeForm && intakeForm.questions.length > 0 ? (
                   <div className="rounded-xl border border-dashed border-[#0089FF]/40 bg-[#0089FF]/5 p-3 text-xs text-slate-600">
-                    Intake form required · {intakeConsent ? "Acknowledged" : "Pending confirmation"}
+                    {intakeForm.deliveryTiming === "booking"
+                      ? intakeForm.isRequired
+                        ? `Intake form required · ${intakeMissingRequired ? "Pending" : "Complete"}`
+                        : "Optional intake form available"
+                      : intakeForm.deliveryTiming === "reminder"
+                        ? "Intake form will be sent 24 hours before the visit"
+                        : "Intake form will be completed at check-in"}
                   </div>
                 ) : null}
               </div>
@@ -1854,9 +2055,9 @@ export default function Appointment() {
                   isBooking ||
                   !isAuthenticated ||
                   (selectedVaultRecordId && (!selectedVaultRecord || isVaultRecordLoading)) ||
-                  (FORM_REQUIRED_CLINICS.has(selectedClinicId) && (!intakeConsent || !intakeReason))
+                  intakeMissingRequired
                 }
-                className={`w-full text-white text-base font-bold px-6 py-4 rounded-xl shadow-lg transition-all ${!selectedClinicId || !selectedDate || !selectedSlot || isBooking || !isAuthenticated || (FORM_REQUIRED_CLINICS.has(selectedClinicId) && (!intakeConsent || !intakeReason))
+                className={`w-full text-white text-base font-bold px-6 py-4 rounded-xl shadow-lg transition-all ${!selectedClinicId || !selectedDate || !selectedSlot || isBooking || !isAuthenticated || (selectedVaultRecordId && (!selectedVaultRecord || isVaultRecordLoading)) || intakeMissingRequired
                   ? "bg-slate-300 cursor-not-allowed"
                   : "bg-[#0089FF] hover:bg-[#0077E6] hover:shadow-xl hover:scale-[1.02]"
                   }`}
