@@ -363,6 +363,8 @@ export default function ClinicAppointments() {
                 : patientName;
             const specializationLabel = t(getSpecializationLabel(appointment.specialization));
 
+            const actionButtonClass = "w-full sm:w-auto whitespace-normal text-center h-auto py-2 leading-tight";
+
             return (
               <div
                 key={appointment._id}
@@ -387,7 +389,7 @@ export default function ClinicAppointments() {
                     <Button
                       variant="outline"
                       onClick={() => handleViewPatientDetails(appointment)}
-                      className="w-full sm:w-auto"
+                      className={actionButtonClass}
                     >
                       {t("View patient details")}
                     </Button>
@@ -395,7 +397,7 @@ export default function ClinicAppointments() {
                       variant="outline"
                       onClick={() => openDialog("reschedule", appointment)}
                       disabled={!canMessage || isSubmitting}
-                      className="w-full sm:w-auto"
+                      className={actionButtonClass}
                     >
                       {t("Request a reschedule")}
                     </Button>
@@ -403,14 +405,14 @@ export default function ClinicAppointments() {
                       variant="outline"
                       onClick={() => openDialog("cancel", appointment)}
                       disabled={!canCancel || isSubmitting}
-                      className="w-full sm:w-auto"
+                      className={actionButtonClass}
                     >
                       {t("Cancel appointment")}
                     </Button>
                     <Button
                       onClick={() => handleConfirm(appointment)}
                       disabled={!canConfirm || isSubmitting}
-                      className="w-full sm:w-auto"
+                      className={actionButtonClass}
                     >
                       {t("Confirm appointment")}
                     </Button>
