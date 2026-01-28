@@ -59,7 +59,9 @@ export const useClinicDoctors = (clinicId?: string) =>
     queryKey: ["clinic-doctors", clinicId],
     queryFn: () => fetchJson<ClinicDoctorsResponse>(`/api/clinics/${clinicId}/doctors`),
     enabled: Boolean(clinicId),
-    initialData: clinicId
+    staleTime: 0,
+    refetchOnMount: "always",
+    placeholderData: clinicId
       ? {
           doctors: fallbackDoctors.filter((doctor) => doctor.clinicId === clinicId),
         }
