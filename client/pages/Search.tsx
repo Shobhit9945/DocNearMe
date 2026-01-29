@@ -22,22 +22,25 @@ export default function Search() {
 
   useEffect(() => {
     const qParam = searchParams.get("q") ?? "";
-    if (qParam !== query) {
-      setQuery(qParam);
-    }
-  }, [query, searchParams]);
+    setQuery((current) => (current === qParam ? current : qParam));
+  }, [searchParams]);
 
   useEffect(() => {
+    const trimmedQuery = query.trim();
+    const currentParam = searchParams.get("q") ?? "";
+    if (trimmedQuery === currentParam) {
+      return;
+    }
     setSearchParams((current) => {
       const next = new URLSearchParams(current);
-      if (query.trim()) {
-        next.set("q", query.trim());
+      if (trimmedQuery) {
+        next.set("q", trimmedQuery);
       } else {
         next.delete("q");
       }
       return next;
     }, { replace: true });
-  }, [query, setSearchParams]);
+  }, [query, searchParams, setSearchParams]);
 
   const normalizedQuery = query.trim().toLowerCase();
   const specializations = useMemo(() => {
