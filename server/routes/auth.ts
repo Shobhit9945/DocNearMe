@@ -1,4 +1,5 @@
 import { RequestHandler } from "express";
+import { resolveMx } from "node:dns/promises";
 import { z } from "zod";
 import bcryptjs from "bcryptjs";
 import jwt from "jsonwebtoken";
@@ -91,6 +92,26 @@ const resetPasswordSchema = z.object({
 const jwtSecret = process.env.AUTH_JWT_SECRET ?? process.env.JWT_SECRET ?? "dev-secret-change-me";
 const jwtExpiry = process.env.AUTH_JWT_EXPIRES_IN ?? "7d";
 const captchaProofExpiry = process.env.CAPTCHA_PROOF_EXPIRES_IN ?? "5m";
+const disposableEmailDomains = new Set([
+  "10minutemail.com",
+  "10minutemail.net",
+  "coswz.com",
+  "dispostable.com",
+  "guerrillamail.com",
+  "maildrop.cc",
+  "mailinator.com",
+  "temp-mail.org",
+  "tempmail.com",
+  "throwawaymail.com",
+  "yopmail.com",
+]);
+const disposableLookupUrl = process.env.DISPOSABLE_EMAIL_LOOKUP_URL ?? "https://open.kickbox.com/v1/disposable";
+const disposableLookupTimeoutMs = Number(process.env.DISPOSABLE_EMAIL_LOOKUP_TIMEOUT_MS ?? "2000");
+const extraDisposableDomains = (process.env.DISPOSABLE_EMAIL_DOMAINS ?? "")
+  .split(",")
+  .map((domain) => domain.trim().toLowerCase())
+  .filter(Boolean);
+extraDisposableDomains.forEach((domain) => disposableEmailDomains.add(domain));
 
 const getUserId = (user: PatientUser) => {
   if (user._id instanceof ObjectId) return user._id.toString();
@@ -132,6 +153,62 @@ const verifyCaptchaProof = (token: string, email: string) => {
   } catch {
     return false;
   }
+};
+
+const getEmailDomain = (email: string) => {
+  const [, domain] = email.split("@");
+  return domain?.trim().toLowerCase() ?? "";
+};
+
+const isDisposableDomain = (domain: string) =>
+  disposableEmailDomains.has(domain) || Array.from(disposableEmailDomains).some(item => domain.endsWith(`.${item}`));
+
+const hasMxRecord = async (domain: string) => {
+  try {
+    const records = await resolveMx(domain);
+    return records.length > 0;
+  } catch {
+    return false;
+  }
+};
+
+const checkDisposableEmailProvider = async (email: string) => {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), disposableLookupTimeoutMs);
+  try {
+    const response = await fetch(`${disposableLookupUrl}/${encodeURIComponent(email)}`, {
+      signal: controller.signal,
+    });
+    if (!response.ok) return null;
+    const data = (await response.json()) as { disposable?: boolean };
+    if (typeof data.disposable === "boolean") {
+      return data.disposable;
+    }
+    return null;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+};
+
+const validateEmailForSignup = async (email: string) => {
+  const domain = getEmailDomain(email);
+  if (!domain) {
+    return { valid: false, message: "Invalid email address." };
+  }
+  if (isDisposableDomain(domain)) {
+    return { valid: false, message: "Temporary email addresses are not allowed." };
+  }
+  const disposableLookup = await checkDisposableEmailProvider(email);
+  if (disposableLookup === true) {
+    return { valid: false, message: "Temporary email addresses are not allowed." };
+  }
+  const mxOk = await hasMxRecord(domain);
+  if (!mxOk) {
+    return { valid: false, message: "Please enter a valid email address." };
+  }
+  return { valid: true };
 };
 
 const parseRequestBody = (body: unknown): unknown => {
@@ -223,6 +300,13 @@ export const handleRequestOtp: RequestHandler = async (req, res, next) => {
     }
     const payload = parsed.data as RequestOtpRequest;
     const normalizedEmail = payload.email.toLowerCase();
+    const emailValidation = await validateEmailForSignup(normalizedEmail);
+    if (!emailValidation.valid) {
+      return res.status(400).json({
+        success: false,
+        message: emailValidation.message ?? "Invalid email address.",
+      } satisfies OtpResponse);
+    }
     const captchaProofValid = verifyCaptchaProof(payload.captchaProofToken, normalizedEmail);
     if (!captchaProofValid) {
       return res.status(400).json({
@@ -302,6 +386,13 @@ export const handleCheckEmail: RequestHandler = async (req, res, next) => {
   try {
     const payload = checkEmailSchema.parse(parseRequestBody(req.body)) as CheckEmailRequest;
     const normalizedEmail = payload.email.toLowerCase();
+    const emailValidation = await validateEmailForSignup(normalizedEmail);
+    if (!emailValidation.valid) {
+      return res.status(400).json({
+        exists: false,
+        message: emailValidation.message ?? "Invalid email address.",
+      } satisfies CheckEmailResponse);
+    }
     const captchaCheck = await verifyRecaptcha(payload.captchaToken, req.ip);
     if (!captchaCheck.success) {
       return res.status(400).json({
