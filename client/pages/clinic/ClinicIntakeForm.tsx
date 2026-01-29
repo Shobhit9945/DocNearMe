@@ -44,16 +44,6 @@ const DELIVERY_OPTIONS: { value: IntakeDeliveryTiming; label: string }[] = [
   { value: "checkin", label: "At clinic check-in" },
 ];
 
-const createEmptyQuestion = (index: number): IntakeQuestion => ({
-  id: `q-${Date.now()}-${index}`,
-  label: "",
-  description: "",
-  questionType: "short-text" satisfies IntakeQuestionType,
-  dataType: "string" satisfies IntakeDataType,
-  required: true,
-  options: ["Option 1", "Option 2"],
-});
-
 const DEFAULT_QUESTIONS: IntakeQuestion[] = [
   {
     id: "q-1",
@@ -84,6 +74,17 @@ export default function ClinicIntakeForm() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+
+  const optionLabel = (index: number) => `${t("Option")} ${index}`;
+  const createEmptyQuestion = (index: number): IntakeQuestion => ({
+    id: `q-${Date.now()}-${index}`,
+    label: "",
+    description: "",
+    questionType: "short-text" satisfies IntakeQuestionType,
+    dataType: "string" satisfies IntakeDataType,
+    required: true,
+    options: [optionLabel(1), optionLabel(2)],
+  });
 
   const questionTypeHelper = useMemo(
     () =>
@@ -166,7 +167,7 @@ export default function ClinicIntakeForm() {
     setQuestions((prev) =>
       prev.map((question) =>
         question.id === id
-          ? { ...question, options: [...question.options, `Option ${question.options.length + 1}`] }
+          ? { ...question, options: [...question.options, optionLabel(question.options.length + 1)] }
           : question,
       ),
     );
@@ -407,7 +408,7 @@ export default function ClinicIntakeForm() {
                                 value === "single-choice" || value === "multiple-choice"
                                   ? question.options.length
                                     ? question.options
-                                  : ["Option 1", "Option 2"]
+                                  : [optionLabel(1), optionLabel(2)]
                                 : [],
                           })
                         }

@@ -260,30 +260,36 @@ const serializeAppointment = (appointment: Appointment) => {
 const resolveAppointmentId = (appointmentId: string) =>
   ObjectId.isValid(appointmentId) ? new ObjectId(appointmentId) : appointmentId;
 
-const TRANSLATION_ENDPOINT = process.env.TRANSLATION_ENDPOINT ?? "https://libretranslate.de/translate";
+const DEEPL_API_URL = process.env.DEEPL_API_URL ?? "https://api-free.deepl.com/v2/translate";
+const DEEPL_API_KEY = process.env.DEEPL;
 const GOOGLE_TRANSLATE_ENDPOINT =
   "https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=ja&dt=t&q=";
 
 const containsJapanese = (text: string) => /[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9faf]/.test(text);
 
-const translateWithLibre = async (text: string) => {
-  const response = await fetch(TRANSLATION_ENDPOINT, {
+const translateWithDeepL = async (text: string) => {
+  if (!DEEPL_API_KEY) return undefined;
+  const params = new URLSearchParams();
+  params.append("text", text);
+  params.append("target_lang", "JA");
+
+  const response = await fetch(DEEPL_API_URL, {
     method: "POST",
     headers: {
-      "Content-Type": "application/json",
+      "Content-Type": "application/x-www-form-urlencoded",
+      Authorization: `DeepL-Auth-Key ${DEEPL_API_KEY}`,
     },
-    body: JSON.stringify({
-      q: text,
-      source: "auto",
-      target: "ja",
-      format: "text",
-    }),
+    body: params.toString(),
   });
+
   if (!response.ok) {
+    const errorBody = await response.text();
+    console.error("DeepL translation error", errorBody);
     return undefined;
   }
-  const data = (await response.json()) as { translatedText?: string };
-  const translated = typeof data.translatedText === "string" ? data.translatedText.trim() : "";
+
+  const data = (await response.json()) as { translations?: Array<{ text?: string }> };
+  const translated = data.translations?.[0]?.text?.trim() ?? "";
   if (!translated || translated === text) return undefined;
   return translated;
 };
@@ -307,8 +313,8 @@ const translateToJapanese = async (text?: string) => {
   if (!text) return undefined;
   if (containsJapanese(text)) return text;
   try {
-    const libreTranslation = await translateWithLibre(text);
-    if (libreTranslation) return libreTranslation;
+    const deepLTranslation = await translateWithDeepL(text);
+    if (deepLTranslation) return deepLTranslation;
     const googleTranslation = await translateWithGoogle(text);
     return googleTranslation ?? text;
   } catch (error) {

@@ -1877,13 +1877,13 @@ export default function Appointment() {
                     <div className="rounded-2xl border border-dashed border-[#0089FF]/40 bg-[#0089FF]/5 p-4 space-y-4">
                       <div className="space-y-1">
                         <p className="text-xs uppercase tracking-wide text-[#0089FF] font-semibold">
-                          {intakeForm.isRequired ? "Intake form required" : "Optional intake form"}
+                          {intakeForm.isRequired ? t("Intake form required") : t("Optional intake form")}
                         </p>
                         <p className="text-sm text-slate-600">
-                          This clinic collects a short intake form before confirming your appointment.
+                          {t("This clinic collects a short intake form before confirming your appointment.")}
                         </p>
                         <p className="text-xs text-slate-500">
-                          Responses are shared only with the clinic and removed if the appointment is cancelled.
+                          {t("Responses are shared only with the clinic and removed if the appointment is cancelled.")}
                         </p>
                       </div>
                       <div className="space-y-4">
@@ -1947,9 +1947,9 @@ export default function Appointment() {
                                     }}
                                     className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:border-[#0089FF] focus:outline-none focus:ring-2 focus:ring-[#0089FF]/20"
                                   >
-                                    <option value="">Select an option</option>
-                                    <option value="yes">Yes</option>
-                                    <option value="no">No</option>
+                                    <option value="">{t("Select an option")}</option>
+                                    <option value="yes">{t("Yes")}</option>
+                                    <option value="no">{t("No")}</option>
                                   </select>
                                 );
                               case "single-choice":
@@ -1959,10 +1959,10 @@ export default function Appointment() {
                                     onChange={(event) => updateIntakeResponse(question.id, event.target.value)}
                                     className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:border-[#0089FF] focus:outline-none focus:ring-2 focus:ring-[#0089FF]/20"
                                   >
-                                    <option value="">Select an option</option>
+                                    <option value="">{t("Select an option")}</option>
                                     {question.options.map((option) => (
                                       <option key={`${question.id}-${option}`} value={option}>
-                                        {option}
+                                        <TranslatedText text={option} asText showOriginal={false} />
                                       </option>
                                     ))}
                                   </select>
@@ -1971,14 +1971,17 @@ export default function Appointment() {
                                 return (
                                   <div className="space-y-2">
                                     {question.options.map((option) => (
-                                      <label key={`${question.id}-${option}`} className="flex items-center gap-2 text-sm text-slate-600">
+                                      <label
+                                        key={`${question.id}-${option}`}
+                                        className="flex items-center gap-2 text-sm text-slate-600"
+                                      >
                                         <input
                                           type="checkbox"
                                           checked={Array.isArray(value) ? value.includes(option) : false}
                                           onChange={() => toggleMultiChoice(question.id, option)}
                                           className="h-4 w-4 rounded border-slate-300 text-[#0089FF] focus:ring-[#0089FF]"
                                         />
-                                        {option}
+                                        <TranslatedText text={option} inline showOriginal={false} />
                                       </label>
                                     ))}
                                   </div>
@@ -1986,7 +1989,7 @@ export default function Appointment() {
                               case "file":
                                 return (
                                   <div className="rounded-xl border border-dashed border-slate-200 bg-white px-3 py-2 text-xs text-slate-500">
-                                    File uploads are collected directly by the clinic after confirmation.
+                                    {t("File uploads are collected directly by the clinic after confirmation.")}
                                   </div>
                                 );
                               default:
@@ -1997,13 +2000,17 @@ export default function Appointment() {
                           return (
                             <div key={question.id} className="space-y-2">
                               <div className="flex items-center justify-between">
-                                <label className="text-sm font-medium text-slate-700">{question.label}</label>
+                                <label className="text-sm font-medium text-slate-700">
+                                  <TranslatedText text={question.label} inline showOriginal={false} />
+                                </label>
                                 <span className="text-xs text-slate-500">
-                                  {question.required ? "Required" : "Optional"}
+                                  {question.required ? t("Required") : t("Optional")}
                                 </span>
                               </div>
                               {question.description ? (
-                                <p className="text-xs text-slate-500">{question.description}</p>
+                                <p className="text-xs text-slate-500">
+                                  <TranslatedText text={question.description} inline showOriginal={false} />
+                                </p>
                               ) : null}
                               {renderInput()}
                               {error ? <p className="text-sm text-red-500">{error}</p> : null}
@@ -2017,8 +2024,10 @@ export default function Appointment() {
                     </div>
                   ) : (
                     <div className="rounded-2xl border border-dashed border-[#0089FF]/30 bg-[#0089FF]/5 p-4 text-sm text-slate-600">
-                      This clinic will send the intake form{" "}
-                      {intakeForm.deliveryTiming === "reminder" ? "24 hours before your visit." : "at check-in."}
+                      {t("This clinic will send the intake form")}{" "}
+                      {intakeForm.deliveryTiming === "reminder"
+                        ? t("24 hours before your visit.")
+                        : t("at check-in.")}
                     </div>
                   )
                 ) : null}

@@ -627,7 +627,11 @@ export default function ClinicAppointments() {
                             <TranslatedText text={response.label} inline />
                           </p>
                           <p>
-                            <TranslatedText text={formatIntakeValue(response.value, t)} inline />
+                            <TranslatedText
+                              text={formatIntakeValue(response.value, t)}
+                              inline
+                              targetLanguage="ja"
+                            />
                           </p>
                         </div>
                       ))}
