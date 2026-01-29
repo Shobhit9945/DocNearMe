@@ -119,6 +119,12 @@ const PatientAuth = () => {
     }
   }, [activeTab]);
 
+  useEffect(() => {
+    if (signupStep !== "otp") return;
+    setCaptchaToken(null);
+    recaptchaRef.current?.reset();
+  }, [signupStep]);
+
   const validateSignup = () => {
     if (activeTab !== "signup") return true;
     if (signupStep !== "details") {
@@ -714,23 +720,21 @@ const PatientAuth = () => {
                         </InputOTP>
                         <div className="space-y-2">
                           <Label>Security check</Label>
+                          <RecaptchaWidget
+                            ref={recaptchaRef}
+                            siteKey={RECAPTCHA_SITE_KEY}
+                            onVerify={setCaptchaToken}
+                            onExpire={() => setCaptchaToken(null)}
+                            onError={() => setCaptchaToken(null)}
+                          />
                           {captchaToken ? (
                             <p className="text-xs font-medium text-emerald-600">
                               Captcha completed. You can send your verification code.
                             </p>
                           ) : (
-                            <>
-                              <RecaptchaWidget
-                                ref={recaptchaRef}
-                                siteKey={RECAPTCHA_SITE_KEY}
-                                onVerify={setCaptchaToken}
-                                onExpire={() => setCaptchaToken(null)}
-                                onError={() => setCaptchaToken(null)}
-                              />
-                              <p className="text-xs text-slate-500">
-                                Complete the captcha to enable sending your verification code.
-                              </p>
-                            </>
+                            <p className="text-xs text-slate-500">
+                              Complete the captcha to enable sending your verification code.
+                            </p>
                           )}
                         </div>
                         <div className="flex flex-wrap gap-2">
