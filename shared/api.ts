@@ -272,6 +272,7 @@ export interface PatientProfileUpdateRequest {
 
 export interface RequestOtpRequest {
   email: string;
+  captchaProofToken?: string;
 }
 
 export interface CheckEmailRequest {
