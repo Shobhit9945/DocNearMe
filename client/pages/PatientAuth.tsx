@@ -233,10 +233,13 @@ const PatientAuth = () => {
       setError("Please enter a valid email address.");
       return;
     }
+    if (!captchaToken) {
+      setError("Please complete the captcha before checking your email.");
+      return;
+    }
 
     setCheckEmailLoading(true);
     setStatus(initialStatus);
-
     try {
       const payload: CheckEmailRequest = { email: signupData.email };
       const response = await fetch("/api/auth/check-email", {
@@ -314,16 +317,15 @@ const PatientAuth = () => {
       return;
     }
     if (!captchaToken) {
-      setError("Please complete the captcha before requesting a verification code.");
+      setError("Captcha expired. Please complete it again to send a verification code.");
+      setSignupStep("email");
       return;
     }
 
     setOtpLoading(true);
     setStatus(initialStatus);
-    let shouldResetCaptcha = false;
 
     try {
-      shouldResetCaptcha = true;
       const payload: RequestOtpRequest = { email: signupData.email, captchaToken };
       const response = await fetch("/api/auth/request-otp", {
         method: "POST",
@@ -347,10 +349,6 @@ const PatientAuth = () => {
       setError(error instanceof Error ? error.message : "Network error. Please try again.");
     } finally {
       setOtpLoading(false);
-      if (shouldResetCaptcha) {
-        setCaptchaToken(null);
-        recaptchaRef.current?.reset();
-      }
     }
   };
 
@@ -684,7 +682,7 @@ const PatientAuth = () => {
                       <Button
                         type="button"
                         className="w-full"
-                        disabled={checkEmailLoading}
+                        disabled={checkEmailLoading || !captchaToken}
                         onClick={checkEmailAvailability}
                       >
                         {checkEmailLoading ? "Checking..." : "Check email"}
@@ -712,32 +710,11 @@ const PatientAuth = () => {
                             ))}
                           </InputOTPGroup>
                         </InputOTP>
-                        <div className="space-y-2">
-                          <Label>Security check</Label>
-                          {captchaToken ? (
-                            <p className="text-xs font-medium text-emerald-600">
-                              Captcha completed. You can send your verification code.
-                            </p>
-                          ) : (
-                            <>
-                              <RecaptchaWidget
-                                ref={recaptchaRef}
-                                siteKey={RECAPTCHA_SITE_KEY}
-                                onVerify={setCaptchaToken}
-                                onExpire={() => setCaptchaToken(null)}
-                                onError={() => setCaptchaToken(null)}
-                              />
-                              <p className="text-xs text-slate-500">
-                                Complete the captcha to enable sending your verification code.
-                              </p>
-                            </>
-                          )}
-                        </div>
                         <div className="flex flex-wrap gap-2">
                           <Button
                             type="button"
                             variant="secondary"
-                            disabled={otpLoading || otpCooldown > 0 || !captchaToken}
+                            disabled={otpLoading || otpCooldown > 0}
                             onClick={requestOtp}
                           >
                             {otpLoading ? "Sending..." : "Send OTP"}
@@ -745,7 +722,7 @@ const PatientAuth = () => {
                           <Button
                             type="button"
                             variant="secondary"
-                            disabled={!otpSent || otpLoading || otpCooldown > 0 || !captchaToken}
+                            disabled={!otpSent || otpLoading || otpCooldown > 0}
                             onClick={requestOtp}
                           >
                             {otpLoading
