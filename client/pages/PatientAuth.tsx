@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -9,6 +9,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { PageScaffold } from "@/components/PageScaffold";
 import { useTranslation } from "@/lib/i18n";
 import { countries } from "@/lib/countries";
+import { RecaptchaWidget, type RecaptchaWidgetHandle } from "@/components/RecaptchaWidget";
 import type {
   AuthResponse,
   CheckEmailRequest,
@@ -26,6 +27,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 const TOKEN_KEY = "docnearme_patient_token";
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const RECAPTCHA_SITE_KEY = "6LcqNFosAAAAAKXm06QYkPd_C-ftIUuWtyuuQ-xJ";
 
 type StatusState = {
   type: "idle" | "success" | "error";
@@ -66,6 +68,8 @@ const PatientAuth = () => {
   const [resetOtpSent, setResetOtpSent] = useState(false);
   const [resetOtpLoading, setResetOtpLoading] = useState(false);
   const [resetPasswordLoading, setResetPasswordLoading] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const recaptchaRef = useRef<RecaptchaWidgetHandle | null>(null);
   const navigate = useNavigate();
   const { t } = useTranslation();
 
@@ -82,6 +86,8 @@ const PatientAuth = () => {
     setOtpVerified(false);
     setOtpSent(false);
     setOtpCooldown(0);
+    setCaptchaToken(null);
+    recaptchaRef.current?.reset();
   };
   const resetSignupFlow = () => {
     setSignupStep("email");
@@ -254,7 +260,6 @@ const PatientAuth = () => {
       setEmailAvailable(true);
       setSignupStep("otp");
       setSuccess(data.message);
-      await requestOtp();
     } catch (error) {
       setError(error instanceof Error ? error.message : "Network error. Please try again.");
     } finally {
@@ -307,12 +312,18 @@ const PatientAuth = () => {
       setError("Please enter a valid email address to request a verification code.");
       return;
     }
+    if (!captchaToken) {
+      setError("Please complete the captcha before requesting a verification code.");
+      return;
+    }
 
     setOtpLoading(true);
     setStatus(initialStatus);
+    let shouldResetCaptcha = false;
 
     try {
-      const payload: RequestOtpRequest = { email: signupData.email };
+      shouldResetCaptcha = true;
+      const payload: RequestOtpRequest = { email: signupData.email, captchaToken };
       const response = await fetch("/api/auth/request-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -335,6 +346,10 @@ const PatientAuth = () => {
       setError(error instanceof Error ? error.message : "Network error. Please try again.");
     } finally {
       setOtpLoading(false);
+      if (shouldResetCaptcha) {
+        setCaptchaToken(null);
+        recaptchaRef.current?.reset();
+      }
     }
   };
 
@@ -681,11 +696,24 @@ const PatientAuth = () => {
                             ))}
                           </InputOTPGroup>
                         </InputOTP>
+                        <div className="space-y-2">
+                          <Label>Security check</Label>
+                          <RecaptchaWidget
+                            ref={recaptchaRef}
+                            siteKey={RECAPTCHA_SITE_KEY}
+                            onVerify={setCaptchaToken}
+                            onExpire={() => setCaptchaToken(null)}
+                            onError={() => setCaptchaToken(null)}
+                          />
+                          <p className="text-xs text-slate-500">
+                            Complete the captcha to enable sending your verification code.
+                          </p>
+                        </div>
                         <div className="flex flex-wrap gap-2">
                           <Button
                             type="button"
                             variant="secondary"
-                            disabled={otpLoading || otpCooldown > 0}
+                            disabled={otpLoading || otpCooldown > 0 || !captchaToken}
                             onClick={requestOtp}
                           >
                             {otpLoading ? "Sending..." : "Send OTP"}
@@ -693,7 +721,7 @@ const PatientAuth = () => {
                           <Button
                             type="button"
                             variant="secondary"
-                            disabled={!otpSent || otpLoading || otpCooldown > 0}
+                            disabled={!otpSent || otpLoading || otpCooldown > 0 || !captchaToken}
                             onClick={requestOtp}
                           >
                             {otpLoading

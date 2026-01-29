@@ -65,6 +65,11 @@ const loginSchema = z.object({
 
 const requestOtpSchema = z.object({
   email: emailSchema,
+  captchaToken: z.string().trim().min(1),
+});
+
+const requestPasswordResetSchema = z.object({
+  email: emailSchema,
 });
 
 const checkEmailSchema = z.object({
@@ -133,6 +138,42 @@ const parseRequestBody = (body: unknown): unknown => {
   }
 };
 
+const verifyRecaptcha = async (token: string, remoteIp?: string) => {
+  const secret = process.env.CAPTCHA;
+  if (!secret) {
+    return {
+      success: false,
+      message: "Captcha configuration missing. Please try again later.",
+    };
+  }
+
+  const params = new URLSearchParams({ secret, response: token });
+  if (remoteIp) params.set("remoteip", remoteIp);
+
+  const response = await fetch("https://www.google.com/recaptcha/api/siteverify", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: params.toString(),
+  });
+
+  if (!response.ok) {
+    return {
+      success: false,
+      message: "Unable to verify captcha. Please try again.",
+    };
+  }
+
+  const data = (await response.json()) as { success: boolean; "error-codes"?: string[] };
+  if (!data.success) {
+    return {
+      success: false,
+      message: "Captcha verification failed. Please try again.",
+    };
+  }
+
+  return { success: true };
+};
+
 const getLatestOtp = async (email: string, purpose: "signup" | "password_reset") => {
   const otps = await getEmailOtpsCollection();
   const query =
@@ -154,6 +195,14 @@ export const handleRequestOtp: RequestHandler = async (req, res, next) => {
       return res.status(409).json({
         success: false,
         message: "An account with that email already exists.",
+      } satisfies OtpResponse);
+    }
+
+    const captchaCheck = await verifyRecaptcha(payload.captchaToken, req.ip);
+    if (!captchaCheck.success) {
+      return res.status(400).json({
+        success: false,
+        message: captchaCheck.message ?? "Captcha verification failed. Please try again.",
       } satisfies OtpResponse);
     }
 
@@ -426,7 +475,7 @@ export const handleLogin: RequestHandler = async (req, res, next) => {
 
 export const handleRequestPasswordReset: RequestHandler = async (req, res, next) => {
   try {
-    const payload = requestOtpSchema.parse(parseRequestBody(req.body)) as RequestPasswordResetRequest;
+    const payload = requestPasswordResetSchema.parse(parseRequestBody(req.body)) as RequestPasswordResetRequest;
     const normalizedEmail = payload.email.toLowerCase();
 
     const patients = await getPatientsCollection();
