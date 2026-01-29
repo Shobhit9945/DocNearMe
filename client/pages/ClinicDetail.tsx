@@ -19,7 +19,7 @@ export default function ClinicDetail() {
   const { clinicId } = useParams<{ clinicId: string }>();
   const navigate = useNavigate();
   const { t, language } = useTranslation();
-  const { data: clinicData } = useClinicProfile(clinicId);
+  const { data: clinicData, isLoading: isLoadingClinic } = useClinicProfile(clinicId);
   const clinic = clinicData?.clinic;
   const { data: googlePlaceDetails } = useGooglePlaceDetails(clinic?.googlePlaceId);
 
@@ -50,6 +50,16 @@ export default function ClinicDetail() {
     },
     enabled: Boolean(clinicId),
   });
+
+  if (!clinic && isLoadingClinic) {
+    return (
+      <PageScaffold contentClassName="pb-28 lg:pb-12">
+        <div className="flex flex-col items-center justify-center px-6 py-20 text-center">
+          <p className="text-lg font-semibold text-[#002D55]">{t("Loading clinic details...")}</p>
+        </div>
+      </PageScaffold>
+    );
+  }
 
   if (!clinic) {
     return (

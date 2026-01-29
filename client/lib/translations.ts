@@ -485,6 +485,7 @@ const baseTranslations: Record<string, TranslationEntry> = {
   "Checking consent status. Please try again in a moment.": { ja: "同意状況を確認中です。少し待ってから再度お試しください。" },
   "Client-side encrypted": { ja: "クライアント側で暗号化" },
   "Clinic not found": { ja: "クリニックが見つかりません" },
+  "Loading clinic details...": { ja: "クリニックの詳細を読み込み中..." },
   "Close preview": { ja: "プレビューを閉じる" },
   "Consent saved. You can now upload your records.": { ja: "同意が保存されました。記録をアップロードできます。" },
   "DOCDAISY SUPPORT": { ja: "DocDaisyサポート" },
