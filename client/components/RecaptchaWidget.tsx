@@ -26,6 +26,15 @@ export const RecaptchaWidget = forwardRef<RecaptchaWidgetHandle, RecaptchaWidget
   ({ siteKey, onVerify, onExpire, onError }, ref) => {
     const containerRef = useRef<HTMLDivElement | null>(null);
     const widgetIdRef = useRef<number | null>(null);
+    const verifyRef = useRef(onVerify);
+    const expireRef = useRef(onExpire);
+    const errorRef = useRef(onError);
+
+    useEffect(() => {
+      verifyRef.current = onVerify;
+      expireRef.current = onExpire;
+      errorRef.current = onError;
+    }, [onVerify, onExpire, onError]);
 
     useImperativeHandle(ref, () => ({
       reset: () => {
@@ -40,19 +49,19 @@ export const RecaptchaWidget = forwardRef<RecaptchaWidgetHandle, RecaptchaWidget
 
       const handleVerify = (token: string) => {
         if (cancelled) return;
-        onVerify(token);
+        verifyRef.current(token);
       };
 
       const handleExpired = () => {
         if (cancelled) return;
-        onVerify(null);
-        onExpire?.();
+        verifyRef.current(null);
+        expireRef.current?.();
       };
 
       const handleError = () => {
         if (cancelled) return;
-        onVerify(null);
-        onError?.();
+        verifyRef.current(null);
+        errorRef.current?.();
       };
 
       const renderWidget = () => {
@@ -98,7 +107,7 @@ export const RecaptchaWidget = forwardRef<RecaptchaWidgetHandle, RecaptchaWidget
         }
         widgetIdRef.current = null;
       };
-    }, [onExpire, onError, onVerify, siteKey]);
+    }, [siteKey]);
 
     return <div ref={containerRef} />;
   },
