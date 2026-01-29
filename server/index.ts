@@ -138,6 +138,12 @@ export async function createServer(): Promise<Express> {
   app.post("/api/auth/signup", handleSignup);
   app.post("/api/auth/login", handleLogin);
   app.post("/api/auth/check-email", handleCheckEmail);
+  app.get("/api/auth/request-otp", (_req, res) => {
+    res.status(405).json({
+      success: false,
+      message: "Use POST /api/auth/request-otp to request a verification code.",
+    });
+  });
   app.post("/api/auth/request-otp", handleRequestOtp);
   app.post("/api/auth/verify-otp", handleVerifyOtp);
   app.post("/api/auth/request-password-reset", handleRequestPasswordReset);

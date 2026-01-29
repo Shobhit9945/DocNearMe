@@ -207,7 +207,21 @@ const getLatestOtp = async (email: string, purpose: "signup" | "password_reset")
 
 export const handleRequestOtp: RequestHandler = async (req, res, next) => {
   try {
-    const payload = requestOtpSchema.parse(parseRequestBody(req.body)) as RequestOtpRequest;
+    const parsed = requestOtpSchema.safeParse(parseRequestBody(req.body));
+    if (!parsed.success) {
+      const hasCaptchaIssue = parsed.error.issues.some(issue => issue.path.includes("captchaProofToken"));
+      const hasEmailIssue = parsed.error.issues.some(issue => issue.path.includes("email"));
+      const message = hasCaptchaIssue
+        ? "Captcha verification expired. Please check your email again."
+        : hasEmailIssue
+          ? "Invalid email address."
+          : "Invalid request. Please try again.";
+      return res.status(400).json({
+        success: false,
+        message,
+      } satisfies OtpResponse);
+    }
+    const payload = parsed.data as RequestOtpRequest;
     const normalizedEmail = payload.email.toLowerCase();
     const captchaProofValid = verifyCaptchaProof(payload.captchaProofToken, normalizedEmail);
     if (!captchaProofValid) {
