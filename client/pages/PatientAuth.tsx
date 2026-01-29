@@ -324,6 +324,7 @@ const PatientAuth = () => {
 
     setOtpLoading(true);
     setStatus(initialStatus);
+    let shouldResetCaptcha = false;
 
     try {
       const payload: RequestOtpRequest = { email: signupData.email, captchaToken };
@@ -333,6 +334,7 @@ const PatientAuth = () => {
         body: JSON.stringify(payload),
       });
 
+      shouldResetCaptcha = true;
       const data = (await response.json()) as OtpResponse;
       if (!response.ok || !data.success) {
         setError(data.message || "Failed to send verification code.");
@@ -348,6 +350,9 @@ const PatientAuth = () => {
     } catch (error) {
       setError(error instanceof Error ? error.message : "Network error. Please try again.");
     } finally {
+      if (shouldResetCaptcha) {
+        setCaptchaToken(null);
+      }
       setOtpLoading(false);
     }
   };
