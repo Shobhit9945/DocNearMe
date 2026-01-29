@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import type { PatientProfile, PatientProfileResponse, PatientProfileUpdateRequest } from "@shared/api";
 
 export default function Profile() {
   const { t } = useTranslation();
@@ -23,6 +24,9 @@ export default function Profile() {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [profileSaved, setProfileSaved] = useState(false);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [isSyncingProfile, setIsSyncingProfile] = useState(false);
+
+  const TOKEN_KEY = "docnearme_patient_token";
 
   const loadProfileFromStorage = () => {
     const storedProfile = localStorage.getItem("docnearme_profile");
@@ -60,6 +64,38 @@ export default function Profile() {
     setNotificationsEnabled(parsed.notificationsEnabled ?? true);
   };
 
+  const persistProfileToStorage = (profile: PatientProfile) => {
+    localStorage.setItem("docnearme_user_name", profile.name);
+    localStorage.setItem("docnearme_user_email", profile.email);
+    localStorage.setItem(
+      "docnearme_profile",
+      JSON.stringify({
+        name: profile.name,
+        email: profile.email,
+        phone: profile.phone ?? "",
+        address: profile.address ?? "",
+        visaType: profile.visaType ?? "",
+        emergencyContact: profile.emergencyContact ?? "",
+        preferredLanguage: profile.preferredLanguage ?? "Japanese",
+        notificationsEnabled: profile.notificationsEnabled ?? true,
+      }),
+    );
+  };
+
+  const applyProfile = (profile: PatientProfile) => {
+    setProfileName(profile.name);
+    setProfileEmail(profile.email);
+    setProfilePhone(profile.phone ?? "");
+    setProfileAddress(profile.address ?? "");
+    setProfileVisaType(profile.visaType ?? "");
+    setEmergencyContact(profile.emergencyContact ?? "");
+    setPreferredLanguage(profile.preferredLanguage ?? "Japanese");
+    setNotificationsEnabled(profile.notificationsEnabled ?? true);
+    setUserName(profile.name);
+    setUserEmail(profile.email);
+    persistProfileToStorage(profile);
+  };
+
   useEffect(() => {
     const storedName = localStorage.getItem("docnearme_user_name");
     const storedEmail = localStorage.getItem("docnearme_user_email");
@@ -76,6 +112,32 @@ export default function Profile() {
   }, []);
 
   useEffect(() => {
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (!token || isEditingProfile) return;
+    setIsSyncingProfile(true);
+    void fetch("/api/profile", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error("Failed to load profile");
+        }
+        return (await response.json()) as PatientProfileResponse;
+      })
+      .then((data) => {
+        applyProfile(data.profile);
+      })
+      .catch((error) => {
+        console.error("Profile sync failed", error);
+      })
+      .finally(() => {
+        setIsSyncingProfile(false);
+      });
+  }, [isEditingProfile]);
+
+  useEffect(() => {
     if (!userName) {
       setIsEditingProfile(false);
     }
@@ -90,24 +152,61 @@ export default function Profile() {
     navigate("/");
   };
 
-  const handleProfileSave = () => {
-    localStorage.setItem("docnearme_user_name", profileName);
-    localStorage.setItem("docnearme_user_email", profileEmail);
-    setUserName(profileName);
-    setUserEmail(profileEmail);
-    localStorage.setItem(
-      "docnearme_profile",
-      JSON.stringify({
+  const handleProfileSave = async () => {
+    const token = localStorage.getItem(TOKEN_KEY);
+    const profilePayload: PatientProfileUpdateRequest = {
+      name: profileName,
+      email: profileEmail,
+      phone: profilePhone,
+      address: profileAddress,
+      visaType: profileVisaType || undefined,
+      emergencyContact,
+      preferredLanguage,
+      notificationsEnabled,
+    };
+
+    if (token) {
+      setIsSyncingProfile(true);
+      try {
+        const response = await fetch("/api/profile", {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(profilePayload),
+        });
+        if (!response.ok) {
+          const payload = await response.json().catch(() => ({}));
+          const errorMessage =
+            typeof payload?.error === "string" && payload.error.length > 0
+              ? payload.error
+              : "Failed to save profile";
+          throw new Error(errorMessage);
+        }
+        const data = (await response.json()) as PatientProfileResponse;
+        applyProfile(data.profile);
+      } catch (error) {
+        console.error("Profile update failed", error);
+        return;
+      } finally {
+        setIsSyncingProfile(false);
+      }
+    } else {
+      persistProfileToStorage({
         name: profileName,
         email: profileEmail,
         phone: profilePhone,
         address: profileAddress,
-        visaType: profileVisaType,
+        visaType: profileVisaType || undefined,
         emergencyContact,
         preferredLanguage,
         notificationsEnabled,
-      })
-    );
+      });
+      setUserName(profileName);
+      setUserEmail(profileEmail);
+    }
+
     setProfileSaved(true);
     setIsEditingProfile(false);
     window.setTimeout(() => setProfileSaved(false), 2000);
@@ -343,6 +442,7 @@ export default function Profile() {
                 </>
               )}
               {profileSaved && <span className="text-sm text-emerald-600">{t("Profile saved.")}</span>}
+              {isSyncingProfile && <span className="text-sm text-slate-500">{t("Syncing...")}</span>}
             </div>
             <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4">
               <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold">

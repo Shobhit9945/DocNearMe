@@ -328,6 +328,8 @@ export const handleSignup: RequestHandler = async (req, res, next) => {
       dateOfBirth: payload.dateOfBirth,
       nationality: payload.nationality,
       visaType: payload.visaType,
+      preferredLanguage: "Japanese",
+      notificationsEnabled: true,
       photo: payload.photo ?? null,
       appointments: [],
       createdAt: new Date(),

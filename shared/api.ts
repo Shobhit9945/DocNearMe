@@ -244,6 +244,32 @@ export interface AuthResponse {
   user: AuthUser;
 }
 
+export interface PatientProfile {
+  name: string;
+  email: string;
+  phone?: string;
+  address?: string;
+  visaType?: VisaType;
+  emergencyContact?: string;
+  preferredLanguage?: string;
+  notificationsEnabled?: boolean;
+}
+
+export interface PatientProfileResponse {
+  profile: PatientProfile;
+}
+
+export interface PatientProfileUpdateRequest {
+  name?: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  visaType?: VisaType;
+  emergencyContact?: string;
+  preferredLanguage?: string;
+  notificationsEnabled?: boolean;
+}
+
 export interface RequestOtpRequest {
   email: string;
 }

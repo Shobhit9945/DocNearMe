@@ -120,9 +120,14 @@ export interface PatientUser {
   name: string;
   email: string;
   passwordHash: string;
+  phone?: string;
+  address?: string;
   dateOfBirth?: string;
   nationality?: string;
   visaType?: string;
+  emergencyContact?: string;
+  preferredLanguage?: string;
+  notificationsEnabled?: boolean;
   photo?: {
     dataUrl: string;
     fileName: string;
