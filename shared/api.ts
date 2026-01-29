@@ -282,6 +282,7 @@ export interface CheckEmailRequest {
 export interface CheckEmailResponse {
   exists: boolean;
   message: string;
+  captchaProofToken?: string;
 }
 
 export interface VerifyOtpRequest {

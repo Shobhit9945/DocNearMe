@@ -69,6 +69,7 @@ const PatientAuth = () => {
   const [resetOtpLoading, setResetOtpLoading] = useState(false);
   const [resetPasswordLoading, setResetPasswordLoading] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [captchaProofToken, setCaptchaProofToken] = useState<string | null>(null);
   const recaptchaRef = useRef<RecaptchaWidgetHandle | null>(null);
   const navigate = useNavigate();
   const { t } = useTranslation();
@@ -88,6 +89,7 @@ const PatientAuth = () => {
     setOtpSent(false);
     setOtpCooldown(0);
     setCaptchaToken(null);
+    setCaptchaProofToken(null);
     recaptchaRef.current?.reset();
   };
   const resetSignupFlow = () => {
@@ -263,7 +265,15 @@ const PatientAuth = () => {
       if (data.exists) {
         setEmailAvailable(false);
         setSignupStep("email");
+        setCaptchaProofToken(null);
         setError(data.message);
+        return;
+      }
+
+      if (!data.captchaProofToken) {
+        setEmailAvailable(false);
+        setSignupStep("email");
+        setError("Captcha verification expired. Please try again.");
         return;
       }
 
