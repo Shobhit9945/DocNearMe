@@ -67,6 +67,7 @@ import {
 import { requireClinicAuth } from "./middleware/clinic-auth";
 import { requireAdminAuth } from "./middleware/admin-auth";
 import { handleAdminAuthCheck, handleAdminCreateClinic } from "./routes/admin";
+import { handleGetProfile, handleUpdateProfile } from "./routes/profile";
 
 export async function createServer(): Promise<Express> {
   const app = express();
@@ -140,6 +141,8 @@ export async function createServer(): Promise<Express> {
   app.post("/api/auth/verify-otp", handleVerifyOtp);
   app.post("/api/auth/request-password-reset", handleRequestPasswordReset);
   app.post("/api/auth/reset-password", handleResetPassword);
+  app.get("/api/profile", requireAuth, handleGetProfile);
+  app.put("/api/profile", requireAuth, handleUpdateProfile);
   app.post("/api/clinic-auth/login", handleClinicLogin);
   app.get("/api/clinic-credentials", handleClinicCredentials);
   app.get("/api/admin/auth-check", requireAdminAuth, handleAdminAuthCheck);

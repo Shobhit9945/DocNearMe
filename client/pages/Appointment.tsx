@@ -60,6 +60,7 @@ import type {
   ClinicDoctor,
   MedicalRecordDetail,
   MedicalRecordListResponse,
+  PatientProfileResponse,
   SharedMedicalRecord,
   ClinicIntakeFormResponse,
   IntakeAnswerValue,
@@ -235,6 +236,41 @@ export default function Appointment() {
       email: localStorage.getItem(EMAIL_KEY) ?? "",
     });
   }, []);
+
+  useEffect(() => {
+    if (!authSession?.token) return;
+    void fetch("/api/profile", {
+      headers: {
+        Authorization: `Bearer ${authSession.token}`,
+      },
+    })
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error("Unable to load profile");
+        }
+        return (await response.json()) as PatientProfileResponse;
+      })
+      .then((data) => {
+        const profile = data.profile;
+        if (!patientName && profile.name) {
+          setPatientName(profile.name);
+        }
+        if (!patientEmail && profile.email) {
+          setPatientEmail(profile.email);
+        }
+        if (!patientPhone && profile.phone) {
+          setPatientPhone(profile.phone);
+        }
+        localStorage.setItem(NAME_KEY, profile.name);
+        localStorage.setItem(EMAIL_KEY, profile.email);
+      })
+      .catch((error) => {
+        console.error("Profile load failed", error);
+      })
+      .finally(() => {
+        // no-op
+      });
+  }, [authSession?.token, patientEmail, patientName, patientPhone]);
 
   const selectedClinic = clinics.find((clinic) => clinic.id === selectedClinicId) ?? null;
   const clinicLabel = selectedClinic ? selectedClinic.name : "Select a clinic";
