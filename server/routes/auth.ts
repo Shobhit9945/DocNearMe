@@ -65,6 +65,7 @@ const loginSchema = z.object({
 
 const requestOtpSchema = z.object({
   email: emailSchema,
+  captchaProofToken: z.string().trim().min(1),
 });
 
 const requestPasswordResetSchema = z.object({
