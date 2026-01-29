@@ -72,6 +72,7 @@ const PatientAuth = () => {
   const recaptchaRef = useRef<RecaptchaWidgetHandle | null>(null);
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const isSignupEmailValid = emailPattern.test(signupData.email);
 
   const setError = (message: string) => setStatus({ type: "error", message });
   const setSuccess = (message: string) => setStatus({ type: "success", message });
@@ -665,6 +666,21 @@ const PatientAuth = () => {
                           We&apos;ll check if the email is already registered before sending the verification code.
                         </p>
                       </div>
+                      {isSignupEmailValid && (
+                        <div className="space-y-2">
+                          <Label>Security check</Label>
+                          <RecaptchaWidget
+                            ref={recaptchaRef}
+                            siteKey={RECAPTCHA_SITE_KEY}
+                            onVerify={setCaptchaToken}
+                            onExpire={() => setCaptchaToken(null)}
+                            onError={() => setCaptchaToken(null)}
+                          />
+                          <p className="text-xs text-slate-500">
+                            Complete the captcha to unlock verification for this email.
+                          </p>
+                        </div>
+                      )}
                       <Button
                         type="button"
                         className="w-full"
@@ -698,16 +714,24 @@ const PatientAuth = () => {
                         </InputOTP>
                         <div className="space-y-2">
                           <Label>Security check</Label>
-                          <RecaptchaWidget
-                            ref={recaptchaRef}
-                            siteKey={RECAPTCHA_SITE_KEY}
-                            onVerify={setCaptchaToken}
-                            onExpire={() => setCaptchaToken(null)}
-                            onError={() => setCaptchaToken(null)}
-                          />
-                          <p className="text-xs text-slate-500">
-                            Complete the captcha to enable sending your verification code.
-                          </p>
+                          {captchaToken ? (
+                            <p className="text-xs font-medium text-emerald-600">
+                              Captcha completed. You can send your verification code.
+                            </p>
+                          ) : (
+                            <>
+                              <RecaptchaWidget
+                                ref={recaptchaRef}
+                                siteKey={RECAPTCHA_SITE_KEY}
+                                onVerify={setCaptchaToken}
+                                onExpire={() => setCaptchaToken(null)}
+                                onError={() => setCaptchaToken(null)}
+                              />
+                              <p className="text-xs text-slate-500">
+                                Complete the captcha to enable sending your verification code.
+                              </p>
+                            </>
+                          )}
                         </div>
                         <div className="flex flex-wrap gap-2">
                           <Button
