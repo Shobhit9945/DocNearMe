@@ -68,6 +68,10 @@ const requestOtpSchema = z.object({
   captchaToken: z.string().trim().min(1),
 });
 
+const requestPasswordResetSchema = z.object({
+  email: emailSchema,
+});
+
 const checkEmailSchema = z.object({
   email: emailSchema,
 });
@@ -471,7 +475,7 @@ export const handleLogin: RequestHandler = async (req, res, next) => {
 
 export const handleRequestPasswordReset: RequestHandler = async (req, res, next) => {
   try {
-    const payload = requestOtpSchema.parse(parseRequestBody(req.body)) as RequestPasswordResetRequest;
+    const payload = requestPasswordResetSchema.parse(parseRequestBody(req.body)) as RequestPasswordResetRequest;
     const normalizedEmail = payload.email.toLowerCase();
 
     const patients = await getPatientsCollection();
