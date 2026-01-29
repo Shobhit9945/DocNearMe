@@ -9,6 +9,7 @@ import { useTranslation } from "@/lib/i18n";
 import { SPECIALIZATION_OPTIONS, matchSpecialization } from "@/lib/specializations";
 import { supportedLanguages } from "@/lib/translations";
 import type { ClinicDoctor, ClinicDoctorsUpdateRequest } from "@shared/api";
+import { TranslatedText } from "@/components/TranslatedText";
 
 export default function ClinicDoctors() {
   const session = getClinicSession();
@@ -282,6 +283,7 @@ export default function ClinicDoctors() {
               SPECIALIZATION_OPTIONS.find((spec) => spec.label === doctor.specialization) ??
               null;
             const selectedSpecialization = matchedSpecialization?.label ?? "";
+            const specializationFallback = doctor.specialization?.trim() ?? "";
             const isEditing = editingDoctors[doctor.id] ?? false;
             const visibleLanguages =
               doctor.languages && doctor.languages.length > 0 ? doctor.languages : [t("English")];
@@ -290,10 +292,20 @@ export default function ClinicDoctors() {
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div className="space-y-1">
                     <p className="text-sm font-semibold text-gray-900">
-                      {doctor.name.trim().length > 0 ? doctor.name : t("Unnamed doctor")}
+                      {doctor.name.trim().length > 0 ? (
+                        <TranslatedText text={doctor.name} inline />
+                      ) : (
+                        t("Unnamed doctor")
+                      )}
                     </p>
                     <p className="text-xs text-gray-500">
-                      {selectedSpecialization || t("Select specialization")}
+                      {selectedSpecialization
+                        ? t(selectedSpecialization)
+                        : specializationFallback
+                          ? (
+                              <TranslatedText text={specializationFallback} inline />
+                            )
+                          : t("Select specialization")}
                     </p>
                     <div className="flex flex-wrap gap-2 text-xs text-gray-500">
                       {visibleLanguages.map((languageItem) => (

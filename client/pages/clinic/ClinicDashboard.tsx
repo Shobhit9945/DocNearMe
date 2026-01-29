@@ -7,6 +7,7 @@ import { getClinicAuthHeader, getClinicSession } from "@/lib/clinic-auth";
 import { useClinicProfile } from "@/lib/clinic-data";
 import { useTranslation } from "@/lib/i18n";
 import { getDateKey, normalizeClinicHours } from "@/lib/scheduling";
+import { getSpecializationLabel } from "@/lib/specializations";
 import type { AppointmentListResponse, ClinicBookingClosure, ClinicProfileUpdateRequest } from "@shared/api";
 import { toast } from "@/components/ui/use-toast";
 import { TranslatedText } from "@/components/TranslatedText";
@@ -220,6 +221,7 @@ export default function ClinicDashboard() {
                 const statusLabel = item.status === "CONFIRMED" ? t("Confirmed") : t("Pending");
                 const statusStyle =
                   item.status === "CONFIRMED" ? "bg-green-50 text-green-700" : "bg-yellow-50 text-yellow-700";
+                const specializationLabel = getSpecializationLabel(item.specialization);
 
                 return (
                   <div
@@ -231,7 +233,9 @@ export default function ClinicDashboard() {
                       <p className="font-semibold text-gray-900">
                         <TranslatedText text={item.patientName ?? t("Patient")} inline />
                       </p>
-                      <p className="text-sm text-gray-500">{item.specialization}</p>
+                      <p className="text-sm text-gray-500">
+                        {specializationLabel ? t(specializationLabel) : t("Not provided")}
+                      </p>
                     </div>
                     <div className="flex items-center gap-2 text-sm">
                       <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusStyle}`}>
@@ -370,7 +374,15 @@ export default function ClinicDashboard() {
                     <span>
                       {closure.startDate}
                       {closure.startTime ? ` ${closure.startTime}` : ""} → {closure.endDate}
-                      {closure.endTime ? ` ${closure.endTime}` : ""} {closure.reason ? `(${closure.reason})` : ""}
+                      {closure.endTime ? ` ${closure.endTime}` : ""}
+                      {closure.reason ? (
+                        <>
+                          {" "}
+                          (
+                          <TranslatedText text={closure.reason} inline showOriginal={false} />
+                          )
+                        </>
+                      ) : null}
                     </span>
                     <Button
                       type="button"
