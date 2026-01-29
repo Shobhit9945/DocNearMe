@@ -17,12 +17,9 @@ const normalizeTextInput = (value: unknown) => {
 const languageSchema = z.preprocess(normalizeLanguageInput, z.enum(["en", "ja", "vi", "id", "es"]));
 
 const translationRequestSchema = z.object({
-  text: z.preprocess(normalizeTextInput, z.string().min(1).max(5000)),
-  targetLanguage: languageSchema,
-  sourceLanguage: z
-    .preprocess(normalizeLanguageInput, z.enum(["auto", "en", "ja", "vi", "id", "es"]))
-    .optional()
-    .default("auto"),
+  text: z.string().trim().min(1).max(5000),
+  targetLanguage: z.enum(["en", "ja", "vi", "id", "es"]),
+  sourceLanguage: z.enum(["auto", "en", "ja", "vi", "id", "es"]).optional().default("auto"),
 });
 
 const parseRequestBody = (body: unknown): unknown => {
