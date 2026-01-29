@@ -280,7 +280,6 @@ const PatientAuth = () => {
       setEmailAvailable(true);
       setSignupStep("otp");
       setCaptchaToken(null);
-      setCaptchaProofToken(data.captchaProofToken);
       setSuccess(data.message);
     } catch (error) {
       setError(error instanceof Error ? error.message : "Network error. Please try again.");
@@ -334,17 +333,11 @@ const PatientAuth = () => {
       setError("Please enter a valid email address to request a verification code.");
       return;
     }
-    if (!captchaProofToken) {
-      setError("Captcha verification expired. Please check your email again.");
-      setSignupStep("email");
-      setEmailAvailable(false);
-      return;
-    }
     setOtpLoading(true);
     setStatus(initialStatus);
 
     try {
-      const payload: RequestOtpRequest = { email: signupData.email, captchaProofToken };
+      const payload: RequestOtpRequest = { email: signupData.email };
       const response = await fetch("/api/auth/request-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
