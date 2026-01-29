@@ -2,6 +2,7 @@ import { BottomNav } from "@/components/BottomNav";
 import { PageScaffold } from "@/components/PageScaffold";
 import { Search as SearchIcon, Stethoscope, Building2, Star } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
+import { formatAvailabilityForLanguage } from "@/lib/time-format";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAllDoctors, useClinics } from "@/lib/clinic-data";
@@ -9,7 +10,7 @@ import { getSpecializationLabel, matchSpecialization, SPECIALIZATION_OPTIONS } f
 import { TranslatedText } from "@/components/TranslatedText";
 
 export default function Search() {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [query, setQuery] = useState("");
@@ -291,7 +292,7 @@ export default function Search() {
                             ))}
                           </div>
                           <p className="mt-3 text-sm text-slate-500">
-                            {t("Next availability")}: {doctor.nextAvailable}
+                            {t("Next availability")}: {formatAvailabilityForLanguage(doctor.nextAvailable, language, t)}
                           </p>
                           <div className="mt-4 flex flex-wrap gap-2">
                             <button
@@ -375,7 +376,7 @@ export default function Search() {
                           ))}
                         </div>
                         <p className="mt-3 text-sm text-slate-500">
-                          {t("Next availability")}: {clinic.nextAvailability}
+                          {t("Next availability")}: {formatAvailabilityForLanguage(clinic.nextAvailability, language, t)}
                         </p>
                         <div className="mt-4 flex flex-wrap gap-2">
                           <button

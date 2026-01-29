@@ -5,17 +5,17 @@ import type { Language } from "./translations";
 const TARGET_LANGUAGE_MAP: Record<Language, TranslateRequest["targetLanguage"] | null> = {
   en: "en",
   ja: "ja",
-  vi: "vi",
+  ko: "ko",
   id: "id",
+  my: "my",
+  bn: "bn",
+  ar: "ar",
+  hi: "hi",
+  fil: "fil",
+  th: "th",
+  zh: "zh",
   "es-MX": "es",
-  my: null,
-  bn: null,
-  ar: null,
-  hi: null,
-  fil: null,
-  th: null,
-  zh: null,
-  ko: null,
+  vi: "vi",
 };
 const JAPANESE_REGEX = /[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9faf\uf900-\ufaff]/;
 const LATIN_REGEX = /[A-Za-z]/;
