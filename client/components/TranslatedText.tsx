@@ -27,12 +27,14 @@ export function TranslatedText({
   const { language } = useTranslation();
   const normalizedText = text?.trim() ?? "";
   const normalizedTranslation = translatedText?.trim() ?? "";
+  const resolvedTargetLanguage = targetLanguage ?? language;
+  const shouldUseProvidedTranslation = Boolean(normalizedTranslation && resolvedTargetLanguage === "ja");
   const { translation: fetchedTranslation } = useTranslatedText(
     normalizedText,
-    targetLanguage ?? language,
-    !normalizedTranslation,
+    resolvedTargetLanguage,
+    !shouldUseProvidedTranslation,
   );
-  const primaryText = normalizedTranslation || fetchedTranslation || normalizedText;
+  const primaryText = shouldUseProvidedTranslation ? normalizedTranslation : fetchedTranslation || normalizedText;
   const showSecondary = Boolean(showOriginal && primaryText && normalizedText && primaryText !== normalizedText);
 
   if (!normalizedText) return null;

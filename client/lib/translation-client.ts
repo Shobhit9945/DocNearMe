@@ -47,7 +47,7 @@ export const useTranslatedText = (text: string, targetLanguage: Language, enable
       const payload: TranslateRequest = {
         text: normalizedText,
         targetLanguage: resolvedTargetLanguage,
-        sourceLanguage: detectedLanguage === "unknown" ? "auto" : detectedLanguage,
+        sourceLanguage: detectedLanguage === "ja" ? "ja" : "auto",
       };
 
       const response = await fetch("/api/translate", {
