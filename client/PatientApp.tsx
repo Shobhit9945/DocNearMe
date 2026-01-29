@@ -22,7 +22,8 @@ const queryClient = new QueryClient();
 declare global {
   interface Window {
     umami?: {
-      track: (event?: string | Record<string, unknown>, data?: Record<string, unknown>) => void;
+      track: (event?: string, data?: Record<string, unknown>) => void;
+      trackView?: (url?: string, referrer?: string) => void;
     };
   }
 }
@@ -49,9 +50,14 @@ const TrackPageView = () => {
       return;
     }
 
-    window.umami?.track({
-      url: `${location.pathname}${location.search}`,
-    });
+    const url = `${location.pathname}${location.search}`;
+
+    if (window.umami?.trackView) {
+      window.umami.trackView(url);
+      return;
+    }
+
+    window.umami?.track();
   }, [location.pathname, location.search]);
 
   return null;
