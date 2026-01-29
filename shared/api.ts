@@ -213,6 +213,8 @@ export interface SignupRequest {
   dateOfBirth: string;
   nationality: string;
   visaType: VisaType;
+  phone: string;
+  phoneProofToken: string;
   photo?: SignupPhotoPayload | null;
   consentAccepted: boolean;
 }
@@ -295,6 +297,19 @@ export interface OtpResponse {
   success: boolean;
   message: string;
   debugOtp?: string;
+}
+
+export interface RequestPhoneOtpRequest {
+  phone: string;
+}
+
+export interface VerifyPhoneOtpRequest {
+  phone: string;
+  otp: string;
+}
+
+export interface PhoneOtpResponse extends OtpResponse {
+  phoneProofToken?: string;
 }
 
 export interface RequestPasswordResetRequest {

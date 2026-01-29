@@ -31,9 +31,11 @@ import {
   handleCheckEmail,
   handleRequestOtp,
   handleRequestPasswordReset,
+  handleRequestPhoneOtp,
   handleResetPassword,
   handleSignup,
   handleVerifyOtp,
+  handleVerifyPhoneOtp,
 } from "./routes/auth";
 import { requireAuth } from "./middleware/auth";
 import {
@@ -146,6 +148,8 @@ export async function createServer(): Promise<Express> {
   });
   app.post("/api/auth/request-otp", handleRequestOtp);
   app.post("/api/auth/verify-otp", handleVerifyOtp);
+  app.post("/api/auth/request-phone-otp", handleRequestPhoneOtp);
+  app.post("/api/auth/verify-phone-otp", handleVerifyPhoneOtp);
   app.post("/api/auth/request-password-reset", handleRequestPasswordReset);
   app.post("/api/auth/reset-password", handleResetPassword);
   app.get("/api/profile", requireAuth, handleGetProfile);

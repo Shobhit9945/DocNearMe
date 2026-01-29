@@ -9,18 +9,22 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { PageScaffold } from "@/components/PageScaffold";
 import { useTranslation } from "@/lib/i18n";
 import { countries } from "@/lib/countries";
+import { phoneCountryOptions } from "@/lib/phone-countries";
 import { RecaptchaWidget, type RecaptchaWidgetHandle } from "@/components/RecaptchaWidget";
 import type {
   AuthResponse,
   CheckEmailRequest,
   CheckEmailResponse,
   OtpResponse,
+  PhoneOtpResponse,
+  RequestPhoneOtpRequest,
   RequestOtpRequest,
   RequestPasswordResetRequest,
   ResetPasswordRequest,
   ResetPasswordResponse,
   SignupPhotoPayload,
   VerifyOtpRequest,
+  VerifyPhoneOtpRequest,
 } from "@shared/api";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -44,6 +48,8 @@ const PatientAuth = () => {
     dateOfBirth: "",
     nationality: "",
     visaType: "",
+    phone: "",
+    phoneProofToken: "",
     photo: null as SignupPhotoPayload | null,
     consentAccepted: false,
   });
@@ -58,7 +64,14 @@ const PatientAuth = () => {
   const [otpLoading, setOtpLoading] = useState(false);
   const [otpCooldown, setOtpCooldown] = useState(0);
   const [otpSent, setOtpSent] = useState(false);
-  const [signupStep, setSignupStep] = useState<"email" | "otp" | "details">("email");
+  const [signupStep, setSignupStep] = useState<"email" | "otp" | "phone" | "phone-otp" | "details">("email");
+  const [phoneCountryIso, setPhoneCountryIso] = useState("US");
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [phoneOtpValue, setPhoneOtpValue] = useState("");
+  const [phoneOtpVerified, setPhoneOtpVerified] = useState(false);
+  const [phoneOtpLoading, setPhoneOtpLoading] = useState(false);
+  const [phoneOtpCooldown, setPhoneOtpCooldown] = useState(0);
+  const [phoneOtpSent, setPhoneOtpSent] = useState(false);
   const [checkEmailLoading, setCheckEmailLoading] = useState(false);
   const [emailAvailable, setEmailAvailable] = useState(false);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
@@ -74,6 +87,10 @@ const PatientAuth = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const isSignupEmailValid = emailPattern.test(signupData.email);
+  const selectedPhoneCountry =
+    phoneCountryOptions.find((country) => country.iso === phoneCountryIso) ?? phoneCountryOptions[0];
+  const phoneDialCode = selectedPhoneCountry?.dialCode ?? "";
+  const phoneFlag = selectedPhoneCountry?.flag ?? "🌍";
 
   const setError = (message: string) => setStatus({ type: "error", message });
   const setSuccess = (message: string) => setStatus({ type: "success", message });
@@ -92,10 +109,19 @@ const PatientAuth = () => {
     setCaptchaProofToken(null);
     recaptchaRef.current?.reset();
   };
+  const resetPhoneState = () => {
+    setPhoneNumber("");
+    setPhoneOtpValue("");
+    setPhoneOtpVerified(false);
+    setPhoneOtpSent(false);
+    setPhoneOtpCooldown(0);
+    setSignupData((prev) => ({ ...prev, phone: "", phoneProofToken: "" }));
+  };
   const resetSignupFlow = () => {
     setSignupStep("email");
     setEmailAvailable(false);
     resetOtpState();
+    resetPhoneState();
   };
 
   useEffect(() => {
@@ -115,6 +141,14 @@ const PatientAuth = () => {
   }, [resetOtpCooldown]);
 
   useEffect(() => {
+    if (phoneOtpCooldown <= 0) return;
+    const interval = window.setInterval(() => {
+      setPhoneOtpCooldown((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => window.clearInterval(interval);
+  }, [phoneOtpCooldown]);
+
+  useEffect(() => {
     if (activeTab === "signup") {
       resetSignupFlow();
       setStatus(initialStatus);
@@ -127,10 +161,17 @@ const PatientAuth = () => {
     recaptchaRef.current?.reset();
   }, [signupStep]);
 
+  useEffect(() => {
+    setPhoneOtpVerified(false);
+    setPhoneOtpSent(false);
+    setPhoneOtpCooldown(0);
+    setSignupData((prev) => ({ ...prev, phone: "", phoneProofToken: "" }));
+  }, [phoneCountryIso]);
+
   const validateSignup = () => {
     if (activeTab !== "signup") return true;
     if (signupStep !== "details") {
-      setError("Please complete email verification before finishing signup.");
+      setError("Please complete email and phone verification before finishing signup.");
       return false;
     }
     if (signupData.name.trim().length < 2) {
@@ -168,6 +209,10 @@ const PatientAuth = () => {
     }
     if (!otpVerified || signupData.email.toLowerCase() !== otpEmail.toLowerCase()) {
       setError("Please verify your email with the OTP before signing up.");
+      return false;
+    }
+    if (!phoneOtpVerified || !signupData.phone || !signupData.phoneProofToken) {
+      setError("Please verify your phone number before signing up.");
       return false;
     }
     if (!signupData.consentAccepted) {
@@ -393,12 +438,108 @@ const PatientAuth = () => {
 
       setOtpVerified(true);
       setOtpEmail(signupData.email);
-      setSignupStep("details");
+      setSignupStep("phone");
       setSuccess(data.message);
     } catch (error) {
       setError(error instanceof Error ? error.message : "Network error. Please try again.");
     } finally {
       setOtpLoading(false);
+    }
+  };
+
+  const normalizePhoneNumber = () => {
+    const digits = phoneNumber.replace(/\D/g, "");
+    if (!phoneDialCode || !digits) return "";
+    return `${phoneDialCode}${digits}`;
+  };
+
+  const requestPhoneOtp = async () => {
+    if (phoneOtpCooldown > 0) {
+      setError(`Please wait ${formatCountdown(phoneOtpCooldown)} before requesting another code.`);
+      return;
+    }
+
+    const normalizedPhone = normalizePhoneNumber();
+    if (!normalizedPhone) {
+      setError("Please enter a valid phone number.");
+      return;
+    }
+
+    setPhoneOtpLoading(true);
+    setStatus(initialStatus);
+
+    try {
+      const payload: RequestPhoneOtpRequest = { phone: normalizedPhone };
+      const response = await fetch("/api/auth/request-phone-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = (await response.json()) as OtpResponse;
+      if (!response.ok || !data.success) {
+        setError(data.message || "Failed to send verification code.");
+        return;
+      }
+
+      setPhoneOtpSent(true);
+      setPhoneOtpVerified(false);
+      setPhoneOtpValue("");
+      setPhoneOtpCooldown(60);
+      setSuccess(data.message);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Network error. Please try again.");
+    } finally {
+      setPhoneOtpLoading(false);
+    }
+  };
+
+  const verifyPhoneOtp = async () => {
+    if (!phoneOtpValue || phoneOtpValue.length < 6) {
+      setError("Please enter the 6-digit verification code.");
+      return;
+    }
+
+    const normalizedPhone = normalizePhoneNumber();
+    if (!normalizedPhone) {
+      setError("Please enter a valid phone number.");
+      return;
+    }
+
+    setPhoneOtpLoading(true);
+    setStatus(initialStatus);
+
+    try {
+      const payload: VerifyPhoneOtpRequest = { phone: normalizedPhone, otp: phoneOtpValue };
+      const response = await fetch("/api/auth/verify-phone-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = (await response.json()) as PhoneOtpResponse;
+      if (!response.ok || !data.success) {
+        setError(data.message || "Verification failed.");
+        return;
+      }
+
+      if (!data.phoneProofToken) {
+        setError("Verification token missing. Please try again.");
+        return;
+      }
+
+      setPhoneOtpVerified(true);
+      setSignupData((prev) => ({
+        ...prev,
+        phone: normalizedPhone,
+        phoneProofToken: data.phoneProofToken ?? "",
+      }));
+      setSignupStep("details");
+      setSuccess(data.message);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Network error. Please try again.");
+    } finally {
+      setPhoneOtpLoading(false);
     }
   };
 
@@ -651,12 +792,25 @@ const PatientAuth = () => {
                     <p className="font-semibold text-slate-900">Signup progress</p>
                     <p>
                       Step{" "}
-                      {signupStep === "email" ? "1" : signupStep === "otp" ? "2" : "3"} of 3:{" "}
+                      {signupStep === "email"
+                        ? "1"
+                        : signupStep === "otp"
+                          ? "2"
+                          : signupStep === "phone"
+                            ? "3"
+                            : signupStep === "phone-otp"
+                              ? "4"
+                              : "5"}{" "}
+                      of 5:{" "}
                       {signupStep === "email"
                         ? "Confirm your email"
                         : signupStep === "otp"
                           ? "Verify your email"
-                          : "Complete your profile"}
+                          : signupStep === "phone"
+                            ? "Add your phone"
+                            : signupStep === "phone-otp"
+                              ? "Verify your phone"
+                              : "Complete your profile"}
                     </p>
                   </div>
 
@@ -758,21 +912,159 @@ const PatientAuth = () => {
                     </div>
                   )}
 
+                  {signupStep === "phone" && (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-semibold text-slate-900">Add your phone number</p>
+                          <p className="text-xs text-slate-500">We&apos;ll send an SMS verification code.</p>
+                        </div>
+                        <Button type="button" variant="link" className="px-0 text-[#0089FF]" onClick={() => setSignupStep("otp")}>
+                          Back to email verification
+                        </Button>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Country code</Label>
+                        <Select value={phoneCountryIso} onValueChange={setPhoneCountryIso}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select your country" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {phoneCountryOptions.map((country) => (
+                              <SelectItem key={country.iso} value={country.iso}>
+                                <span className="mr-2" aria-hidden="true">{country.flag}</span>
+                                {country.name} ({country.dialCode})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <p className="text-xs text-slate-500">
+                          Choose your country to prefill the dial code.
+                        </p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="signup-phone">Phone number</Label>
+                        <div className="flex flex-wrap gap-2">
+                          <div className="flex items-center gap-2 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
+                            <span aria-hidden="true">{phoneFlag}</span>
+                            <span className="font-semibold">{phoneDialCode}</span>
+                          </div>
+                          <Input
+                            id="signup-phone"
+                            type="tel"
+                            placeholder="555 123 4567"
+                            value={phoneNumber}
+                            onChange={(event) => {
+                              setPhoneNumber(event.target.value);
+                              setPhoneOtpVerified(false);
+                              setPhoneOtpSent(false);
+                              setPhoneOtpCooldown(0);
+                              setSignupData((prev) => ({ ...prev, phone: "", phoneProofToken: "" }));
+                            }}
+                          />
+                        </div>
+                        <p className="text-xs text-slate-500">
+                          Enter your number without the country code.
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        className="w-full"
+                        disabled={!phoneNumber.trim()}
+                        onClick={() => setSignupStep("phone-otp")}
+                      >
+                        Continue to phone verification
+                      </Button>
+                    </div>
+                  )}
+
+                  {signupStep === "phone-otp" && (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-semibold text-slate-900">Verify your phone</p>
+                          <p className="text-xs text-slate-500">{normalizePhoneNumber() || `${phoneDialCode}${phoneNumber}`}</p>
+                        </div>
+                        <Button type="button" variant="link" className="px-0 text-[#0089FF]" onClick={() => setSignupStep("phone")}>
+                          Change phone
+                        </Button>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Verification code</Label>
+                        <InputOTP maxLength={6} value={phoneOtpValue} onChange={setPhoneOtpValue}>
+                          <InputOTPGroup>
+                            {Array.from({ length: 6 }).map((_, index) => (
+                              <InputOTPSlot key={index} index={index} />
+                            ))}
+                          </InputOTPGroup>
+                        </InputOTP>
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            disabled={phoneOtpLoading || phoneOtpCooldown > 0}
+                            onClick={requestPhoneOtp}
+                          >
+                            {phoneOtpLoading ? "Sending..." : "Send OTP"}
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            disabled={!phoneOtpSent || phoneOtpLoading || phoneOtpCooldown > 0}
+                            onClick={requestPhoneOtp}
+                          >
+                            {phoneOtpLoading
+                              ? "Sending..."
+                              : phoneOtpCooldown > 0
+                                ? `Resend in ${formatCountdown(phoneOtpCooldown)}`
+                                : "Resend OTP"}
+                          </Button>
+                          <Button
+                            type="button"
+                            disabled={phoneOtpLoading || phoneOtpValue.length < 6}
+                            onClick={verifyPhoneOtp}
+                          >
+                            {phoneOtpLoading ? "Verifying..." : "Verify OTP"}
+                          </Button>
+                          {phoneOtpVerified && (
+                            <span className="text-sm font-medium text-emerald-600">Phone verified</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {signupStep === "details" && (
                     <div className="space-y-4">
-                      <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50/80 p-4">
-                        <div>
-                          <p className="text-sm font-semibold text-slate-900">Email verified</p>
-                          <p className="text-xs text-slate-500">{signupData.email}</p>
+                      <div className="grid gap-3 md:grid-cols-2">
+                        <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50/80 p-4">
+                          <div>
+                            <p className="text-sm font-semibold text-slate-900">Email verified</p>
+                            <p className="text-xs text-slate-500">{signupData.email}</p>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="link"
+                            className="px-0 text-[#0089FF]"
+                            onClick={() => setSignupStep("otp")}
+                          >
+                            Edit
+                          </Button>
                         </div>
-                        <Button
-                          type="button"
-                          variant="link"
-                          className="px-0 text-[#0089FF]"
-                          onClick={() => setSignupStep("otp")}
-                        >
-                          Back to verification
-                        </Button>
+                        <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50/80 p-4">
+                          <div>
+                            <p className="text-sm font-semibold text-slate-900">Phone verified</p>
+                            <p className="text-xs text-slate-500">{signupData.phone || normalizePhoneNumber()}</p>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="link"
+                            className="px-0 text-[#0089FF]"
+                            onClick={() => setSignupStep("phone")}
+                          >
+                            Edit
+                          </Button>
+                        </div>
                       </div>
 
                       <div className="space-y-2">
