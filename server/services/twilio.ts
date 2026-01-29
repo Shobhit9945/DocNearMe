@@ -36,16 +36,16 @@ const createTwilioRequest = async (path: string, body: Record<string, string>) =
 
 export const requestPhoneVerification = async (phone: string) => {
   const data = await createTwilioRequest("/Verifications", {
-    to: phone,
-    channel: "sms",
+    To: phone,
+    Channel: "sms",
   });
   return data.status ?? "unknown";
 };
 
 export const checkPhoneVerification = async (phone: string, code: string) => {
   const data = await createTwilioRequest("/VerificationCheck", {
-    to: phone,
-    code,
+    To: phone,
+    Code: code,
   });
   return data.status ?? "unknown";
 };

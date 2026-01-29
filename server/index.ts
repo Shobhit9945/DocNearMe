@@ -146,6 +146,18 @@ export async function createServer(): Promise<Express> {
       message: "Use POST /api/auth/request-otp to request a verification code.",
     });
   });
+  app.get("/api/auth/request-phone-otp", (_req, res) => {
+    res.status(405).json({
+      success: false,
+      message: "Use POST /api/auth/request-phone-otp to request a phone verification code.",
+    });
+  });
+  app.get("/api/auth/verify-phone-otp", (_req, res) => {
+    res.status(405).json({
+      success: false,
+      message: "Use POST /api/auth/verify-phone-otp to verify a phone code.",
+    });
+  });
   app.post("/api/auth/request-otp", handleRequestOtp);
   app.post("/api/auth/verify-otp", handleVerifyOtp);
   app.post("/api/auth/request-phone-otp", handleRequestPhoneOtp);
