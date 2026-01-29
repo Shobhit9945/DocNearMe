@@ -63,20 +63,23 @@ const formatAppointmentTime = (appointment: AppointmentResponseItem, language: s
   return `${dateLabel} · ${slotLabel}`;
 };
 
-const formatIntakeValue = (value: IntakeAnswerValue) => {
+const formatIntakeValue = (
+  value: IntakeAnswerValue,
+  t: (key: string, fallback?: string) => string,
+) => {
   if (Array.isArray(value)) {
-    return value.length ? value.join(", ") : "Not provided";
+    return value.length ? value.join(", ") : t("Not provided");
   }
   if (typeof value === "boolean") {
-    return value ? "Yes" : "No";
+    return value ? t("Yes") : t("No");
   }
   if (typeof value === "number") {
-    return Number.isNaN(value) ? "Not provided" : String(value);
+    return Number.isNaN(value) ? t("Not provided") : String(value);
   }
   if (typeof value === "string") {
-    return value.trim() ? value : "Not provided";
+    return value.trim() ? value : t("Not provided");
   }
-  return "Not provided";
+  return t("Not provided");
 };
 
 export default function ClinicAppointments() {
@@ -568,11 +571,21 @@ export default function ClinicAppointments() {
                 </div>
                 <div>
                   <p className="text-xs uppercase tracking-wide text-slate-500">{t("Country")}</p>
-                  <p className="font-medium">{patientDetails.patient.country || t("Not provided")}</p>
+                  <p className="font-medium">
+                    <TranslatedText
+                      text={patientDetails.patient.country || t("Not provided")}
+                      inline
+                    />
+                  </p>
                 </div>
                 <div>
                   <p className="text-xs uppercase tracking-wide text-slate-500">{t("Visa type")}</p>
-                  <p className="font-medium">{patientDetails.patient.visaType || t("Not provided")}</p>
+                  <p className="font-medium">
+                    <TranslatedText
+                      text={patientDetails.patient.visaType || t("Not provided")}
+                      inline
+                    />
+                  </p>
                 </div>
               </div>
               <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 space-y-2">
@@ -580,7 +593,9 @@ export default function ClinicAppointments() {
                 {patientDetails.sharedRecord ? (
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
-                      <p className="font-medium">{patientDetails.sharedRecord.name}</p>
+                      <p className="font-medium">
+                        <TranslatedText text={patientDetails.sharedRecord.name} inline />
+                      </p>
                       <p className="text-xs text-slate-500">
                         {patientDetails.sharedRecord.type} ·{" "}
                         {Math.round(patientDetails.sharedRecord.size / 1024)} KB
@@ -608,8 +623,12 @@ export default function ClinicAppointments() {
                     <div className="space-y-2">
                       {patientDetails.intakeResponse.responses.map((response) => (
                         <div key={response.questionId} className="text-sm text-slate-700">
-                          <p className="font-medium text-slate-800">{response.label}</p>
-                          <p>{formatIntakeValue(response.value)}</p>
+                          <p className="font-medium text-slate-800">
+                            <TranslatedText text={response.label} inline />
+                          </p>
+                          <p>
+                            <TranslatedText text={formatIntakeValue(response.value, t)} inline />
+                          </p>
                         </div>
                       ))}
                     </div>

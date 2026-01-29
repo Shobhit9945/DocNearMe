@@ -15,6 +15,7 @@ import type {
   IntakeQuestion,
   IntakeQuestionType,
 } from "@shared/api";
+import { TranslatedText } from "@/components/TranslatedText";
 
 const QUESTION_TYPES: { value: IntakeQuestionType; label: string; helper: string }[] = [
   { value: "short-text", label: "Short text", helper: "One-line answer field." },
@@ -529,12 +530,16 @@ export default function ClinicIntakeForm() {
                 {questions.map((question) => (
                   <div key={`preview-${question.id}`} className="space-y-2">
                     <div className="flex items-center justify-between text-sm font-medium text-gray-800">
-                      <span>{question.label || t("Untitled question")}</span>
+                      <span>
+                        <TranslatedText text={question.label || t("Untitled question")} inline />
+                      </span>
                       <span className="text-xs text-gray-500">
                         {question.required ? t("Required") : t("Optional")}
                       </span>
                     </div>
-                    <div className="text-xs text-gray-500">{question.description || t("No help text")}</div>
+                    <div className="text-xs text-gray-500">
+                      <TranslatedText text={question.description || t("No help text")} inline />
+                    </div>
                     <div className="rounded-lg border border-dashed border-gray-200 bg-white px-3 py-2 text-xs text-gray-500">
                       {t("Answer type")}: {t(QUESTION_TYPES.find((type) => type.value === question.questionType)?.label ?? "")}
                     </div>

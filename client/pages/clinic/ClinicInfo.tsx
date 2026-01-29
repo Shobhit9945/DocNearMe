@@ -6,6 +6,7 @@ import { getClinicAuthHeader, getClinicSession } from "@/lib/clinic-auth";
 import { useClinicProfile } from "@/lib/clinic-data";
 import { useTranslation } from "@/lib/i18n";
 import { getDateKey, normalizeClinicHours } from "@/lib/scheduling";
+import { TranslatedText } from "@/components/TranslatedText";
 import type { ClinicBookingClosure, ClinicProfileUpdateRequest } from "@shared/api";
 
 const DAYS_OF_WEEK = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
@@ -39,6 +40,11 @@ export default function ClinicInfo() {
   const [otherServices, setOtherServices] = useState("");
   const [photoUrls, setPhotoUrls] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+
+  const specializationLabels = useMemo(
+    () => (clinic?.specializations ?? []).map((spec) => t(spec)).join(", "),
+    [clinic?.specializations, t],
+  );
 
   useEffect(() => {
     if (!clinic) return;
@@ -187,16 +193,32 @@ export default function ClinicInfo() {
             </label>
             <div className="rounded-md border border-dashed border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
               {(clinic?.specializations ?? []).length > 0
-                ? clinic?.specializations?.join(", ")
+                ? specializationLabels
                 : t("Add doctor profiles to populate specialties.")}
             </div>
           </div>
           <div>
             <label className="text-sm font-medium text-gray-700 block mb-2">{t("Next availability")}</label>
             <div className="rounded-md border border-dashed border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
-              {clinic?.nextAvailability ?? t("Schedule updates after you set hours and closures.")}
+              {clinic?.nextAvailability ? (
+                <TranslatedText text={clinic.nextAvailability} inline />
+              ) : (
+                t("Schedule updates after you set hours and closures.")
+              )}
             </div>
           </div>
+          {(name.trim() || location.trim()) && (
+            <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+              <p className="text-xs uppercase tracking-wide text-slate-500">{t("Clinic name")}</p>
+              <p className="font-medium text-slate-700">
+                <TranslatedText text={name.trim() || t("Not provided")} />
+              </p>
+              <p className="mt-3 text-xs uppercase tracking-wide text-slate-500">{t("Address")}</p>
+              <p className="font-medium text-slate-700">
+                <TranslatedText text={location.trim() || t("Not provided")} inline />
+              </p>
+            </div>
+          )}
           <Button onClick={handleSave} disabled={isSaving}>
             {isSaving ? t("Saving...") : t("Save")}
           </Button>
@@ -330,7 +352,15 @@ export default function ClinicInfo() {
                     <span>
                       {closure.startDate}
                       {closure.startTime ? ` ${closure.startTime}` : ""} → {closure.endDate}
-                      {closure.endTime ? ` ${closure.endTime}` : ""} {closure.reason ? `(${closure.reason})` : ""}
+                      {closure.endTime ? ` ${closure.endTime}` : ""}
+                      {closure.reason ? (
+                        <>
+                          {" "}
+                          (
+                          <TranslatedText text={closure.reason} inline showOriginal={false} />
+                          )
+                        </>
+                      ) : null}
                     </span>
                     <Button
                       type="button"

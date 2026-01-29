@@ -1963,6 +1963,8 @@ const baseTranslations: Record<string, TranslationEntry> = {
   "No document shared.": { ja: "共有書類はありません。" },
   Close: { ja: "閉じる" },
   Tel: { ja: "電話" },
+  Yes: { ja: "はい" },
+  No: { ja: "いいえ" },
   "Not provided": { ja: "未提供" },
   Selected: { ja: "選択中" },
   "Delete appointment record": { ja: "予約記録を削除" },
