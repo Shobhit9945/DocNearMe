@@ -84,7 +84,7 @@ export const formatAvailabilityForLanguage = (
   result = result.replace(/(\d{1,2}):(\d{2})\s*(AM|PM)/gi, (_match, hours, minutes, period) =>
     formatSlotForLanguage(`${hours}:${minutes} ${period}`, language),
   );
-  result = result.replace(/(\d{1,2}):(\d{2})/g, (_match, hours, minutes) =>
+  result = result.replace(/(\d{1,2}):(\d{2})(?!\s*(?:AM|PM))/gi, (_match, hours, minutes) =>
     language === "ja" ? format24HourTime(hours, minutes) : formatSlotForLanguage(`${hours}:${minutes}`, language),
   );
 
