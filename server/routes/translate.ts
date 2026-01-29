@@ -5,8 +5,6 @@ const normalizeLanguageInput = (value: unknown) => {
   if (typeof value !== "string") return value;
   const normalized = value.trim().toLowerCase();
   if (normalized === "es-mx") return "es";
-  if (normalized === "zh-cn" || normalized === "zh-tw") return "zh";
-  if (normalized === "tl") return "fil";
   if (normalized === "jp") return "ja";
   return normalized;
 };
@@ -16,21 +14,12 @@ const normalizeTextInput = (value: unknown) => {
   return value.trim();
 };
 
-const languageSchema = z.preprocess(
-  normalizeLanguageInput,
-  z.enum(["en", "ja", "ko", "id", "my", "bn", "ar", "hi", "th", "fil", "zh", "es", "vi"]),
-);
+const languageSchema = z.preprocess(normalizeLanguageInput, z.enum(["en", "ja", "vi", "id", "es"]));
 
 const translationRequestSchema = z.object({
-  text: z.preprocess(normalizeTextInput, z.string().min(1).max(5000)),
-  targetLanguage: languageSchema,
-  sourceLanguage: z
-    .preprocess(
-      normalizeLanguageInput,
-      z.enum(["auto", "en", "ja", "ko", "id", "my", "bn", "ar", "hi", "th", "fil", "zh", "es", "vi"]),
-    )
-    .optional()
-    .default("auto"),
+  text: z.string().trim().min(1).max(5000),
+  targetLanguage: z.enum(["en", "ja", "vi", "id", "es"]),
+  sourceLanguage: z.enum(["auto", "en", "ja", "vi", "id", "es"]).optional().default("auto"),
 });
 
 const parseRequestBody = (body: unknown): unknown => {
