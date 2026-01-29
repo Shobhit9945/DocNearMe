@@ -239,10 +239,13 @@ const PatientAuth = () => {
       setError("Please enter a valid email address.");
       return;
     }
+    if (!captchaToken) {
+      setError("Please complete the captcha before checking your email.");
+      return;
+    }
 
     setCheckEmailLoading(true);
     setStatus(initialStatus);
-
     try {
       const payload: CheckEmailRequest = { email: signupData.email };
       const response = await fetch("/api/auth/check-email", {
@@ -320,7 +323,8 @@ const PatientAuth = () => {
       return;
     }
     if (!captchaToken) {
-      setError("Please complete the captcha before requesting a verification code.");
+      setError("Captcha expired. Please complete it again to send a verification code.");
+      setSignupStep("email");
       return;
     }
 
@@ -329,7 +333,6 @@ const PatientAuth = () => {
     let shouldResetCaptcha = false;
 
     try {
-      shouldResetCaptcha = true;
       const payload: RequestOtpRequest = { email: signupData.email, captchaToken };
       const response = await fetch("/api/auth/request-otp", {
         method: "POST",
@@ -337,6 +340,7 @@ const PatientAuth = () => {
         body: JSON.stringify(payload),
       });
 
+      shouldResetCaptcha = true;
       const data = (await response.json()) as OtpResponse;
       if (!response.ok || !data.success) {
         setError(data.message || "Failed to send verification code.");
@@ -352,11 +356,10 @@ const PatientAuth = () => {
     } catch (error) {
       setError(error instanceof Error ? error.message : "Network error. Please try again.");
     } finally {
-      setOtpLoading(false);
       if (shouldResetCaptcha) {
         setCaptchaToken(null);
-        recaptchaRef.current?.reset();
       }
+      setOtpLoading(false);
     }
   };
 
@@ -690,7 +693,7 @@ const PatientAuth = () => {
                       <Button
                         type="button"
                         className="w-full"
-                        disabled={checkEmailLoading}
+                        disabled={checkEmailLoading || !captchaToken}
                         onClick={checkEmailAvailability}
                       >
                         {checkEmailLoading ? "Checking..." : "Check email"}
@@ -741,7 +744,7 @@ const PatientAuth = () => {
                           <Button
                             type="button"
                             variant="secondary"
-                            disabled={otpLoading || otpCooldown > 0 || !captchaToken}
+                            disabled={otpLoading || otpCooldown > 0}
                             onClick={requestOtp}
                           >
                             {otpLoading ? "Sending..." : "Send OTP"}
@@ -749,7 +752,7 @@ const PatientAuth = () => {
                           <Button
                             type="button"
                             variant="secondary"
-                            disabled={!otpSent || otpLoading || otpCooldown > 0 || !captchaToken}
+                            disabled={!otpSent || otpLoading || otpCooldown > 0}
                             onClick={requestOtp}
                           >
                             {otpLoading
