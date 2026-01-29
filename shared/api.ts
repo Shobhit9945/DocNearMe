@@ -475,6 +475,16 @@ export interface ClinicDoctorsUpdateRequest {
   doctors: ClinicDoctor[];
 }
 
+export interface TranslateRequest {
+  text: string;
+  targetLanguage: "en" | "ja" | "vi" | "id" | "es";
+  sourceLanguage?: "auto" | "en" | "ja" | "vi" | "id" | "es";
+}
+
+export interface TranslateResponse {
+  translation: string;
+}
+
 export interface AdminAuthCheckResponse {
   ok: boolean;
 }

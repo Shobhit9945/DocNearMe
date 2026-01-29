@@ -8,6 +8,7 @@ import { useClinicDoctors, useClinicProfile } from "@/lib/clinic-data";
 import { useTranslation } from "@/lib/i18n";
 import { GoogleReviews } from "@/components/GoogleReviews";
 import { useGooglePlaceDetails } from "@/hooks/useGooglePlaceDetails";
+import { TranslatedText } from "@/components/TranslatedText";
 import { CalendarClock, MapPin, Star, Users } from "lucide-react";
 import type {
   ClinicReviewListResponse,
@@ -81,9 +82,11 @@ export default function ClinicDetail() {
         </button>
         <div className="mt-4 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="space-y-2">
-            <h1 className="text-3xl font-bold text-[#002D55]">{t(clinic.name)}</h1>
+            <h1 className="text-3xl font-bold text-[#002D55]">
+              <TranslatedText text={clinic.name} />
+            </h1>
             <p className="flex items-center gap-2 text-sm text-slate-600">
-              <MapPin className="h-4 w-4 text-[#0089FF]" /> {clinic.location}
+              <MapPin className="h-4 w-4 text-[#0089FF]" /> <TranslatedText text={clinic.location} inline />
             </p>
             <div className="flex flex-wrap items-center gap-4 text-sm text-slate-500">
               <span className="flex items-center gap-1 text-[#B06B00]">
@@ -102,7 +105,7 @@ export default function ClinicDetail() {
             </div>
           </div>
           <div className="overflow-hidden rounded-3xl border border-slate-100 shadow-sm lg:w-[320px]">
-            <img src={clinic.image} alt={t(clinic.name)} className="h-48 w-full object-cover" />
+            <img src={clinic.image} alt={clinic.name} className="h-48 w-full object-cover" />
           </div>
         </div>
       </header>
@@ -148,7 +151,9 @@ export default function ClinicDetail() {
                           key={doctor.id}
                           className="rounded-2xl border border-slate-100 bg-[#F8FBFF] p-4"
                         >
-                          <p className="text-base font-semibold text-[#002D55]">{t(doctor.name)}</p>
+                          <p className="text-base font-semibold text-[#002D55]">
+                            <TranslatedText text={doctor.name} />
+                          </p>
                           <p className="text-sm text-slate-500">{doctor.languages.map((language) => t(language)).join(", ")}</p>
                           <p className="text-sm text-slate-500">
                             {t("Next availability")}: {doctor.nextAvailable}

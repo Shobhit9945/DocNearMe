@@ -38,6 +38,7 @@ import { BottomNav } from "@/components/BottomNav";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
+import { TranslatedText } from "@/components/TranslatedText";
 import { Textarea } from "@/components/ui/textarea";
 import { useAllDoctors, useClinics } from "@/lib/clinic-data";
 import {
@@ -1536,7 +1537,7 @@ export default function Appointment() {
                   <option value="">Select a clinic</option>
                   {clinicsForSpecialization.map((clinic) => (
                     <option key={clinic.id} value={clinic.id}>
-                      {t(clinic.name)}
+                      <TranslatedText text={clinic.name} asText />
                     </option>
                   ))}
                 </select>
@@ -1559,7 +1560,7 @@ export default function Appointment() {
               </div>
                 {selectedDoctor ? (
                 <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full">
-                  Selected: {t(selectedDoctor.name)}
+                  Selected: <TranslatedText text={selectedDoctor.name} inline />
                 </span>
               ) : null}
             </div>
@@ -1595,7 +1596,9 @@ export default function Appointment() {
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                    <p className="text-base font-semibold text-slate-900">{t(doctor.name)}</p>
+                    <p className="text-base font-semibold text-slate-900">
+                      <TranslatedText text={doctor.name} />
+                    </p>
                     <p className="text-sm text-slate-600">{t(doctor.specialization)}</p>
                   </div>
                       <div className="flex items-center gap-1 text-sm font-semibold text-slate-700">
