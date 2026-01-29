@@ -1,11 +1,54 @@
 import { RequestHandler } from "express";
 import { z } from "zod";
 
+const normalizeLanguageInput = (value: unknown) => {
+  if (typeof value !== "string") return value;
+  const normalized = value.trim().toLowerCase();
+  if (normalized === "es-mx") return "es";
+  if (normalized === "jp") return "ja";
+  return normalized;
+};
+
+const normalizeTextInput = (value: unknown) => {
+  if (typeof value !== "string") return value;
+  return value.trim();
+};
+
+const languageSchema = z.preprocess(normalizeLanguageInput, z.enum(["en", "ja", "vi", "id", "es"]));
+
 const translationRequestSchema = z.object({
-  text: z.string().trim().min(1).max(500),
-  targetLanguage: z.enum(["en", "ja", "vi", "id", "es"]),
-  sourceLanguage: z.enum(["auto", "en", "ja", "vi", "id", "es"]).optional().default("auto"),
+  text: z.preprocess(normalizeTextInput, z.string().min(1).max(5000)),
+  targetLanguage: languageSchema,
+  sourceLanguage: z
+    .preprocess(normalizeLanguageInput, z.enum(["auto", "en", "ja", "vi", "id", "es"]))
+    .optional()
+    .default("auto"),
 });
+
+const parseRequestBody = (body: unknown): unknown => {
+  if (body instanceof Buffer) {
+    return parseRequestBody(body.toString("utf8"));
+  }
+  if (body instanceof Uint8Array) {
+    return parseRequestBody(Buffer.from(body).toString("utf8"));
+  }
+  if (body && typeof body === "object") return body;
+  if (typeof body !== "string") return {};
+
+  const trimmed = body.trim();
+  if (!trimmed) return {};
+
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    const params = new URLSearchParams(trimmed);
+    const payload: Record<string, string> = {};
+    params.forEach((value, key) => {
+      payload[key] = value;
+    });
+    return payload;
+  }
+};
 
 const translateBaseUrl = process.env.DEEPL_API_URL ?? "https://api-free.deepl.com/v2/translate";
 const translateApiKey = process.env.DEEPL;
@@ -29,7 +72,7 @@ const mapDeepLLanguage = (language: "en" | "ja" | "vi" | "id" | "es") => {
 
 export const handleTranslate: RequestHandler = async (req, res, next) => {
   try {
-    const parsed = translationRequestSchema.safeParse(req.body);
+    const parsed = translationRequestSchema.safeParse(parseRequestBody(req.body));
     if (!parsed.success) {
       return res.status(400).json({
         error: "Invalid translation request",
