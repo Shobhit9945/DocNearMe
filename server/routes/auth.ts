@@ -12,15 +12,19 @@ import {
   CheckEmailResponse,
   LoginRequest,
   OtpResponse,
+  PhoneOtpResponse,
+  RequestPhoneOtpRequest,
   RequestOtpRequest,
   RequestPasswordResetRequest,
   ResetPasswordRequest,
   ResetPasswordResponse,
   SignupRequest,
   VerifyOtpRequest,
+  VerifyPhoneOtpRequest,
 } from "@shared/api";
 import { buildOtpEmail, generateOtpCode, getOtpTtlMinutes, hashOtp, verifyOtp } from "../services/otp";
 import { sendEmail } from "../services/mailer";
+import { checkPhoneVerification, requestPhoneVerification } from "../services/twilio";
 
 const emailSchema = z.string().trim().toLowerCase().email().max(254);
 const passwordSchema = z.string().min(8).max(128);
@@ -32,6 +36,8 @@ const dateOfBirthSchema = z
 const nationalitySchema = z.string().trim().min(2).max(80);
 const visaTypeSchema = z.string().trim().min(2).max(80);
 const consentAcceptedSchema = z.literal(true);
+const phoneSchema = z.string().trim().regex(/^\+\d{7,15}$/);
+const phoneProofSchema = z.string().trim().min(1);
 const photoSchema = z
   .object({
     dataUrl: z.string().min(20),
@@ -55,6 +61,8 @@ const signupSchema = z.object({
   dateOfBirth: dateOfBirthSchema,
   nationality: nationalitySchema,
   visaType: visaTypeSchema,
+  phone: phoneSchema,
+  phoneProofToken: phoneProofSchema,
   photo: photoSchema,
   consentAccepted: consentAcceptedSchema,
 });
@@ -80,6 +88,15 @@ const checkEmailSchema = z.object({
 
 const verifyOtpSchema = z.object({
   email: emailSchema,
+  otp: z.string().trim().length(6),
+});
+
+const requestPhoneOtpSchema = z.object({
+  phone: phoneSchema,
+});
+
+const verifyPhoneOtpSchema = z.object({
+  phone: phoneSchema,
   otp: z.string().trim().length(6),
 });
 
@@ -150,6 +167,25 @@ const verifyCaptchaProof = (token: string, email: string) => {
   try {
     const payload = jwt.verify(token, jwtSecret) as { sub?: string; scope?: string };
     return payload.sub === email && payload.scope === "captcha";
+  } catch {
+    return false;
+  }
+};
+
+const signPhoneProof = (phone: string) =>
+  jwt.sign(
+    {
+      sub: phone,
+      scope: "phone",
+    },
+    jwtSecret,
+    { expiresIn: captchaProofExpiry },
+  );
+
+const verifyPhoneProof = (token: string, phone: string) => {
+  try {
+    const payload = jwt.verify(token, jwtSecret) as { sub?: string; scope?: string };
+    return payload.sub === phone && payload.scope === "phone";
   } catch {
     return false;
   }
@@ -483,11 +519,83 @@ export const handleVerifyOtp: RequestHandler = async (req, res, next) => {
   }
 };
 
+export const handleRequestPhoneOtp: RequestHandler = async (req, res, next) => {
+  try {
+    const payload = requestPhoneOtpSchema.parse(parseRequestBody(req.body)) as RequestPhoneOtpRequest;
+    const status = await requestPhoneVerification(payload.phone);
+    if (status !== "pending") {
+      return res.status(400).json({
+        success: false,
+        message: "Unable to send verification code. Please try again.",
+      } satisfies OtpResponse);
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Verification code sent to your phone.",
+    } satisfies OtpResponse);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid phone number.",
+      } satisfies OtpResponse);
+    }
+    if (error instanceof Error) {
+      return res.status(400).json({
+        success: false,
+        message: error.message || "Unable to send verification code.",
+      } satisfies OtpResponse);
+    }
+    return next(error);
+  }
+};
+
+export const handleVerifyPhoneOtp: RequestHandler = async (req, res, next) => {
+  try {
+    const payload = verifyPhoneOtpSchema.parse(parseRequestBody(req.body)) as VerifyPhoneOtpRequest;
+    const status = await checkPhoneVerification(payload.phone, payload.otp);
+    if (status !== "approved") {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid verification code.",
+      } satisfies PhoneOtpResponse);
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Phone number verified successfully.",
+      phoneProofToken: signPhoneProof(payload.phone),
+    } satisfies PhoneOtpResponse);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid phone verification payload.",
+      } satisfies PhoneOtpResponse);
+    }
+    if (error instanceof Error) {
+      return res.status(400).json({
+        success: false,
+        message: error.message || "Verification failed.",
+      } satisfies PhoneOtpResponse);
+    }
+    return next(error);
+  }
+};
+
 export const handleSignup: RequestHandler = async (req, res, next) => {
   try {
     const payload = signupSchema.parse(parseRequestBody(req.body)) as SignupRequest;
     const patients = await getPatientsCollection();
     const normalizedEmail = payload.email.toLowerCase();
+    const phoneProofValid = verifyPhoneProof(payload.phoneProofToken, payload.phone);
+    if (!phoneProofValid) {
+      return res.status(400).json({
+        error: "Phone verification required before signup.",
+        detail: "phone_verification_required",
+      });
+    }
 
     const existing = await patients.findOne({ email: normalizedEmail });
     if (existing) {
@@ -510,6 +618,7 @@ export const handleSignup: RequestHandler = async (req, res, next) => {
       name: payload.name,
       email: normalizedEmail,
       passwordHash,
+      phone: payload.phone,
       dateOfBirth: payload.dateOfBirth,
       nationality: payload.nationality,
       visaType: payload.visaType,
