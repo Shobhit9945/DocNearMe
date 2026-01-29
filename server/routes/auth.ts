@@ -65,7 +65,7 @@ const loginSchema = z.object({
 
 const requestOtpSchema = z.object({
   email: emailSchema,
-  captchaToken: z.string().trim().min(1),
+  captchaProofToken: z.string().trim().min(1),
 });
 
 const requestPasswordResetSchema = z.object({
@@ -74,6 +74,7 @@ const requestPasswordResetSchema = z.object({
 
 const checkEmailSchema = z.object({
   email: emailSchema,
+  captchaToken: z.string().trim().min(1),
 });
 
 const verifyOtpSchema = z.object({
@@ -89,6 +90,7 @@ const resetPasswordSchema = z.object({
 
 const jwtSecret = process.env.AUTH_JWT_SECRET ?? process.env.JWT_SECRET ?? "dev-secret-change-me";
 const jwtExpiry = process.env.AUTH_JWT_EXPIRES_IN ?? "7d";
+const captchaProofExpiry = process.env.CAPTCHA_PROOF_EXPIRES_IN ?? "5m";
 
 const getUserId = (user: PatientUser) => {
   if (user._id instanceof ObjectId) return user._id.toString();
@@ -112,6 +114,25 @@ const signToken = (user: PatientUser) =>
     jwtSecret,
     { expiresIn: jwtExpiry },
   );
+
+const signCaptchaProof = (email: string) =>
+  jwt.sign(
+    {
+      sub: email,
+      scope: "captcha",
+    },
+    jwtSecret,
+    { expiresIn: captchaProofExpiry },
+  );
+
+const verifyCaptchaProof = (token: string, email: string) => {
+  try {
+    const payload = jwt.verify(token, jwtSecret) as { sub?: string; scope?: string };
+    return payload.sub === email && payload.scope === "captcha";
+  } catch {
+    return false;
+  }
+};
 
 const parseRequestBody = (body: unknown): unknown => {
   if (body instanceof Buffer) {
@@ -188,6 +209,13 @@ export const handleRequestOtp: RequestHandler = async (req, res, next) => {
   try {
     const payload = requestOtpSchema.parse(parseRequestBody(req.body)) as RequestOtpRequest;
     const normalizedEmail = payload.email.toLowerCase();
+    const captchaProofValid = verifyCaptchaProof(payload.captchaProofToken, normalizedEmail);
+    if (!captchaProofValid) {
+      return res.status(400).json({
+        success: false,
+        message: "Captcha verification expired. Please check your email again.",
+      } satisfies OtpResponse);
+    }
 
     const patients = await getPatientsCollection();
     const existing = await patients.findOne({ email: normalizedEmail });
@@ -195,14 +223,6 @@ export const handleRequestOtp: RequestHandler = async (req, res, next) => {
       return res.status(409).json({
         success: false,
         message: "An account with that email already exists.",
-      } satisfies OtpResponse);
-    }
-
-    const captchaCheck = await verifyRecaptcha(payload.captchaToken, req.ip);
-    if (!captchaCheck.success) {
-      return res.status(400).json({
-        success: false,
-        message: captchaCheck.message ?? "Captcha verification failed. Please try again.",
       } satisfies OtpResponse);
     }
 
@@ -268,12 +288,23 @@ export const handleCheckEmail: RequestHandler = async (req, res, next) => {
   try {
     const payload = checkEmailSchema.parse(parseRequestBody(req.body)) as CheckEmailRequest;
     const normalizedEmail = payload.email.toLowerCase();
+    const captchaCheck = await verifyRecaptcha(payload.captchaToken, req.ip);
+    if (!captchaCheck.success) {
+      return res.status(400).json({
+        exists: false,
+        message: captchaCheck.message ?? "Captcha verification failed. Please try again.",
+      } satisfies CheckEmailResponse);
+    }
     const patients = await getPatientsCollection();
     const existing = await patients.findOne({ email: normalizedEmail });
 
     const response: CheckEmailResponse = existing
       ? { exists: true, message: "An account with that email already exists." }
-      : { exists: false, message: "Email is available for signup." };
+      : {
+          exists: false,
+          message: "Email is available for signup.",
+          captchaProofToken: signCaptchaProof(normalizedEmail),
+        };
 
     return res.status(200).json(response);
   } catch (error) {
