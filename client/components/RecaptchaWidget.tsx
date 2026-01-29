@@ -26,6 +26,7 @@ export const RecaptchaWidget = forwardRef<RecaptchaWidgetHandle, RecaptchaWidget
   ({ siteKey, onVerify, onExpire, onError }, ref) => {
     const containerRef = useRef<HTMLDivElement | null>(null);
     const widgetIdRef = useRef<number | null>(null);
+    const retryTimeoutRef = useRef<number | null>(null);
     const verifyRef = useRef(onVerify);
     const expireRef = useRef(onExpire);
     const errorRef = useRef(onError);
@@ -46,6 +47,17 @@ export const RecaptchaWidget = forwardRef<RecaptchaWidgetHandle, RecaptchaWidget
 
     useEffect(() => {
       let cancelled = false;
+
+      const scheduleRender = (retries = 20) => {
+        if (cancelled) return;
+        if (!containerRef.current) return;
+        if (window.grecaptcha?.render) {
+          renderWidget();
+          return;
+        }
+        if (retries <= 0) return;
+        retryTimeoutRef.current = window.setTimeout(() => scheduleRender(retries - 1), 150);
+      };
 
       const handleVerify = (token: string) => {
         if (cancelled) return;
@@ -85,7 +97,8 @@ export const RecaptchaWidget = forwardRef<RecaptchaWidgetHandle, RecaptchaWidget
 
         const existingScript = document.querySelector<HTMLScriptElement>("script[data-recaptcha]");
         if (existingScript) {
-          existingScript.addEventListener("load", renderWidget, { once: true });
+          existingScript.addEventListener("load", () => scheduleRender(), { once: true });
+          scheduleRender();
           return;
         }
 
@@ -94,14 +107,18 @@ export const RecaptchaWidget = forwardRef<RecaptchaWidgetHandle, RecaptchaWidget
         script.async = true;
         script.defer = true;
         script.dataset.recaptcha = "true";
-        script.addEventListener("load", renderWidget, { once: true });
+        script.addEventListener("load", () => scheduleRender(), { once: true });
         document.body.appendChild(script);
+        scheduleRender();
       };
 
       ensureScript();
 
       return () => {
         cancelled = true;
+        if (retryTimeoutRef.current !== null) {
+          window.clearTimeout(retryTimeoutRef.current);
+        }
         if (widgetIdRef.current !== null && window.grecaptcha?.reset) {
           window.grecaptcha.reset(widgetIdRef.current);
         }
