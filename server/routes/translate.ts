@@ -49,22 +49,67 @@ const parseRequestBody = (body: unknown): unknown => {
 
 const translateBaseUrl = process.env.DEEPL_API_URL ?? "https://api-free.deepl.com/v2/translate";
 const translateApiKey = process.env.DEEPL;
+const googleTranslateBaseUrl = "https://translate.googleapis.com/translate_a/single";
 
-const mapDeepLLanguage = (language: "en" | "ja" | "vi" | "id" | "es") => {
+const mapDeepLLanguage = (language: "en" | "ja" | "ko" | "id" | "ar" | "hi" | "th" | "zh" | "vi" | "es") => {
   switch (language) {
     case "en":
       return "EN";
     case "ja":
       return "JA";
+    case "ko":
+      return "KO";
     case "vi":
       return "VI";
     case "id":
       return "ID";
+    case "ar":
+      return "AR";
+    case "hi":
+      return "HI";
+    case "th":
+      return "TH";
+    case "zh":
+      return "ZH";
     case "es":
       return "ES";
     default:
       return "EN";
   }
+};
+
+const mapGoogleLanguage = (
+  language: "en" | "ja" | "ko" | "id" | "my" | "bn" | "ar" | "hi" | "th" | "fil" | "zh" | "es" | "vi",
+) => {
+  if (language === "fil") return "tl";
+  return language;
+};
+
+const isDeepLSupported = (
+  language: "en" | "ja" | "ko" | "id" | "my" | "bn" | "ar" | "hi" | "th" | "fil" | "zh" | "es" | "vi",
+) => ["en", "ja", "ko", "id", "ar", "hi", "th", "zh", "es", "vi"].includes(language);
+
+const translateWithGoogle = async (
+  text: string,
+  targetLanguage: "en" | "ja" | "ko" | "id" | "my" | "bn" | "ar" | "hi" | "th" | "fil" | "zh" | "es" | "vi",
+  sourceLanguage: "auto" | "en" | "ja" | "ko" | "id" | "my" | "bn" | "ar" | "hi" | "th" | "fil" | "zh" | "es" | "vi",
+) => {
+  const target = mapGoogleLanguage(targetLanguage);
+  const source = sourceLanguage === "auto" ? "auto" : mapGoogleLanguage(sourceLanguage);
+  const url = new URL(googleTranslateBaseUrl);
+  url.searchParams.set("client", "gtx");
+  url.searchParams.set("sl", source);
+  url.searchParams.set("tl", target);
+  url.searchParams.set("dt", "t");
+  url.searchParams.set("q", text);
+  const response = await fetch(url.toString());
+  if (!response.ok) {
+    const errorBody = await response.text();
+    throw new Error(errorBody);
+  }
+  const data = (await response.json()) as Array<Array<[string]>> | undefined;
+  const translated = data?.[0]?.map((chunk) => chunk[0]).join("").trim();
+  return translated || text;
 };
 
 export const handleTranslate: RequestHandler = async (req, res, next) => {
@@ -77,18 +122,24 @@ export const handleTranslate: RequestHandler = async (req, res, next) => {
       });
     }
 
-    if (!translateApiKey) {
-      return res.status(500).json({
-        error: "Missing DeepL API key",
-        detail: "missing_deepl_key",
-      });
-    }
-
     const { text, targetLanguage, sourceLanguage } = parsed.data;
+
+    if (!translateApiKey || !isDeepLSupported(targetLanguage)) {
+      try {
+        const translation = await translateWithGoogle(text, targetLanguage, sourceLanguage);
+        return res.json({ translation });
+      } catch (error) {
+        return res.status(502).json({
+          error: "Translation service unavailable",
+          detail: "translation_failed",
+          message: error instanceof Error ? error.message : "Google translation failed",
+        });
+      }
+    }
     const params = new URLSearchParams();
     params.append("text", text);
     params.append("target_lang", mapDeepLLanguage(targetLanguage));
-    if (sourceLanguage && sourceLanguage !== "auto") {
+    if (sourceLanguage && sourceLanguage !== "auto" && isDeepLSupported(sourceLanguage)) {
       params.append("source_lang", mapDeepLLanguage(sourceLanguage));
     }
 
