@@ -2,14 +2,15 @@ import { BottomNav } from "@/components/BottomNav";
 import { PageScaffold } from "@/components/PageScaffold";
 import { Search as SearchIcon, Stethoscope, Building2, Star } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
-import { useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAllDoctors, useClinics } from "@/lib/clinic-data";
 import { getSpecializationLabel, matchSpecialization, SPECIALIZATION_OPTIONS } from "@/lib/specializations";
 
 export default function Search() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [query, setQuery] = useState("");
   const [specializationFilter, setSpecializationFilter] = useState("all");
   const [languageFilter, setLanguageFilter] = useState("all");
@@ -18,6 +19,25 @@ export default function Search() {
   const { data: doctorsData } = useAllDoctors();
   const doctorScrollerRef = useRef<HTMLDivElement | null>(null);
   const clinicScrollerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const qParam = searchParams.get("q") ?? "";
+    if (qParam !== query) {
+      setQuery(qParam);
+    }
+  }, [query, searchParams]);
+
+  useEffect(() => {
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current);
+      if (query.trim()) {
+        next.set("q", query.trim());
+      } else {
+        next.delete("q");
+      }
+      return next;
+    }, { replace: true });
+  }, [query, setSearchParams]);
 
   const normalizedQuery = query.trim().toLowerCase();
   const specializations = useMemo(() => {
