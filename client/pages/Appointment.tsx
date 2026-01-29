@@ -48,6 +48,7 @@ import {
   SPECIALIZATION_OPTIONS,
 } from "@/lib/specializations";
 import { useTranslation } from "@/lib/i18n";
+import { formatAvailabilityForLanguage, getLocaleForLanguage } from "@/lib/time-format";
 import { getDateKey, isDateWithinClosure, normalizeClinicHours } from "@/lib/scheduling";
 import { arrayBufferToBase64, base64ToArrayBuffer, getStoredVaultKey } from "@/lib/medicalVault";
 import type {
@@ -109,7 +110,7 @@ type UpcomingAppointment = {
 
 export default function Appointment() {
   const navigate = useNavigate();
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const [searchParams] = useSearchParams();
   const specializationParam = searchParams.get("specialization") ?? "";
   const clinicId = searchParams.get("clinic");
@@ -175,7 +176,7 @@ export default function Appointment() {
     `DNM-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
 
   const formatDateLabel = (date: Date) =>
-    new Intl.DateTimeFormat("en-US", {
+    new Intl.DateTimeFormat(getLocaleForLanguage(language), {
       weekday: "long",
       month: "long",
       day: "numeric",
@@ -1617,7 +1618,7 @@ export default function Appointment() {
                       ))}
                     </div>
                     <p className="mt-3 text-xs text-slate-500">
-                      Next availability: {doctor.nextAvailable}
+                      {t("Next availability")}: {formatAvailabilityForLanguage(doctor.nextAvailable, language, t)}
                     </p>
                   </button>
                 ))}
@@ -1634,9 +1635,9 @@ export default function Appointment() {
                 <CalendarClock className="w-6 h-6 text-[#0089FF]" />
                 <div>
                   <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold">
-                    Select Date
+                    {t("Select Date")}
                   </p>
-                  <p className="text-sm text-slate-600">Choose your preferred appointment date</p>
+                  <p className="text-sm text-slate-600">{t("Choose your preferred appointment date")}</p>
                 </div>
               </div>
               <div className="flex justify-center w-full">
@@ -1660,10 +1661,16 @@ export default function Appointment() {
             <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-6">
               <div className="mb-6">
                 <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold mb-1">
-                  Available Time Slots
+                  {t("Available Time Slots")}
                 </p>
                 <p className="text-sm text-slate-600">
-                  {selectedDate ? selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }) : 'Select a date'}
+                  {selectedDate
+                    ? selectedDate.toLocaleDateString(getLocaleForLanguage(language), {
+                        weekday: "long",
+                        month: "long",
+                        day: "numeric",
+                      })
+                    : t("Select a date")}
                 </p>
                 {availabilityNotice ? (
                   <p className="mt-2 text-sm font-semibold text-rose-500">{availabilityNotice}</p>

@@ -14,6 +14,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useLiveLocation } from "@/hooks/useLiveLocation";
 import { useAddressSearch } from "@/hooks/useAddressSearch";
 import { useTranslation } from "@/lib/i18n";
+import { formatAvailabilityForLanguage } from "@/lib/time-format";
 import { useClinics } from "@/lib/clinic-data";
 import { getSpecializationLabel, matchSpecialization, SPECIALIZATION_OPTIONS } from "@/lib/specializations";
 import { TranslatedText } from "@/components/TranslatedText";
@@ -31,7 +32,7 @@ export default function Clinics() {
     setManualLocation,
     clearManualLocation,
   } = useLiveLocation();
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const [isEditingLocation, setIsEditingLocation] = useState(false);
   const [manualLocationInput, setManualLocationInput] = useState(manualLocation ?? "");
   const [manualLocationError, setManualLocationError] = useState("");
@@ -386,7 +387,8 @@ export default function Clinics() {
 
                       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <div className="flex items-center gap-2 text-sm text-slate-500">
-                          <CalendarClock className="w-4 h-4 text-[#0089FF]" /> {t("Next availability")}: {clinic.nextAvailability}
+                          <CalendarClock className="w-4 h-4 text-[#0089FF]" /> {t("Next availability")}:{" "}
+                          {formatAvailabilityForLanguage(clinic.nextAvailability, language, t)}
                         </div>
                         <div className="flex flex-wrap gap-2">
                           <button

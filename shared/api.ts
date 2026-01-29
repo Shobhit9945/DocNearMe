@@ -477,8 +477,22 @@ export interface ClinicDoctorsUpdateRequest {
 
 export interface TranslateRequest {
   text: string;
-  targetLanguage: "en" | "ja" | "vi" | "id" | "es";
-  sourceLanguage?: "auto" | "en" | "ja" | "vi" | "id" | "es";
+  targetLanguage: "en" | "ja" | "ko" | "id" | "my" | "bn" | "ar" | "hi" | "th" | "fil" | "zh" | "es" | "vi";
+  sourceLanguage?:
+    | "auto"
+    | "en"
+    | "ja"
+    | "ko"
+    | "id"
+    | "my"
+    | "bn"
+    | "ar"
+    | "hi"
+    | "th"
+    | "fil"
+    | "zh"
+    | "es"
+    | "vi";
 }
 
 export interface TranslateResponse {

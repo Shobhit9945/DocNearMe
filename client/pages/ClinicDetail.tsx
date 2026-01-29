@@ -6,6 +6,7 @@ import { PageScaffold } from "@/components/PageScaffold";
 import { DocDaisyBanner } from "@/components/DocDaisyBanner";
 import { useClinicDoctors, useClinicProfile } from "@/lib/clinic-data";
 import { useTranslation } from "@/lib/i18n";
+import { formatAvailabilityForLanguage } from "@/lib/time-format";
 import { GoogleReviews } from "@/components/GoogleReviews";
 import { useGooglePlaceDetails } from "@/hooks/useGooglePlaceDetails";
 import { TranslatedText } from "@/components/TranslatedText";
@@ -17,7 +18,7 @@ import type {
 export default function ClinicDetail() {
   const { clinicId } = useParams<{ clinicId: string }>();
   const navigate = useNavigate();
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const { data: clinicData } = useClinicProfile(clinicId);
   const clinic = clinicData?.clinic;
   const { data: googlePlaceDetails } = useGooglePlaceDetails(clinic?.googlePlaceId);
@@ -100,7 +101,8 @@ export default function ClinicDetail() {
                 <Users className="h-4 w-4 text-[#0089FF]" /> {clinic.patients}
               </span>
               <span className="flex items-center gap-1">
-                <CalendarClock className="h-4 w-4 text-[#0089FF]" /> {clinic.nextAvailability}
+                <CalendarClock className="h-4 w-4 text-[#0089FF]" />{" "}
+                {formatAvailabilityForLanguage(clinic.nextAvailability, language, t)}
               </span>
             </div>
           </div>
@@ -156,7 +158,7 @@ export default function ClinicDetail() {
                           </p>
                           <p className="text-sm text-slate-500">{doctor.languages.map((language) => t(language)).join(", ")}</p>
                           <p className="text-sm text-slate-500">
-                            {t("Next availability")}: {doctor.nextAvailable}
+                            {t("Next availability")}: {formatAvailabilityForLanguage(doctor.nextAvailable, language, t)}
                           </p>
                           <div className="mt-2 flex items-center gap-1 text-xs font-semibold text-[#B06B00]">
                             <Star className="h-3 w-3" fill="#B06B00" /> {doctor.rating.toFixed(1)}
