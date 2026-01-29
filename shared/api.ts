@@ -272,11 +272,11 @@ export interface PatientProfileUpdateRequest {
 
 export interface RequestOtpRequest {
   email: string;
-  captchaToken: string;
 }
 
 export interface CheckEmailRequest {
   email: string;
+  captchaToken: string;
 }
 
 export interface CheckEmailResponse {

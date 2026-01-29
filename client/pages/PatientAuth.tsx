@@ -247,7 +247,7 @@ const PatientAuth = () => {
     setCheckEmailLoading(true);
     setStatus(initialStatus);
     try {
-      const payload: CheckEmailRequest = { email: signupData.email };
+      const payload: CheckEmailRequest = { email: signupData.email, captchaToken };
       const response = await fetch("/api/auth/check-email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -269,6 +269,7 @@ const PatientAuth = () => {
 
       setEmailAvailable(true);
       setSignupStep("otp");
+      setCaptchaToken(null);
       setSuccess(data.message);
     } catch (error) {
       setError(error instanceof Error ? error.message : "Network error. Please try again.");
@@ -322,25 +323,17 @@ const PatientAuth = () => {
       setError("Please enter a valid email address to request a verification code.");
       return;
     }
-    if (!captchaToken) {
-      setError("Captcha expired. Please complete it again to send a verification code.");
-      setSignupStep("email");
-      return;
-    }
-
     setOtpLoading(true);
     setStatus(initialStatus);
-    let shouldResetCaptcha = false;
 
     try {
-      const payload: RequestOtpRequest = { email: signupData.email, captchaToken };
+      const payload: RequestOtpRequest = { email: signupData.email };
       const response = await fetch("/api/auth/request-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
 
-      shouldResetCaptcha = true;
       const data = (await response.json()) as OtpResponse;
       if (!response.ok || !data.success) {
         setError(data.message || "Failed to send verification code.");
@@ -356,9 +349,6 @@ const PatientAuth = () => {
     } catch (error) {
       setError(error instanceof Error ? error.message : "Network error. Please try again.");
     } finally {
-      if (shouldResetCaptcha) {
-        setCaptchaToken(null);
-      }
       setOtpLoading(false);
     }
   };
@@ -721,25 +711,6 @@ const PatientAuth = () => {
                             ))}
                           </InputOTPGroup>
                         </InputOTP>
-                        <div className="space-y-2">
-                          <Label>Security check</Label>
-                          <RecaptchaWidget
-                            ref={recaptchaRef}
-                            siteKey={RECAPTCHA_SITE_KEY}
-                            onVerify={setCaptchaToken}
-                            onExpire={() => setCaptchaToken(null)}
-                            onError={() => setCaptchaToken(null)}
-                          />
-                          {captchaToken ? (
-                            <p className="text-xs font-medium text-emerald-600">
-                              Captcha completed. You can send your verification code.
-                            </p>
-                          ) : (
-                            <p className="text-xs text-slate-500">
-                              Complete the captcha to enable sending your verification code.
-                            </p>
-                          )}
-                        </div>
                         <div className="flex flex-wrap gap-2">
                           <Button
                             type="button"

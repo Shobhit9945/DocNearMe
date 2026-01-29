@@ -65,7 +65,6 @@ const loginSchema = z.object({
 
 const requestOtpSchema = z.object({
   email: emailSchema,
-  captchaToken: z.string().trim().min(1),
 });
 
 const requestPasswordResetSchema = z.object({
@@ -74,6 +73,7 @@ const requestPasswordResetSchema = z.object({
 
 const checkEmailSchema = z.object({
   email: emailSchema,
+  captchaToken: z.string().trim().min(1),
 });
 
 const verifyOtpSchema = z.object({
@@ -198,14 +198,6 @@ export const handleRequestOtp: RequestHandler = async (req, res, next) => {
       } satisfies OtpResponse);
     }
 
-    const captchaCheck = await verifyRecaptcha(payload.captchaToken, req.ip);
-    if (!captchaCheck.success) {
-      return res.status(400).json({
-        success: false,
-        message: captchaCheck.message ?? "Captcha verification failed. Please try again.",
-      } satisfies OtpResponse);
-    }
-
     const recentOtp = await getLatestOtp(normalizedEmail, "signup");
     if (recentOtp && Date.now() - recentOtp.createdAt.getTime() < 60 * 1000) {
       return res.status(429).json({
@@ -268,6 +260,13 @@ export const handleCheckEmail: RequestHandler = async (req, res, next) => {
   try {
     const payload = checkEmailSchema.parse(parseRequestBody(req.body)) as CheckEmailRequest;
     const normalizedEmail = payload.email.toLowerCase();
+    const captchaCheck = await verifyRecaptcha(payload.captchaToken, req.ip);
+    if (!captchaCheck.success) {
+      return res.status(400).json({
+        exists: false,
+        message: captchaCheck.message ?? "Captcha verification failed. Please try again.",
+      } satisfies CheckEmailResponse);
+    }
     const patients = await getPatientsCollection();
     const existing = await patients.findOne({ email: normalizedEmail });
 
