@@ -2,7 +2,7 @@ import { RequestHandler } from "express";
 import { z } from "zod";
 
 const translationRequestSchema = z.object({
-  text: z.string().trim().min(1).max(500),
+  text: z.string().trim().min(1).max(5000),
   targetLanguage: z.enum(["en", "ja", "vi", "id", "es"]),
   sourceLanguage: z.enum(["auto", "en", "ja", "vi", "id", "es"]).optional().default("auto"),
 });
