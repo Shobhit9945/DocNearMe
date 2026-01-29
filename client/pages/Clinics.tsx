@@ -16,6 +16,7 @@ import { useAddressSearch } from "@/hooks/useAddressSearch";
 import { useTranslation } from "@/lib/i18n";
 import { useClinics } from "@/lib/clinic-data";
 import { getSpecializationLabel, matchSpecialization, SPECIALIZATION_OPTIONS } from "@/lib/specializations";
+import { TranslatedText } from "@/components/TranslatedText";
 
 export default function Clinics() {
   const navigate = useNavigate();
@@ -351,12 +352,14 @@ export default function Clinics() {
                     className="flex h-full flex-col overflow-hidden rounded-[28px] border border-slate-100 bg-white shadow-[0_10px_35px_rgba(21,47,81,0.05)]"
                   >
                     <div className="h-40 w-full overflow-hidden">
-                      <img src={clinic.image} alt={t(clinic.name)} className="h-full w-full object-cover" />
+                      <img src={clinic.image} alt={clinic.name} className="h-full w-full object-cover" />
                     </div>
                     <div className="flex flex-1 flex-col gap-4 p-5">
                       <div className="flex flex-wrap items-start justify-between gap-3">
                         <div>
-                          <h3 className="text-xl font-semibold text-[#002D55]">{t(clinic.name)}</h3>
+                          <h3 className="text-xl font-semibold text-[#002D55]">
+                            <TranslatedText text={clinic.name} />
+                          </h3>
                         </div>
                       </div>
 
@@ -365,7 +368,8 @@ export default function Clinics() {
                           <Users className="w-4 h-4 text-[#0089FF]" /> {clinic.patients}
                         </div>
                         <div className="flex items-center gap-1">
-                          <MapPin className="w-4 h-4 text-[#0089FF]" /> {clinic.location} · {clinic.distance}
+                          <MapPin className="w-4 h-4 text-[#0089FF]" />
+                          <TranslatedText text={clinic.location} inline /> · {clinic.distance}
                         </div>
                       </div>
 

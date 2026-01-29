@@ -68,6 +68,7 @@ import { requireClinicAuth } from "./middleware/clinic-auth";
 import { requireAdminAuth } from "./middleware/admin-auth";
 import { handleAdminAuthCheck, handleAdminCreateClinic } from "./routes/admin";
 import { handleGetProfile, handleUpdateProfile } from "./routes/profile";
+import { handleTranslate } from "./routes/translate";
 
 export async function createServer(): Promise<Express> {
   const app = express();
@@ -167,6 +168,7 @@ export async function createServer(): Promise<Express> {
   app.post("/api/clinics/:clinicId/reviews", handleCreateClinicReview);
   app.patch("/api/clinics/:clinicId/reviews/:reviewId", handleUpdateClinicReview);
   app.delete("/api/clinics/:clinicId/reviews/:reviewId", handleDeleteClinicReview);
+  app.post("/api/translate", handleTranslate);
   app.get("/api/google-maps/geocode", handleGeocode);
   app.get("/api/google-maps/places/autocomplete", handlePlaceAutocomplete);
   app.get("/api/google-maps/places/details", handlePlaceDetails);

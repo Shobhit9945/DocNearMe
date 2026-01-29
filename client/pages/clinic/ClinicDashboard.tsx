@@ -9,6 +9,7 @@ import { useTranslation } from "@/lib/i18n";
 import { getDateKey, normalizeClinicHours } from "@/lib/scheduling";
 import type { AppointmentListResponse, ClinicBookingClosure, ClinicProfileUpdateRequest } from "@shared/api";
 import { toast } from "@/components/ui/use-toast";
+import { TranslatedText } from "@/components/TranslatedText";
 
 const DAYS_OF_WEEK = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
@@ -227,7 +228,9 @@ export default function ClinicDashboard() {
                   >
                     <div>
                       <p className="text-sm text-gray-500">{timeLabel}</p>
-                      <p className="font-semibold text-gray-900">{item.patientName ?? t("Patient")}</p>
+                      <p className="font-semibold text-gray-900">
+                        <TranslatedText text={item.patientName ?? t("Patient")} inline />
+                      </p>
                       <p className="text-sm text-gray-500">{item.specialization}</p>
                     </div>
                     <div className="flex items-center gap-2 text-sm">

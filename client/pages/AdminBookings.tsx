@@ -4,6 +4,7 @@ import { PageScaffold } from "@/components/PageScaffold";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { TranslatedText } from "@/components/TranslatedText";
 
 function formatDate(date: string) {
   return new Date(date).toLocaleString(undefined, {
@@ -66,7 +67,9 @@ export default function AdminBookings() {
                         <TableCell className="font-medium">{formatDate(appt.date)}</TableCell>
                         <TableCell>
                           <div className="flex flex-col">
-                            <span className="font-semibold text-slate-800">{appt.patientName ?? "Unknown"}</span>
+                            <span className="font-semibold text-slate-800">
+                              <TranslatedText text={appt.patientName ?? "Unknown"} inline />
+                            </span>
                             <span className="text-xs text-slate-500">{appt.patientEmail ?? "Hidden"}</span>
                           </div>
                         </TableCell>
@@ -81,7 +84,7 @@ export default function AdminBookings() {
                           {appt.patientVisaType ?? "—"}
                         </TableCell>
                         <TableCell className="max-w-xs text-sm text-slate-600">
-                          {appt.notes?.trim() ? appt.notes : "—"}
+                          {appt.notes?.trim() ? <TranslatedText text={appt.notes} inline /> : "—"}
                         </TableCell>
                       </TableRow>
                     ))}

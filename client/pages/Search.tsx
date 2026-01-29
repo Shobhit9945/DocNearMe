@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAllDoctors, useClinics } from "@/lib/clinic-data";
 import { getSpecializationLabel, matchSpecialization, SPECIALIZATION_OPTIONS } from "@/lib/specializations";
+import { TranslatedText } from "@/components/TranslatedText";
 
 export default function Search() {
   const { t } = useTranslation();
@@ -270,9 +271,13 @@ export default function Search() {
                         >
                           <div className="flex items-start justify-between gap-3">
                             <div>
-                              <p className="text-lg font-semibold text-[#002D55]">{t(doctor.name)}</p>
+                              <p className="text-lg font-semibold text-[#002D55]">
+                                <TranslatedText text={doctor.name} />
+                              </p>
                               <p className="text-sm text-slate-500">{t(doctor.specialization)}</p>
-                              <p className="text-sm text-slate-500">{clinic ? t(clinic.name) : t("Clinic")}</p>
+                              <p className="text-sm text-slate-500">
+                                {clinic ? <TranslatedText text={clinic.name} inline /> : t("Clinic")}
+                              </p>
                             </div>
                             <span className="flex items-center gap-1 rounded-full bg-[#FFF3C8] px-3 py-1 text-xs font-semibold text-[#B06B00]">
                               <Star className="h-4 w-4" fill="#B06B00" /> {doctor.rating.toFixed(1)}
@@ -351,8 +356,12 @@ export default function Search() {
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div>
-                            <p className="text-lg font-semibold text-[#002D55]">{t(clinic.name)}</p>
-                            <p className="text-sm text-slate-500">{clinic.location}</p>
+                            <p className="text-lg font-semibold text-[#002D55]">
+                              <TranslatedText text={clinic.name} />
+                            </p>
+                            <p className="text-sm text-slate-500">
+                              <TranslatedText text={clinic.location} inline />
+                            </p>
                           </div>
                           <span className="flex items-center gap-1 rounded-full bg-[#FFF3C8] px-3 py-1 text-xs font-semibold text-[#B06B00]">
                             <Star className="h-4 w-4" fill="#B06B00" /> {clinic.rating.toFixed(1)}
