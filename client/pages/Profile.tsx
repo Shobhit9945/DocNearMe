@@ -177,18 +177,12 @@ export default function Profile() {
           body: JSON.stringify(profilePayload),
         });
         if (!response.ok) {
-          const payload = await response.json().catch(() => ({}));
-          const errorMessage =
-            typeof payload?.error === "string" && payload.error.length > 0
-              ? payload.error
-              : "Failed to save profile";
-          throw new Error(errorMessage);
+          throw new Error("Failed to save profile");
         }
         const data = (await response.json()) as PatientProfileResponse;
         applyProfile(data.profile);
       } catch (error) {
         console.error("Profile update failed", error);
-        return;
       } finally {
         setIsSyncingProfile(false);
       }
