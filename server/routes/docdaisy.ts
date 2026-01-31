@@ -50,10 +50,20 @@ const extractOpenAIText = (payload: unknown) => {
 };
 
 router.post("/respond", async (req, res) => {
-  const { mode, messages } = req.body as {
+  const { mode: rawMode, messages: rawMessages, conversation: rawConversation } = req.body as {
     mode?: "followup" | "conclusion";
     messages?: ChatMessage[];
+    conversation?: ChatMessage[];
   };
+
+  const messages = Array.isArray(rawMessages)
+    ? rawMessages
+    : Array.isArray(rawConversation)
+      ? rawConversation
+      : [];
+  const userTurns = messages.filter((msg) => msg.sender === "user").length;
+  const inferredMode = userTurns >= 3 ? "conclusion" : "followup";
+  const mode = rawMode ?? inferredMode;
 
   if (!mode || (mode !== "followup" && mode !== "conclusion")) {
     return res.status(400).json({ error: "Invalid mode supplied" });
