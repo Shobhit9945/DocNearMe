@@ -3,7 +3,7 @@ import { Send, Loader2, ChevronLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { PageScaffold } from "@/components/PageScaffold";
 import { useTranslation } from "@/lib/i18n";
-import { getSpecializationLabel, resolveSpecializationId, SPECIALIZATION_IDS } from "@/lib/specializations";
+import { getSpecializationLabel, resolveSpecializationId } from "@/lib/specializations";
 
 // ---------- Types ----------
 type ChatMessage = {
@@ -13,69 +13,27 @@ type ChatMessage = {
 
 type Mode = "followup" | "conclusion";
 
-// ---------- Env & helpers ----------
-// You can either:
-// 1) Put your key in .env as VITE_ZAI_API_KEY
-// 2) Or replace "YOUR_ZAI_API_KEY_HERE" directly for quick testing
-const ZAI_API_KEY =
-  (import.meta.env.VITE_ZAI_API_KEY as string | undefined) ||
-  "3346461ebc1a45aa86f21363b9284b6e.Qc0zucUoL66uZ5vA";
-
-const ZAI_URL = "https://api.z.ai/api/paas/v4/chat/completions";
-
+// ---------- Helpers ----------
 const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
 
-// Call Z.AI directly from the client
-async function askZAIWithRetry(
+// Call DocDaisy via the backend (Gemini)
+async function askDocDaisyWithRetry(
   mode: Mode,
   conversation: ChatMessage[],
   retries = 3
 ): Promise<{ reply: string; specialization?: string | null }> {
-  if (!ZAI_API_KEY || ZAI_API_KEY === "YOUR_ZAI_API_KEY_HERE") {
-    throw new Error(
-      "Z.AI API key is missing. Set VITE_ZAI_API_KEY in .env or edit ZAI_API_KEY in DocDaisy.tsx."
-    );
-  }
-
   let lastError: Error | null = null;
-
-  // Map UI messages to Z.AI / OpenAI-style chat format
-  const chatMessages = conversation.map((msg) => ({
-    role: msg.sender === "user" ? ("user" as const) : ("assistant" as const),
-    content: msg.text,
-  }));
-
-  const systemPromptFollowup =
-    "You are DocDaisy, a friendly medical triage assistant. Ask ONE concise follow-up question at a time based only on the user's previous answers. Do not give diagnoses or mention specializations yet.";
-  const specializationList = SPECIALIZATION_IDS.join(", ");
-  const systemPromptConclusion =
-    `You are DocDaisy, a medical triage assistant. Based on the conversation, summarize your assessment and recommend ONE most appropriate medical specialization from this list: ${specializationList}. Respond ONLY as valid JSON in this exact shape: {"reply": "...", "specialization": "..."} If none of the listed specializations are appropriate, set specialization to "Other" and keep the reply concise about the closest fit.`;
-
-  const isConclusion = mode === "conclusion";
 
   for (let attempt = 0; attempt < retries; attempt++) {
     try {
-      const res = await fetch(ZAI_URL, {
+      const res = await fetch("/api/docdaisy/respond", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${ZAI_API_KEY}`,
         },
         body: JSON.stringify({
-          model: "glm-4.5-flash", // GLM-4.5-Flash tier; adjust if docs say "glm-4.5-flash"
-          messages: [
-            {
-              role: "system",
-              content: isConclusion ? systemPromptConclusion : systemPromptFollowup,
-            },
-            ...chatMessages,
-          ],
-          thinking: {
-            type: "enabled",
-          },
-          stream: false,
-          max_tokens: 4096,
-          temperature: 0.4,
+          mode,
+          messages: conversation,
         }),
       });
 
@@ -85,33 +43,19 @@ async function askZAIWithRetry(
           continue;
         }
         const errBody = await res.text();
-        throw new Error(`Z.AI error ${res.status}: ${errBody}`);
+        throw new Error(`DocDaisy error ${res.status}: ${errBody}`);
       }
 
       const data = await res.json();
-      const content: string =
-        data?.choices?.[0]?.message?.content?.trim() ?? "";
+      const content = data?.reply?.trim?.() ?? "";
 
       if (!content) {
-        throw new Error("Empty response from Z.AI");
+        throw new Error("Empty response from DocDaisy.");
       }
 
-      if (isConclusion) {
-        // Expect strict JSON (as instructed in system prompt)
-        const parsed = JSON.parse(content) as {
-          reply: string;
-          specialization: string;
-        };
-        return {
-          reply: parsed.reply,
-          specialization: parsed.specialization,
-        };
-      }
-
-      // followup mode – plain text
-      return { reply: content };
+      return { reply: content, specialization: data?.specialization ?? null };
     } catch (err) {
-      lastError = err instanceof Error ? err : new Error("Unknown Z.AI error");
+      lastError = err instanceof Error ? err : new Error("Unknown DocDaisy error");
       if (attempt < retries - 1) {
         await delay(2 ** attempt * 1000);
         continue;
@@ -120,7 +64,7 @@ async function askZAIWithRetry(
     }
   }
 
-  throw lastError ?? new Error("Unable to reach Z.AI.");
+  throw lastError ?? new Error("Unable to reach DocDaisy.");
 }
 
 // ---------- Component ----------
@@ -200,14 +144,14 @@ const DocDaisy: React.FC = () => {
       let specialization: string | null | undefined = null;
 
       if (shouldConclude) {
-        const { reply, specialization: spec } = await askZAIWithRetry(
+        const { reply, specialization: spec } = await askDocDaisyWithRetry(
           "conclusion",
           updatedConversation
         );
         finalBotReply = reply;
         specialization = spec;
       } else {
-        const { reply } = await askZAIWithRetry(
+        const { reply } = await askDocDaisyWithRetry(
           "followup",
           updatedConversation
         );
@@ -221,7 +165,7 @@ const DocDaisy: React.FC = () => {
         setRecommendedSpecialization(safeSpecialization);
       }
     } catch (err) {
-      console.error("DocDaisy Z.AI Error:", err);
+      console.error("DocDaisy Error:", err);
       setMessages((prev) => [
         ...prev,
         {
