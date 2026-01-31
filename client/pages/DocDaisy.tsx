@@ -16,7 +16,7 @@ type Mode = "followup" | "conclusion";
 // ---------- Helpers ----------
 const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
 
-// Call DocDaisy via the backend (Gemini)
+// Call DocDaisy via the backend
 async function askDocDaisyWithRetry(
   mode: Mode,
   conversation: ChatMessage[],

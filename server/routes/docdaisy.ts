@@ -6,52 +6,64 @@ interface ChatMessage {
 }
 
 const router = Router();
-const GEMINI_MODEL = process.env.GEMINI_MODEL ?? "gemini-1.5-flash";
+const OPENAI_MODEL = process.env.OPENAI_MODEL ?? "gpt-5-mini";
 
 const buildConversationTranscript = (messages: ChatMessage[]) =>
   messages
     .map((msg) => `${msg.sender === "user" ? "User" : "DocDaisy"}: ${msg.text}`)
     .join("\n");
 
-const callGemini = async (body: Record<string, unknown>) => {
-  const apiKey = process.env.GEMINI_API_KEY;
+const callOpenAI = async (body: Record<string, unknown>) => {
+  const apiKey = process.env.OPENAI;
   if (!apiKey) {
-    throw new Error("Missing GEMINI_API_KEY environment variable");
+    throw new Error("Missing OPENAI environment variable");
   }
 
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
-    }
-  );
+  const response = await fetch("https://api.openai.com/v1/responses", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
 
   if (!response.ok) {
     const errorPayload = await response.text();
-    throw new Error(`Gemini request failed: ${response.status} ${errorPayload}`);
+    throw new Error(`OpenAI request failed: ${response.status} ${errorPayload}`);
   }
 
   return response.json();
 };
 
-const extractGeminiText = (payload: unknown) => {
+const extractOpenAIText = (payload: unknown) => {
   if (!payload || typeof payload !== "object") return "";
-  const candidates = (payload as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> })
-    .candidates;
-  const parts = candidates?.[0]?.content?.parts;
-  if (!parts) return "";
+  const response = payload as {
+    output_text?: string;
+    output?: Array<{ content?: Array<{ type?: string; text?: string }> }>;
+  };
+  if (typeof response.output_text === "string") {
+    return response.output_text.trim();
+  }
+  const parts = response.output?.flatMap((item) => item.content ?? []) ?? [];
   return parts.map((part) => part.text ?? "").join("").trim();
 };
 
 router.post("/respond", async (req, res) => {
-  const { mode, messages } = req.body as {
+  const { mode: rawMode, messages: rawMessages, conversation: rawConversation } = req.body as {
     mode?: "followup" | "conclusion";
     messages?: ChatMessage[];
+    conversation?: ChatMessage[];
   };
+
+  const messages = Array.isArray(rawMessages)
+    ? rawMessages
+    : Array.isArray(rawConversation)
+      ? rawConversation
+      : [];
+  const userTurns = messages.filter((msg) => msg.sender === "user").length;
+  const inferredMode = userTurns >= 3 ? "conclusion" : "followup";
+  const mode = rawMode ?? inferredMode;
 
   if (!mode || (mode !== "followup" && mode !== "conclusion")) {
     return res.status(400).json({ error: "Invalid mode supplied" });
@@ -61,7 +73,7 @@ router.post("/respond", async (req, res) => {
     return res.status(400).json({ error: "Conversation history is required" });
   }
 
-  if (!process.env.GEMINI_API_KEY) {
+  if (!process.env.OPENAI) {
     return res.status(500).json({ error: "DocDaisy AI is not configured." });
   }
 
@@ -70,33 +82,34 @@ router.post("/respond", async (req, res) => {
 
     if (mode === "followup") {
       const payload = {
-        systemInstruction: {
-          role: "system",
-          parts: [
-            {
-              text:
-                "You are DocDaisy, a warm and concise AI nurse who collects the most relevant symptom details before escalating to a specialist recommendation. Ask only one short follow-up question at a time and keep it under 35 words. Respond using plain text only.",
-            },
-          ],
-        },
-        contents: [
+        model: OPENAI_MODEL,
+        input: [
+          {
+            role: "system",
+            content: [
+              {
+                type: "text",
+                text:
+                  "You are DocDaisy, a warm and concise medical navigator who collects the most relevant symptom details before escalating to a specialist recommendation. Ask only one short follow-up question at a time and keep it under 35 words. Respond using plain text only.",
+              },
+            ],
+          },
           {
             role: "user",
-            parts: [
+            content: [
               {
+                type: "text",
                 text: `Conversation so far:\n${conversation}\n\nAsk the next clarifying question.`,
               },
             ],
           },
         ],
-        generationConfig: {
-          temperature: 0.2,
-        },
+        temperature: 0.2,
       };
 
-      const completion = await callGemini(payload);
+      const completion = await callOpenAI(payload);
       const reply =
-        extractGeminiText(completion) || "I couldn't generate a response. Please try again.";
+        extractOpenAIText(completion) || "I couldn't generate a response. Please try again.";
 
       return res.json({ reply: typeof reply === "string" ? reply.trim() : reply });
     }
@@ -123,44 +136,51 @@ router.post("/respond", async (req, res) => {
     } as const;
 
     const payload = {
-      systemInstruction: {
-        role: "system",
-        parts: [
-          {
-            text:
-              "You are DocDaisy, a medical triage assistant. Review the conversation and return a JSON object with a short summary and the single best specialization. If unsure, set specialization to Unsure.",
-          },
-        ],
-      },
-      contents: [
+      model: OPENAI_MODEL,
+      input: [
+        {
+          role: "system",
+          content: [
+            {
+              type: "text",
+              text:
+                "You are DocDaisy, a medical navigator. Review the conversation and return a JSON object with a short summary and the single best specialization. If unsure, set specialization to Unsure.",
+            },
+          ],
+        },
         {
           role: "user",
-          parts: [
+          content: [
             {
+              type: "text",
               text: `Conversation history:\n${conversation}\n\nReturn only the JSON object conforming to the schema.`,
             },
           ],
         },
       ],
-      generationConfig: {
-        temperature: 0.2,
-        responseMimeType: "application/json",
-        responseSchema: schema.schema,
+      temperature: 0.2,
+      response_format: {
+        type: "json_schema",
+        json_schema: {
+          name: schema.name,
+          schema: schema.schema,
+          strict: true,
+        },
       },
     };
 
-    const completion = await callGemini(payload);
-    const rawContent = extractGeminiText(completion);
+    const completion = await callOpenAI(payload);
+    const rawContent = extractOpenAIText(completion);
 
     if (typeof rawContent !== "string") {
-      throw new Error("Unexpected Gemini response format");
+      throw new Error("Unexpected OpenAI response format");
     }
 
     const parsed = JSON.parse(rawContent);
 
     return res.json({ reply: parsed.summary, specialization: parsed.specialization });
   } catch (error) {
-    console.error("DocDaisy Gemini error", error);
+    console.error("DocDaisy OpenAI error", error);
     return res.status(500).json({ error: "Unable to reach DocDaisy right now. Please try again." });
   }
 });
