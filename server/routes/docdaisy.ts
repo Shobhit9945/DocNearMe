@@ -13,6 +13,34 @@ const buildConversationTranscript = (messages: ChatMessage[]) =>
     .map((msg) => `${msg.sender === "user" ? "User" : "DocDaisy"}: ${msg.text}`)
     .join("\n");
 
+const parseMaybeJson = <T,>(value: unknown): T | undefined => {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+  try {
+    return JSON.parse(value) as T;
+  } catch {
+    return undefined;
+  }
+};
+
+const normalizeMessages = (value: unknown): ChatMessage[] => {
+  if (Array.isArray(value)) {
+    return value.filter((entry): entry is ChatMessage => {
+      if (!entry || typeof entry !== "object") return false;
+      const record = entry as Partial<ChatMessage>;
+      return (
+        (record.sender === "user" || record.sender === "bot") &&
+        typeof record.text === "string" &&
+        record.text.trim().length > 0
+      );
+    });
+  }
+
+  const parsed = parseMaybeJson<unknown[]>(value);
+  return Array.isArray(parsed) ? normalizeMessages(parsed) : [];
+};
+
 const callOpenAI = async (body: Record<string, unknown>) => {
   const apiKey = process.env.OPENAI;
   if (!apiKey) {
@@ -50,17 +78,30 @@ const extractOpenAIText = (payload: unknown) => {
 };
 
 router.post("/respond", async (req, res) => {
-  const { mode: rawMode, messages: rawMessages, conversation: rawConversation } = req.body as {
-    mode?: "followup" | "conclusion";
-    messages?: ChatMessage[];
-    conversation?: ChatMessage[];
-  };
+  const rawBody =
+    typeof req.body === "string"
+      ? parseMaybeJson<Record<string, unknown>>(req.body) ?? {}
+      : ((req.body as Record<string, unknown> | undefined) ?? {});
+  const rawMode = rawBody?.mode as "followup" | "conclusion" | undefined;
+  const rawMessages =
+    rawBody?.messages ??
+    rawBody?.conversation ??
+    rawBody?.history ??
+    rawBody?.conversationHistory;
+  const fallbackText =
+    typeof rawBody?.message === "string"
+      ? rawBody.message
+      : typeof rawBody?.text === "string"
+        ? rawBody.text
+        : undefined;
 
-  const messages = Array.isArray(rawMessages)
-    ? rawMessages
-    : Array.isArray(rawConversation)
-      ? rawConversation
-      : [];
+  const normalizedMessages = normalizeMessages(rawMessages);
+  const messages =
+    normalizedMessages.length > 0
+      ? normalizedMessages
+      : fallbackText
+        ? [{ sender: "user", text: fallbackText }]
+        : [];
   const userTurns = messages.filter((msg) => msg.sender === "user").length;
   const inferredMode = userTurns >= 3 ? "conclusion" : "followup";
   const mode = rawMode ?? inferredMode;
