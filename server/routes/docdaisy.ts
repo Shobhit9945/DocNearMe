@@ -6,20 +6,20 @@ interface ChatMessage {
 }
 
 const router = Router();
-const ZAI_MODEL = process.env.ZAI_MODEL ?? "glm-4.5-flash";
+const OPENAI_MODEL = process.env.OPENAI_MODEL ?? "gpt-5-mini";
 
 const buildConversationTranscript = (messages: ChatMessage[]) =>
   messages
     .map((msg) => `${msg.sender === "user" ? "User" : "DocDaisy"}: ${msg.text}`)
     .join("\n");
 
-const callZAI = async (body: Record<string, unknown>) => {
-  const apiKey = process.env.ZAI_API_KEY;
+const callOpenAI = async (body: Record<string, unknown>) => {
+  const apiKey = process.env.OPENAI;
   if (!apiKey) {
-    throw new Error("Missing ZAI_API_KEY environment variable");
+    throw new Error("Missing OPENAI environment variable");
   }
 
-  const response = await fetch("https://api.z.ai/api/paas/v4/chat/completions", {
+  const response = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -30,10 +30,16 @@ const callZAI = async (body: Record<string, unknown>) => {
 
   if (!response.ok) {
     const errorPayload = await response.text();
-    throw new Error(`Z.AI request failed: ${response.status} ${errorPayload}`);
+    throw new Error(`OpenAI request failed: ${response.status} ${errorPayload}`);
   }
 
   return response.json();
+};
+
+const extractOpenAIText = (payload: unknown) => {
+  if (!payload || typeof payload !== "object") return "";
+  const choices = (payload as { choices?: Array<{ message?: { content?: string } }> }).choices;
+  return choices?.[0]?.message?.content?.trim?.() ?? "";
 };
 
 router.post("/respond", async (req, res) => {
@@ -50,7 +56,7 @@ router.post("/respond", async (req, res) => {
     return res.status(400).json({ error: "Conversation history is required" });
   }
 
-  if (!process.env.ZAI_API_KEY) {
+  if (!process.env.OPENAI) {
     return res.status(500).json({ error: "DocDaisy AI is not configured." });
   }
 
@@ -59,7 +65,7 @@ router.post("/respond", async (req, res) => {
 
     if (mode === "followup") {
       const payload = {
-        model: ZAI_MODEL,
+        model: OPENAI_MODEL,
         temperature: 0.2,
         messages: [
           {
@@ -73,12 +79,11 @@ router.post("/respond", async (req, res) => {
           },
         ],
         stream: false,
-        thinking: { type: "enabled" },
       };
 
-      const completion = await callZAI(payload);
-      const reply = completion?.choices?.[0]?.message?.content ??
-        "I couldn't generate a response. Please try again.";
+      const completion = await callOpenAI(payload);
+      const reply =
+        extractOpenAIText(completion) || "I couldn't generate a response. Please try again.";
 
       return res.json({ reply: typeof reply === "string" ? reply.trim() : reply });
     }
@@ -105,9 +110,15 @@ router.post("/respond", async (req, res) => {
     } as const;
 
     const payload = {
-      model: ZAI_MODEL,
+      model: OPENAI_MODEL,
       temperature: 0.2,
-      response_format: { type: "json_schema", json_schema: schema },
+      response_format: {
+        type: "json_schema",
+        json_schema: {
+          name: schema.name,
+          schema: schema.schema,
+        },
+      },
       messages: [
         {
           role: "system",
@@ -120,21 +131,20 @@ router.post("/respond", async (req, res) => {
         },
       ],
       stream: false,
-      thinking: { type: "enabled" },
     };
 
-    const completion = await callZAI(payload);
-    const rawContent = completion?.choices?.[0]?.message?.content;
+    const completion = await callOpenAI(payload);
+    const rawContent = extractOpenAIText(completion);
 
     if (typeof rawContent !== "string") {
-      throw new Error("Unexpected Z.AI response format");
+      throw new Error("Unexpected OpenAI response format");
     }
 
     const parsed = JSON.parse(rawContent);
 
     return res.json({ reply: parsed.summary, specialization: parsed.specialization });
   } catch (error) {
-    console.error("DocDaisy Z.AI error", error);
+    console.error("DocDaisy OpenAI error", error);
     return res.status(500).json({ error: "Unable to reach DocDaisy right now. Please try again." });
   }
 });
