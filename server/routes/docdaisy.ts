@@ -14,17 +14,11 @@ const buildConversationTranscript = (messages: ChatMessage[]) =>
     .join("\n");
 
 const parseMaybeJson = <T,>(value: unknown): T | undefined => {
-  const raw =
-    typeof value === "string"
-      ? value
-      : value instanceof Buffer
-        ? value.toString("utf-8")
-        : undefined;
-  if (!raw) {
+  if (typeof value !== "string") {
     return undefined;
   }
   try {
-    return JSON.parse(raw) as T;
+    return JSON.parse(value) as T;
   } catch {
     return undefined;
   }
@@ -32,35 +26,15 @@ const parseMaybeJson = <T,>(value: unknown): T | undefined => {
 
 const normalizeMessages = (value: unknown): ChatMessage[] => {
   if (Array.isArray(value)) {
-    return value
-      .map((entry) => {
-        if (typeof entry === "string") {
-          return { sender: "user", text: entry };
-        }
-        if (!entry || typeof entry !== "object") return null;
-        const record = entry as Partial<
-          ChatMessage & { role?: string; content?: string }
-        >;
-        const text =
-          typeof record.text === "string"
-            ? record.text
-            : typeof record.content === "string"
-              ? record.content
-              : "";
-        const sender =
-          record.sender === "user" || record.sender === "bot"
-            ? record.sender
-            : record.role === "user"
-              ? "user"
-              : record.role === "assistant"
-                ? "bot"
-                : undefined;
-        if (!sender || text.trim().length === 0) {
-          return null;
-        }
-        return { sender, text };
-      })
-      .filter((entry): entry is ChatMessage => Boolean(entry));
+    return value.filter((entry): entry is ChatMessage => {
+      if (!entry || typeof entry !== "object") return false;
+      const record = entry as Partial<ChatMessage>;
+      return (
+        (record.sender === "user" || record.sender === "bot") &&
+        typeof record.text === "string" &&
+        record.text.trim().length > 0
+      );
+    });
   }
 
   const parsed = parseMaybeJson<unknown[]>(value);
@@ -104,12 +78,10 @@ const extractOpenAIText = (payload: unknown) => {
 };
 
 router.post("/respond", async (req, res) => {
-  const parsedBody = parseMaybeJson<Record<string, unknown>>(req.body);
   const rawBody =
-    parsedBody ??
-    (typeof req.body === "string"
-      ? { message: req.body }
-      : ((req.body as Record<string, unknown> | undefined) ?? {}));
+    typeof req.body === "string"
+      ? parseMaybeJson<Record<string, unknown>>(req.body) ?? {}
+      : ((req.body as Record<string, unknown> | undefined) ?? {});
   const rawMode = rawBody?.mode as "followup" | "conclusion" | undefined;
   const rawMessages =
     rawBody?.messages ??
@@ -121,9 +93,7 @@ router.post("/respond", async (req, res) => {
       ? rawBody.message
       : typeof rawBody?.text === "string"
         ? rawBody.text
-        : typeof rawBody?.prompt === "string"
-          ? rawBody.prompt
-          : undefined;
+        : undefined;
 
   const normalizedMessages = normalizeMessages(rawMessages);
   const messages =
