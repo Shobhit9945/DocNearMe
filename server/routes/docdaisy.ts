@@ -7,6 +7,10 @@ interface ChatMessage {
 
 const router = Router();
 const OPENAI_MODEL = process.env.OPENAI_MODEL ?? "gpt-5-mini";
+const OPENAI_BASE_URL = (process.env.OPENAI_BASE_URL ?? "https://api.openai.com")
+  .replace(/\/$/, "");
+
+const getOpenAIKey = () => process.env.OPENAI_API_KEY ?? process.env.OPENAI;
 
 const buildConversationTranscript = (messages: ChatMessage[]) =>
   messages
@@ -42,12 +46,12 @@ const normalizeMessages = (value: unknown): ChatMessage[] => {
 };
 
 const callOpenAI = async (body: Record<string, unknown>) => {
-  const apiKey = process.env.OPENAI;
+  const apiKey = getOpenAIKey();
   if (!apiKey) {
-    throw new Error("Missing OPENAI environment variable");
+    throw new Error("Missing OPENAI_API_KEY or OPENAI environment variable");
   }
 
-  const response = await fetch("https://api.openai.com/v1/responses", {
+  const response = await fetch(`${OPENAI_BASE_URL}/v1/responses`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
@@ -114,8 +118,11 @@ router.post("/respond", async (req, res) => {
     return res.status(400).json({ error: "Conversation history is required" });
   }
 
-  if (!process.env.OPENAI) {
-    return res.status(500).json({ error: "DocDaisy AI is not configured." });
+  if (!getOpenAIKey()) {
+    return res.status(500).json({
+      error: "DocDaisy AI is not configured.",
+      detail: "Missing OPENAI_API_KEY or OPENAI environment variable.",
+    });
   }
 
   try {
