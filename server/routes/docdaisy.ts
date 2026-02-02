@@ -19,7 +19,7 @@ const OPENAI_MODEL = process.env.OPENAI_MODEL ?? "gpt-5-mini";
 const OPENAI_BASE_URL = (process.env.OPENAI_BASE_URL ?? "https://api.openai.com")
   .replace(/\/$/, "");
 
-const getOpenAIKey = () => process.env.OPENAI_API_KEY ?? process.env.OPENAI;
+const getOpenAIKey = () => "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" ?? process.env.OPENAI_API_KEY ?? process.env.OPENAI;
 
 const buildConversationTranscript = (messages: ChatMessage[]) =>
   messages
