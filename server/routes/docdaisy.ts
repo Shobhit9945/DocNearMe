@@ -18,6 +18,31 @@ const router = Router();
 const OPENAI_MODEL = process.env.OPENAI_MODEL ?? "gpt-5-mini";
 const OPENAI_BASE_URL = (process.env.OPENAI_BASE_URL ?? "https://api.openai.com")
   .replace(/\/$/, "");
+const DOCDAISY_SPECIALIZATIONS = [
+  "General Physician",
+  "Internal Medicine",
+  "Cardiologist",
+  "Dermatologist",
+  "Pediatrician",
+  "Orthopedic Surgeon",
+  "Gastroenterology",
+  "Neurology",
+  "Psychiatry",
+  "Psychology",
+  "Ophthalmology",
+  "Endocrinology",
+  "Oncology",
+  "Pulmonology",
+  "Rheumatology",
+  "Allergy & Immunology",
+  "Nephrology",
+  "ENT",
+  "Gynecology",
+  "Obstetrics",
+  "Urology",
+  "Sports Medicine",
+  "Physical Therapy",
+];
 
 const getOpenAIKey = () => "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" ?? process.env.OPENAI_API_KEY ?? process.env.OPENAI;
 
@@ -87,7 +112,16 @@ const coerceMessage = (value: unknown): ChatMessage | null => {
 
 const normalizeMessages = (value: unknown): ChatMessage[] => {
   if (Array.isArray(value)) {
-    return value.map((entry) => coerceMessage(entry)).filter(Boolean) as ChatMessage[];
+    return value
+      .flatMap((entry) => {
+        if (typeof entry === "string") {
+          const trimmed = entry.trim();
+          return trimmed ? [{ sender: "user" as const, text: trimmed }] : [];
+        }
+        const coerced = coerceMessage(entry);
+        return coerced ? [coerced] : [];
+      })
+      .filter(Boolean) as ChatMessage[];
   }
 
   if (value && typeof value === "object") {
@@ -143,6 +177,11 @@ const extractOpenAIText = (payload: unknown) => {
   return parts.map((part) => part.text ?? "").join("").trim();
 };
 
+const isInAppSpecialization = (value: string) => {
+  const normalized = value.trim().toLowerCase();
+  return DOCDAISY_SPECIALIZATIONS.some((spec) => spec.toLowerCase() === normalized);
+};
+
 router.post("/respond", async (req, res) => {
   const rawBody = parseRawBody(req.body);
   const rawMode = rawBody?.mode as "followup" | "conclusion" | undefined;
@@ -177,7 +216,11 @@ router.post("/respond", async (req, res) => {
   }
 
   if (!Array.isArray(messages) || messages.length === 0) {
-    return res.status(400).json({ error: "Conversation history is required" });
+    return res.json({
+      reply:
+        "Hello! I'm DocDaisy, your medical navigator. Please describe your main symptom so I can ask a few quick follow-up questions.",
+      specialization: null,
+    });
   }
 
   if (!getOpenAIKey()) {
@@ -200,7 +243,7 @@ router.post("/respond", async (req, res) => {
               {
                 type: "text",
                 text:
-                  "You are DocDaisy, a warm and concise medical navigator who collects the most relevant symptom details before escalating to a specialist recommendation. Ask only one short follow-up question at a time and keep it under 35 words. Respond using plain text only.",
+                  "You are DocDaisy, a warm and concise medical navigator who collects the most relevant symptom details before escalating to a specialist recommendation. Ask only one short follow-up question at a time and keep it under 35 words. Stay aligned with in-app specializations when you later recommend. Respond using plain text only.",
               },
             ],
           },
@@ -209,7 +252,9 @@ router.post("/respond", async (req, res) => {
             content: [
               {
                 type: "text",
-                text: `Conversation so far:\n${conversation}\n\nAsk the next clarifying question.`,
+                text: `Conversation so far:\n${conversation}\n\nAvailable specializations in the app:\n${DOCDAISY_SPECIALIZATIONS.join(
+                  ", "
+                )}\n\nAsk the next clarifying question.`,
               },
             ],
           },
@@ -254,7 +299,7 @@ router.post("/respond", async (req, res) => {
             {
               type: "text",
               text:
-                "You are DocDaisy, a medical navigator. Review the conversation and return a JSON object with a short summary and the single best specialization. If unsure, set specialization to Unsure.",
+                "You are DocDaisy, a medical navigator. Review the conversation and return a JSON object with a short summary and the single best specialization. Choose from the in-app list when possible. If no in-app specialization fits, set specialization to Unsure and clearly say which specialization is needed but not available in the app.",
             },
           ],
         },
@@ -263,7 +308,9 @@ router.post("/respond", async (req, res) => {
           content: [
             {
               type: "text",
-              text: `Conversation history:\n${conversation}\n\nReturn only the JSON object conforming to the schema.`,
+              text: `Conversation history:\n${conversation}\n\nAvailable specializations in the app:\n${DOCDAISY_SPECIALIZATIONS.join(
+                ", "
+              )}\n\nReturn only the JSON object conforming to the schema.`,
             },
           ],
         },
@@ -288,7 +335,16 @@ router.post("/respond", async (req, res) => {
 
     const parsed = JSON.parse(rawContent);
 
-    return res.json({ reply: parsed.summary, specialization: parsed.specialization });
+    const specialization = String(parsed.specialization ?? "").trim();
+    const summary = String(parsed.summary ?? "").trim();
+    if (specialization && specialization !== "Unsure" && !isInAppSpecialization(specialization)) {
+      return res.json({
+        reply: `${summary} The recommended specialization is ${specialization}, which is not currently available in the app.`,
+        specialization: "Unsure",
+      });
+    }
+
+    return res.json({ reply: summary, specialization });
   } catch (error) {
     console.error("DocDaisy OpenAI error", error);
     return res.status(500).json({ error: "Unable to reach DocDaisy right now. Please try again." });
