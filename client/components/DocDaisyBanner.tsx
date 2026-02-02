@@ -35,7 +35,7 @@ export function DocDaisyBanner({ className, onClick, onClose, variant = "button"
       >
         <div className="flex items-center justify-start gap-0">
           <div className="flex-1 text-left min-w-0 pr-0">
-            <h4 className="text-base font-bold text-black leading-tight mb-1">{t("Have any queries?")}</h4>
+            <h4 className="text-base font-bold text-black leading-tight mb-1">{t("Not sure which clinic to visit?")}</h4>
             <p className="text-xl font-bold bg-gradient-to-r from-[#3A12DB] to-[#7C53FF] bg-clip-text text-transparent leading-tight mb-1">
               DOCDAISY
             </p>

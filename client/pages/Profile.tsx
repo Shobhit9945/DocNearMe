@@ -1,6 +1,6 @@
 import { BottomNav } from "@/components/BottomNav";
 import { PageScaffold } from "@/components/PageScaffold";
-import { User, ShieldCheck, Bell, LogOut } from "lucide-react";
+import { User, ShieldCheck, LogOut, Lock } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,6 +22,7 @@ export default function Profile() {
   const [emergencyContact, setEmergencyContact] = useState("");
   const [preferredLanguage, setPreferredLanguage] = useState("Japanese");
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [vaultEnabled, setVaultEnabled] = useState(true);
   const [profileSaved, setProfileSaved] = useState(false);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [isSyncingProfile, setIsSyncingProfile] = useState(false);
@@ -228,143 +229,214 @@ export default function Profile() {
       </header>
 
       <main className="flex-1 px-4 pt-6 lg:px-10 lg:pt-10">
-        <div className="flex flex-col gap-8 lg:flex-row">
-          <section className="flex-1 rounded-[24px] border border-slate-200 bg-white p-8 shadow-sm space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="h-12 w-12 rounded-full bg-[#0089FF]/10 flex items-center justify-center">
-                <User className="w-6 h-6 text-[#0089FF]" />
-              </div>
-              <div>
-                <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold">{t("Account")}</p>
-                <p className="text-lg font-bold text-[#002D55]">
-                  {userName ? userName : t("Guest profile")}
-                </p>
-                <p className="text-sm text-slate-600">
-                  {userName ? t("You are signed in to DocNearMe.") : t("Sign in to personalize your profile.")}
-                </p>
-                {userEmail && <p className="text-sm text-slate-500">{userEmail}</p>}
-              </div>
-            </div>
-            {!userName && (
-              <div className="flex flex-wrap items-center gap-3">
-                <span className="px-3 py-1 bg-[#F5FAFF] text-[#1648CE] rounded-full text-xs font-semibold">
-                  {t("Public access")}
-                </span>
-                <Button
-                  type="button"
-                  size="sm"
-                  className="bg-[#0089FF] hover:bg-[#0077E6]"
-                  onClick={() => navigate("/patient-auth")}
-                >
-                  {t("Login")}
-                </Button>
-              </div>
-            )}
-          </section>
+        <div className="mx-auto w-full max-w-6xl space-y-6">
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+            <div className="space-y-6">
+              <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[#EAF4FF]">
+                      <User className="h-5 w-5 text-[#1E6FD9]" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900">{t("Personal information")}</p>
+                      <p className="text-xs text-slate-500">{t("Manage your personal details and preferences.")}</p>
+                    </div>
+                  </div>
+                  {!isEditingProfile && (userName || userEmail) && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="border-slate-200 text-slate-700 hover:bg-slate-50"
+                      onClick={() => {
+                        setIsEditingProfile(true);
+                        setProfileSaved(false);
+                      }}
+                    >
+                      {t("Edit info")}
+                    </Button>
+                  )}
+                </div>
 
-          <section className="flex-1 rounded-[24px] border border-slate-200 bg-white p-8 shadow-sm">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#0089FF]/10">
-                  <User className="w-6 h-6 text-[#0089FF]" />
+                <div className="mt-5 rounded-xl border border-slate-100 bg-slate-50 p-4">
+                  <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold">{t("Account")}</p>
+                  <p className="mt-1 text-lg font-semibold text-[#0F2E4E]">
+                    {userName ? userName : t("Guest profile")}
+                  </p>
+                  <p className="text-sm text-slate-600">
+                    {userName ? t("You are signed in to DocNearMe.") : t("Sign in to personalize your profile.")}
+                  </p>
+                  {userEmail && <p className="text-sm text-slate-500">{userEmail}</p>}
+                  {!userName && (
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-500 border border-slate-200">
+                        {t("Public access")}
+                      </span>
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="bg-[#1E6FD9] hover:bg-[#185DB8]"
+                        onClick={() => navigate("/patient-auth")}
+                      >
+                        {t("Login")}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+
+                <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      {t("Full name")}
+                    </label>
+                    <Input
+                      type="text"
+                      value={profileName}
+                      onChange={(event) => setProfileName(event.target.value)}
+                      placeholder={t("Full name")}
+                      className="mt-2"
+                      disabled={!isEditingProfile}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      {t("Email address")}
+                    </label>
+                    <Input
+                      type="email"
+                      value={profileEmail}
+                      onChange={(event) => setProfileEmail(event.target.value)}
+                      placeholder={t("Email address")}
+                      className="mt-2"
+                      disabled={!isEditingProfile}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      {t("Phone number")}
+                    </label>
+                    <Input
+                      type="tel"
+                      value={profilePhone}
+                      onChange={(event) => setProfilePhone(event.target.value)}
+                      placeholder={t("Phone number")}
+                      className="mt-2"
+                      disabled={!isEditingProfile}
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      {t("Preferred language")}
+                    </label>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {[
+                        "Japanese",
+                        "English",
+                        "Indonesian",
+                        "Burmese",
+                        "Bangla",
+                        "Arabic",
+                        "Hindi",
+                        "Filipino",
+                        "Thai",
+                        "Chinese",
+                        "Korean",
+                        "Mexican",
+                        "Vietnamese",
+                      ].map((language) => (
+                        <button
+                          key={language}
+                          type="button"
+                          className={`rounded-full border px-3 py-1 text-xs font-semibold transition-colors ${
+                            preferredLanguage === language
+                              ? "border-[#1E6FD9] bg-[#EAF4FF] text-[#1E6FD9]"
+                              : "border-slate-200 text-slate-500 hover:border-[#1E6FD9]/40"
+                          } ${!isEditingProfile ? "cursor-not-allowed opacity-60" : ""}`}
+                          onClick={() => setPreferredLanguage(language)}
+                          disabled={!isEditingProfile}
+                        >
+                          {t(language)}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <label className="flex items-center gap-2 text-sm text-slate-600 sm:col-span-2">
+                    <input
+                      type="checkbox"
+                      checked={notificationsEnabled}
+                      onChange={(event) => setNotificationsEnabled(event.target.checked)}
+                      className="h-4 w-4 rounded border-slate-300 text-[#1E6FD9] focus:ring-[#1E6FD9]"
+                      disabled={!isEditingProfile}
+                    />
+                    {t("Send me appointment reminders and care tips.")}
+                  </label>
+                </div>
+              </section>
+
+              <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900">{t("Clinic coordination")}</p>
+                    <p className="text-xs text-slate-500">{t("Used only to help clinics prepare documents and communication support")}</p>
+                  </div>
+                  <span className="rounded-full border border-slate-200 px-2.5 py-1 text-[11px] font-semibold text-slate-500">
+                    {t("Optional")}
+                  </span>
+                </div>
+                <div className="mt-4 grid gap-4">
+                  <div>
+                    <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      {t("Home address")}
+                    </label>
+                    <Input
+                      type="text"
+                      value={profileAddress}
+                      onChange={(event) => setProfileAddress(event.target.value)}
+                      placeholder={t("Home address")}
+                      className="mt-2"
+                      disabled={!isEditingProfile}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      {t("Visa type")}
+                    </label>
+                    <Select
+                      value={profileVisaType}
+                      onValueChange={(value) => setProfileVisaType(value)}
+                      disabled={!isEditingProfile}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={t("Select visa type")} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="tourist">{t("Tourist")}</SelectItem>
+                        <SelectItem value="resident-work">{t("Resident (work visa)")}</SelectItem>
+                        <SelectItem value="resident-student">{t("Resident (student visa)")}</SelectItem>
+                        <SelectItem value="resident-family">{t("Resident (family/dependent)")}</SelectItem>
+                        <SelectItem value="resident-permanent">{t("Resident (permanent)")}</SelectItem>
+                        <SelectItem value="resident-long-term">{t("Resident (long-term)")}</SelectItem>
+                        <SelectItem value="resident-other">{t("Resident (other)")}</SelectItem>
+                        <SelectItem value="japanese-national">{t("Japanese national")}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </section>
+            </div>
+
+            <section className="rounded-2xl border border-[#D6E8FF] bg-[#F7FBFF] p-6 shadow-sm">
+              <div className="flex items-start gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-full bg-white">
+                  <ShieldCheck className="h-5 w-5 text-[#1E6FD9]" />
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold text-[#002D55]">{t("Profile details")}</h2>
-                  <p className="text-sm text-[#556070]">{t("Update your contact and care preferences.")}</p>
+                  <p className="text-sm font-semibold text-slate-900">{t("Medical safety")}</p>
+                  <p className="text-xs text-slate-500">{t("Your information is protected with strong encryption.")}</p>
                 </div>
               </div>
-              {!isEditingProfile && (userName || userEmail) && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="border-[#0089FF] text-[#0089FF] hover:bg-[#E8F3FF]"
-                  onClick={() => {
-                    setIsEditingProfile(true);
-                    setProfileSaved(false);
-                  }}
-                >
-                  {t("Edit info")}
-                </Button>
-              )}
-            </div>
-            <div className="mt-6 grid gap-4">
-              <div>
-                <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  {t("Full name")}
-                </label>
-                <Input
-                  type="text"
-                  value={profileName}
-                  onChange={(event) => setProfileName(event.target.value)}
-                  placeholder={t("Full name")}
-                  className="mt-2"
-                  disabled={!isEditingProfile}
-                />
-              </div>
-              <div>
-                <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  {t("Email address")}
-                </label>
-                <Input
-                  type="email"
-                  value={profileEmail}
-                  onChange={(event) => setProfileEmail(event.target.value)}
-                  placeholder={t("Email address")}
-                  className="mt-2"
-                  disabled={!isEditingProfile}
-                />
-              </div>
-              <div>
-                <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  {t("Phone number")}
-                </label>
-                <Input
-                  type="tel"
-                  value={profilePhone}
-                  onChange={(event) => setProfilePhone(event.target.value)}
-                  placeholder={t("Phone number")}
-                  className="mt-2"
-                  disabled={!isEditingProfile}
-                />
-              </div>
-              <div>
-                <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  {t("Home address")}
-                </label>
-                <Input
-                  type="text"
-                  value={profileAddress}
-                  onChange={(event) => setProfileAddress(event.target.value)}
-                  placeholder={t("Home address")}
-                  className="mt-2"
-                  disabled={!isEditingProfile}
-                />
-              </div>
-              <div className="grid gap-2">
-                <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  {t("Visa type")}
-                </label>
-                <Select
-                  value={profileVisaType}
-                  onValueChange={(value) => setProfileVisaType(value)}
-                  disabled={!isEditingProfile}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder={t("Select visa type")} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="tourist">{t("Tourist")}</SelectItem>
-                    <SelectItem value="resident-work">{t("Resident (work visa)")}</SelectItem>
-                    <SelectItem value="resident-student">{t("Resident (student visa)")}</SelectItem>
-                    <SelectItem value="resident-family">{t("Resident (family/dependent)")}</SelectItem>
-                    <SelectItem value="resident-permanent">{t("Resident (permanent)")}</SelectItem>
-                    <SelectItem value="resident-long-term">{t("Resident (long-term)")}</SelectItem>
-                    <SelectItem value="resident-other">{t("Resident (other)")}</SelectItem>
-                    <SelectItem value="japanese-national">{t("Japanese national")}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
+
+              <div className="mt-5 rounded-xl border border-[#D6E8FF] bg-white p-4">
                 <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                   {t("Emergency contact")}
                 </label>
@@ -377,116 +449,68 @@ export default function Profile() {
                   disabled={!isEditingProfile}
                 />
               </div>
-              <div className="grid gap-2">
-                <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  {t("Preferred language")}
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  {[
-                    "Japanese",
-                    "English",
-                    "Indonesian",
-                    "Burmese",
-                    "Bangla",
-                    "Arabic",
-                    "Hindi",
-                    "Filipino",
-                    "Thai",
-                    "Chinese",
-                    "Korean",
-                    "Mexican",
-                    "Vietnamese",
-                  ].map((language) => (
-                    <button
-                      key={language}
-                      type="button"
-                      className={`rounded-full border px-3 py-1 text-xs font-semibold transition-colors ${
-                        preferredLanguage === language
-                          ? "border-[#0089FF] bg-[#0089FF]/10 text-[#1648CE]"
-                          : "border-slate-200 text-slate-500 hover:border-[#0089FF]/40"
-                      } ${!isEditingProfile ? "cursor-not-allowed opacity-60" : ""}`}
-                      onClick={() => setPreferredLanguage(language)}
-                      disabled={!isEditingProfile}
-                    >
-                      {t(language)}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <label className="flex items-center gap-2 text-sm text-slate-600">
-                <input
-                  type="checkbox"
-                  checked={notificationsEnabled}
-                  onChange={(event) => setNotificationsEnabled(event.target.checked)}
-                  className="h-4 w-4 rounded border-slate-300 text-[#0089FF] focus:ring-[#0089FF]"
-                  disabled={!isEditingProfile}
-                />
-                {t("Send me appointment reminders and care tips.")}
-              </label>
-            </div>
-            <div className="mt-6 flex flex-wrap items-center gap-3">
-              {isEditingProfile && (
-                <>
-                  <Button type="button" className="bg-[#0089FF] hover:bg-[#0077E6]" onClick={handleProfileSave}>
-                    {t("Save profile")}
-                  </Button>
-                  <Button type="button" variant="ghost" onClick={handleProfileCancel}>
-                    {t("Cancel")}
-                  </Button>
-                </>
-              )}
-              {profileSaved && <span className="text-sm text-emerald-600">{t("Profile saved.")}</span>}
-              {isSyncingProfile && <span className="text-sm text-slate-500">{t("Syncing...")}</span>}
-            </div>
-            <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold">
-                {t("Help & support")}
-              </p>
-              <p className="mt-2 text-sm text-slate-600">
-                {t("Contact us at")}{" "}
-                <a
-                  className="font-semibold text-[#0089FF] hover:underline"
-                  href="mailto:docnearme.jp@gmail.com"
-                >
-                  docnearme.jp@gmail.com
-                </a>
-              </p>
-            </div>
-            {userName && (
-              <div className="mt-6 lg:hidden">
-                <Button variant="ghost" size="sm" onClick={handleLogout} className="w-full text-destructive hover:text-destructive hover:bg-destructive/10 gap-2 justify-center">
-                  <LogOut className="w-4 h-4" />
-                  {t("Sign out")}
-                </Button>
-              </div>
-            )}
-          </section>
 
-          <aside className="hidden lg:flex lg:w-1/3 flex-col gap-4">
-            <div className="rounded-2xl bg-white p-6 shadow-sm border border-slate-100 space-y-3">
-              <div className="flex items-center gap-3">
-                <ShieldCheck className="w-5 h-5 text-[#0089FF]" />
+              <div className="mt-4 flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3">
                 <div>
-                  <p className="text-sm font-semibold text-slate-700">{t("Secure medical vault")}</p>
-                  <p className="text-xs text-slate-500">{t("Encrypted storage for prescriptions and reports.")}</p>
+                  <p className="text-sm font-semibold text-slate-800">{t("Medical vault status")}</p>
+                  <div className="mt-1 inline-flex items-center gap-2 rounded-full bg-[#EAF4FF] px-2.5 py-1 text-[11px] font-semibold text-[#1E6FD9]">
+                    <Lock className="h-3.5 w-3.5" />
+                    {t("End-to-End Encrypted")}
+                  </div>
                 </div>
+                <label className="relative inline-flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={vaultEnabled}
+                    onChange={(event) => setVaultEnabled(event.target.checked)}
+                    className="peer sr-only"
+                    aria-label={t("Medical vault status")}
+                  />
+                  <span className="h-7 w-12 rounded-full bg-slate-300 transition-colors peer-checked:bg-[#1E6FD9]" />
+                  <span className="absolute left-0.5 top-0.5 h-6 w-6 rounded-full bg-white shadow transition-transform peer-checked:translate-x-5" />
+                </label>
               </div>
-              <div className="flex items-center gap-3">
-                <Bell className="w-5 h-5 text-[#0089FF]" />
-                <div>
-                  <p className="text-sm font-semibold text-slate-700">{t("Smart reminders")}</p>
-                  <p className="text-xs text-slate-500">{t("Custom follow-ups per specialist.")}</p>
-                </div>
-              </div>
-            </div>
-            <div className="rounded-2xl border border-slate-200 bg-[#F8FBFF] p-6">
-              <p className="text-sm text-slate-600">
-                {t(
-                  "Set your communication preferences once and we'll keep every booking, reminder and lab result perfectly in sync."
-                )}
+              <p className="mt-3 text-xs text-slate-600">
+                {t("Your data stays private and encrypted at rest and in transit.")}
               </p>
+            </section>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            {isEditingProfile && (
+              <>
+                <Button type="button" className="bg-[#1E6FD9] hover:bg-[#185DB8]" onClick={handleProfileSave}>
+                  {t("Save profile")}
+                </Button>
+                <Button type="button" variant="ghost" onClick={handleProfileCancel}>
+                  {t("Cancel")}
+                </Button>
+              </>
+            )}
+            {profileSaved && <span className="text-sm text-emerald-600">{t("Profile saved.")}</span>}
+            {isSyncingProfile && <span className="text-sm text-slate-500">{t("Syncing...")}</span>}
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-white p-5">
+            <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold">
+              {t("Help & support")}
+            </p>
+            <p className="mt-2 text-sm text-slate-600">
+              {t("Contact us at")}{" "}
+              <a className="font-semibold text-[#1E6FD9] hover:underline" href="mailto:docnearme.jp@gmail.com">
+                docnearme.jp@gmail.com
+              </a>
+            </p>
+          </div>
+
+          {userName && (
+            <div className="lg:hidden">
+              <Button variant="ghost" size="sm" onClick={handleLogout} className="w-full text-destructive hover:text-destructive hover:bg-destructive/10 gap-2 justify-center">
+                <LogOut className="w-4 h-4" />
+                {t("Sign out")}
+              </Button>
             </div>
-          </aside>
+          )}
         </div>
       </main>
 
