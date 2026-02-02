@@ -25,5 +25,6 @@ dist-ssr
 
 .config/
 !.env
+.env.example
 .env
 sqlite.db

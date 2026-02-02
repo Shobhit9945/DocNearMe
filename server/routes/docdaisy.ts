@@ -76,6 +76,8 @@ const parseRawBody = (value: unknown) => {
   return value;
 };
 
+const isValidUserText = (value: string) => value.trim().length > 0;
+
 const coerceMessage = (value: unknown): ChatMessage | null => {
   if (!value || typeof value !== "object") return null;
   const record = value as MessageLike;
@@ -118,17 +120,22 @@ const normalizeMessages = (value: unknown): ChatMessage[] => {
       .flatMap((entry) => {
         if (typeof entry === "string") {
           const trimmed = entry.trim();
-          return trimmed ? [{ sender: "user" as const, text: trimmed }] : [];
+          if (!trimmed || !isValidUserText(trimmed)) return [];
+          return [{ sender: "user" as const, text: trimmed }];
         }
         const coerced = coerceMessage(entry);
-        return coerced ? [coerced] : [];
+        if (!coerced) return [];
+        if (coerced.sender === "user" && !isValidUserText(coerced.text)) return [];
+        return [coerced];
       })
       .filter(Boolean) as ChatMessage[];
   }
 
   if (value && typeof value === "object") {
     const single = coerceMessage(value);
-    return single ? [single] : [];
+    if (!single) return [];
+    if (single.sender === "user" && !isValidUserText(single.text)) return [];
+    return [single];
   }
 
   const parsed = parseMaybeJson<unknown>(value);
@@ -137,7 +144,9 @@ const normalizeMessages = (value: unknown): ChatMessage[] => {
   }
 
   if (typeof value === "string" && value.trim().length > 0) {
-    return [{ sender: "user", text: value.trim() }];
+    const trimmed = value.trim();
+    if (!isValidUserText(trimmed)) return [];
+    return [{ sender: "user", text: trimmed }];
   }
 
   return [];
@@ -164,6 +173,41 @@ const callOpenAI = async (body: Record<string, unknown>) => {
   }
 
   return response.json();
+};
+
+const checkReplyRelevance = async (question: string, reply: string) => {
+  const payload = {
+    model: OPENAI_MODEL,
+    messages: [
+      {
+        role: "system" as const,
+        content:
+          "You are a strict relevance checker for a medical intake chat. Decide whether the user reply addresses the last question or adds symptom details. If off-topic, request a concise clarification. Return JSON only.",
+      },
+      {
+        role: "user" as const,
+        content: `Last question: ${question}\nUser reply: ${reply}\n\nReturn JSON: {"relevant": boolean, "redirect": string}`,
+      },
+    ],
+    temperature: 0,
+    response_format: { type: "json_object" as const },
+  };
+
+  const completion = await callOpenAI(payload);
+  const rawContent = extractOpenAIText(completion);
+  if (typeof rawContent !== "string") {
+    return { relevant: true, redirect: "" };
+  }
+
+  try {
+    const parsed = JSON.parse(rawContent) as { relevant?: boolean; redirect?: string };
+    return {
+      relevant: Boolean(parsed?.relevant ?? true),
+      redirect: typeof parsed?.redirect === "string" ? parsed.redirect.trim() : "",
+    };
+  } catch {
+    return { relevant: true, redirect: "" };
+  }
 };
 
 const extractOpenAIText = (payload: unknown) => {
@@ -260,6 +304,24 @@ router.post("/respond", async (req, res) => {
       : fallbackText
         ? [{ sender: "user", text: fallbackText }]
         : [];
+  const lastUserText = [...messages]
+    .reverse()
+    .find((msg) => msg.sender === "user")?.text;
+  const lastBotText = [...messages]
+    .reverse()
+    .find((msg) => msg.sender === "bot")?.text;
+
+  if (lastUserText && lastBotText) {
+    const relevance = await checkReplyRelevance(lastBotText, lastUserText);
+    if (!relevance.relevant) {
+      return res.json({
+        reply:
+          relevance.redirect ||
+          "Please answer the last question with symptom details so I can help.",
+        specialization: null,
+      });
+    }
+  }
   const userTurns = messages.filter((msg) => msg.sender === "user").length;
   const inferredMode = userTurns >= 5 ? "conclusion" : "followup";
   const mode = rawMode ?? inferredMode;

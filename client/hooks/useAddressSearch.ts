@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { getGeocodingErrorMessage, parseGeocodingResponse } from "@/hooks/useLiveLocation";
 
 const AUTOCOMPLETE_ENDPOINT = "/api/google-maps/places/autocomplete";
@@ -86,15 +86,21 @@ export const useAddressSearch = (input: string) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [sessionToken, setSessionToken] = useState(createSessionToken);
+  const prevInputRef = useRef("");
 
   const normalizedInput = useMemo(() => input.trim(), [input]);
 
   useEffect(() => {
+    const prevInput = prevInputRef.current;
+
     if (!normalizedInput) {
       setSuggestions([]);
       setIsLoading(false);
       setError("");
-      setSessionToken(createSessionToken());
+      if (prevInput) {
+        setSessionToken(createSessionToken());
+      }
+      prevInputRef.current = normalizedInput;
       return;
     }
 
@@ -102,6 +108,7 @@ export const useAddressSearch = (input: string) => {
       setSuggestions([]);
       setIsLoading(false);
       setError("");
+      prevInputRef.current = normalizedInput;
       return;
     }
 
@@ -132,6 +139,8 @@ export const useAddressSearch = (input: string) => {
         setIsLoading(false);
       }
     }, 350);
+
+    prevInputRef.current = normalizedInput;
 
     return () => window.clearTimeout(timeout);
   }, [normalizedInput, sessionToken]);

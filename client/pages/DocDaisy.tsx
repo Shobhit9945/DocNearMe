@@ -33,9 +33,12 @@ async function askDocDaisyWithRetry(
         headers: {
           "Content-Type": "application/json",
         },
+        cache: "no-store",
         body: JSON.stringify({
           mode,
           messages: conversation,
+          conversationHistory: conversation,
+          history: conversation,
           message: lastUserMessage,
         }),
       });
@@ -82,6 +85,7 @@ const DocDaisy: React.FC = () => {
     },
   ]);
   const [input, setInput] = useState("");
+  const [inputError, setInputError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   // State to hold the AI's final recommended specialization
@@ -125,8 +129,23 @@ const DocDaisy: React.FC = () => {
     ]);
   };
 
+  const isValidInput = (value: string) => value.trim().length > 0;
+
   const sendMessage = async () => {
-    if (!input.trim() || isLoading) return;
+    if (isLoading) return;
+    if (!isValidInput(input)) {
+      setInputError(
+        "Please enter a message so I can help."
+      );
+      setMessages((prev) => [
+        ...prev,
+        {
+          sender: "bot",
+          text: "I didn't quite catch that. Please share a bit more detail so I can help.",
+        },
+      ]);
+      return;
+    }
 
     const userInput = input.trim();
     const newUserMessage: ChatMessage = { sender: "user", text: userInput };
@@ -134,6 +153,7 @@ const DocDaisy: React.FC = () => {
     setMessages(updatedConversation);
 
     setInput("");
+    setInputError("");
     setIsLoading(true);
     setRecommendedSpecialization(null);
 
@@ -276,7 +296,10 @@ const DocDaisy: React.FC = () => {
               <div className="flex gap-3">
                 <input
                   value={input}
-                  onChange={(e) => setInput(e.target.value)}
+                  onChange={(e) => {
+                    setInput(e.target.value);
+                    if (inputError) setInputError("");
+                  }}
                   onKeyDown={(e) => e.key === "Enter" && sendMessage()}
                   className="flex-1 border border-gray-300 focus:border-[#3A12DB] rounded-xl px-4 py-3 text-gray-700 outline-none transition-all duration-200"
                   placeholder="Ask DocDaisy a question..."
@@ -291,6 +314,9 @@ const DocDaisy: React.FC = () => {
                   <Send className="w-6 h-6" />
                 </button>
               </div>
+              {inputError && (
+                <p className="text-sm text-red-500">{inputError}</p>
+              )}
             </div>
           </section>
 
