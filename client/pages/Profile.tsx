@@ -235,7 +235,7 @@ export default function Profile() {
                 <User className="w-6 h-6 text-[#0089FF]" />
               </div>
               <div>
-                <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold">Account</p>
+                <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold">{t("Account")}</p>
                 <p className="text-lg font-bold text-[#002D55]">
                   {userName ? userName : t("Guest profile")}
                 </p>
@@ -296,7 +296,7 @@ export default function Profile() {
                   type="text"
                   value={profileName}
                   onChange={(event) => setProfileName(event.target.value)}
-                  placeholder="Taro Tanaka"
+                  placeholder={t("Full name")}
                   className="mt-2"
                   disabled={!isEditingProfile}
                 />
@@ -309,7 +309,7 @@ export default function Profile() {
                   type="email"
                   value={profileEmail}
                   onChange={(event) => setProfileEmail(event.target.value)}
-                  placeholder="you@example.com"
+                  placeholder={t("Email address")}
                   className="mt-2"
                   disabled={!isEditingProfile}
                 />
@@ -322,7 +322,7 @@ export default function Profile() {
                   type="tel"
                   value={profilePhone}
                   onChange={(event) => setProfilePhone(event.target.value)}
-                  placeholder="+81 90 0000 0000"
+                  placeholder={t("Phone number")}
                   className="mt-2"
                   disabled={!isEditingProfile}
                 />
@@ -335,14 +335,14 @@ export default function Profile() {
                   type="text"
                   value={profileAddress}
                   onChange={(event) => setProfileAddress(event.target.value)}
-                  placeholder="Chiyoda-ku, Tokyo"
+                  placeholder={t("Home address")}
                   className="mt-2"
                   disabled={!isEditingProfile}
                 />
               </div>
               <div className="grid gap-2">
                 <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  Visa type
+                  {t("Visa type")}
                 </label>
                 <Select
                   value={profileVisaType}
@@ -350,17 +350,17 @@ export default function Profile() {
                   disabled={!isEditingProfile}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select visa type" />
+                    <SelectValue placeholder={t("Select visa type")} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="tourist">Tourist</SelectItem>
-                    <SelectItem value="resident-work">Resident (work visa)</SelectItem>
-                    <SelectItem value="resident-student">Resident (student visa)</SelectItem>
-                    <SelectItem value="resident-family">Resident (family/dependent)</SelectItem>
-                    <SelectItem value="resident-permanent">Resident (permanent)</SelectItem>
-                    <SelectItem value="resident-long-term">Resident (long-term)</SelectItem>
-                    <SelectItem value="resident-other">Resident (other)</SelectItem>
-                    <SelectItem value="japanese-national">Japanese national</SelectItem>
+                    <SelectItem value="tourist">{t("Tourist")}</SelectItem>
+                    <SelectItem value="resident-work">{t("Resident (work visa)")}</SelectItem>
+                    <SelectItem value="resident-student">{t("Resident (student visa)")}</SelectItem>
+                    <SelectItem value="resident-family">{t("Resident (family/dependent)")}</SelectItem>
+                    <SelectItem value="resident-permanent">{t("Resident (permanent)")}</SelectItem>
+                    <SelectItem value="resident-long-term">{t("Resident (long-term)")}</SelectItem>
+                    <SelectItem value="resident-other">{t("Resident (other)")}</SelectItem>
+                    <SelectItem value="japanese-national">{t("Japanese national")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -372,7 +372,7 @@ export default function Profile() {
                   type="text"
                   value={emergencyContact}
                   onChange={(event) => setEmergencyContact(event.target.value)}
-                  placeholder="Name + phone"
+                  placeholder={t("Emergency contact")}
                   className="mt-2"
                   disabled={!isEditingProfile}
                 />
