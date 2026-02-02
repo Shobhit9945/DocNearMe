@@ -41,6 +41,7 @@ import { Input } from "@/components/ui/input";
 import { TranslatedText } from "@/components/TranslatedText";
 import { Textarea } from "@/components/ui/textarea";
 import { useAllDoctors, useClinics } from "@/lib/clinic-data";
+import { LoadingScreen } from "@/components/LoadingScreen";
 import {
   getSpecializationLabel,
   matchSpecialization,
@@ -153,8 +154,8 @@ export default function Appointment() {
   const [actionSlot, setActionSlot] = useState<string | undefined>();
   const [actionError, setActionError] = useState<string | null>(null);
   const [isActionSubmitting, setIsActionSubmitting] = useState(false);
-  const { data: clinicsData } = useClinics();
-  const { data: doctorsData } = useAllDoctors();
+  const { data: clinicsData, isLoading: isClinicsLoading } = useClinics();
+  const { data: doctorsData, isLoading: isDoctorsLoading } = useAllDoctors();
   const clinics = clinicsData?.clinics ?? [];
   const doctors = doctorsData?.doctors ?? [];
   const [fieldErrors, setFieldErrors] = useState<{
@@ -1425,6 +1426,17 @@ export default function Appointment() {
         <div className="lg:hidden">
           <BottomNav />
         </div>
+      </PageScaffold>
+    );
+  }
+
+  if (isClinicsLoading || isDoctorsLoading) {
+    return (
+      <PageScaffold contentClassName="pb-28 lg:pb-12">
+        <LoadingScreen
+          title={t("Loading booking")}
+          subtitle={t("Pulling clinic availability and doctor schedules.")}
+        />
       </PageScaffold>
     );
   }

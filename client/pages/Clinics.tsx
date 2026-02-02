@@ -18,6 +18,7 @@ import { formatAvailabilityForLanguage } from "@/lib/time-format";
 import { useClinics } from "@/lib/clinic-data";
 import { getSpecializationLabel, matchSpecialization } from "@/lib/specializations";
 import { TranslatedText } from "@/components/TranslatedText";
+import { LoadingScreen } from "@/components/LoadingScreen";
 
 export default function Clinics() {
   const navigate = useNavigate();
@@ -51,7 +52,7 @@ export default function Clinics() {
     ? matchSpecialization(specializationParam) ?? specializationParam
     : null;
 
-  const { data: clinicsData } = useClinics();
+  const { data: clinicsData, isLoading: isClinicsLoading } = useClinics();
   const baseSpecializations = useMemo(() => {
     const specializationMap = new Map<string, string>();
     (clinicsData?.clinics ?? []).forEach((clinic) => {
@@ -172,6 +173,17 @@ export default function Clinics() {
     setSearchParams({ specialization });
     setShowFilters(false);
   };
+
+  if (isClinicsLoading) {
+    return (
+      <PageScaffold contentClassName="pb-28 lg:pb-12">
+        <LoadingScreen
+          title={t("Loading clinics")}
+          subtitle={t("Fetching the latest availability from nearby providers.")}
+        />
+      </PageScaffold>
+    );
+  }
 
   return (
     <PageScaffold contentClassName="pb-28 lg:pb-12">

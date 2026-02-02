@@ -8,6 +8,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAllDoctors, useClinics } from "@/lib/clinic-data";
 import { getSpecializationLabel, matchSpecialization } from "@/lib/specializations";
 import { TranslatedText } from "@/components/TranslatedText";
+import { LoadingScreen } from "@/components/LoadingScreen";
 
 export default function Search() {
   const { t, language } = useTranslation();
@@ -17,8 +18,8 @@ export default function Search() {
   const [specializationFilter, setSpecializationFilter] = useState("all");
   const [languageFilter, setLanguageFilter] = useState("all");
   const [resultType, setResultType] = useState<"all" | "doctor" | "clinic">("all");
-  const { data: clinicsData } = useClinics();
-  const { data: doctorsData } = useAllDoctors();
+  const { data: clinicsData, isLoading: isClinicsLoading } = useClinics();
+  const { data: doctorsData, isLoading: isDoctorsLoading } = useAllDoctors();
   const doctorScrollerRef = useRef<HTMLDivElement | null>(null);
   const clinicScrollerRef = useRef<HTMLDivElement | null>(null);
 
@@ -137,6 +138,17 @@ export default function Search() {
     const offset = Math.max(scroller.clientWidth * 0.85, 280);
     scroller.scrollBy({ left: direction === "left" ? -offset : offset, behavior: "smooth" });
   };
+
+  if (isClinicsLoading || isDoctorsLoading) {
+    return (
+      <PageScaffold contentClassName="pb-28 lg:pb-12">
+        <LoadingScreen
+          title={t("Loading search")}
+          subtitle={t("Preparing clinics and doctors for you.")}
+        />
+      </PageScaffold>
+    );
+  }
 
   return (
     <PageScaffold contentClassName="pb-28 lg:pb-12">
