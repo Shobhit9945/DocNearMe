@@ -37,6 +37,18 @@ const parseMaybeJson = <T,>(value: unknown): T | undefined => {
   }
 };
 
+const parseRawBody = (value: unknown) => {
+  if (typeof value === "string") {
+    const parsed = parseMaybeJson<unknown>(value);
+    if (parsed !== undefined) {
+      return parsed;
+    }
+    return { message: value };
+  }
+
+  return value;
+};
+
 const coerceMessage = (value: unknown): ChatMessage | null => {
   if (!value || typeof value !== "object") return null;
   const record = value as MessageLike;
