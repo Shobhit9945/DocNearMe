@@ -132,10 +132,7 @@ const extractOpenAIText = (payload: unknown) => {
 };
 
 router.post("/respond", async (req, res) => {
-  const rawBody =
-    typeof req.body === "string"
-      ? parseMaybeJson<Record<string, unknown>>(req.body) ?? {}
-      : ((req.body as Record<string, unknown> | undefined) ?? {});
+  const rawBody = parseRawBody(req.body);
   const rawMode = rawBody?.mode as "followup" | "conclusion" | undefined;
   const rawMessages =
     rawBody?.messages ??
