@@ -184,20 +184,21 @@ const isInAppSpecialization = (value: string) => {
 
 router.post("/respond", async (req, res) => {
   const rawBody = parseRawBody(req.body);
-  const rawMode = rawBody?.mode as "followup" | "conclusion" | undefined;
+  const payload = parseRawBody(rawBody?.body ?? rawBody?.data ?? rawBody);
+  const rawMode = payload?.mode as "followup" | "conclusion" | undefined;
   const rawMessages =
-    rawBody?.messages ??
-    rawBody?.conversation ??
-    rawBody?.history ??
-    rawBody?.conversationHistory ??
-    (Array.isArray(rawBody) ? rawBody : undefined);
+    payload?.messages ??
+    payload?.conversation ??
+    payload?.history ??
+    payload?.conversationHistory ??
+    (Array.isArray(payload) ? payload : undefined);
   const fallbackText =
-    typeof rawBody?.message === "string"
-      ? rawBody.message
-      : typeof rawBody?.text === "string"
-        ? rawBody.text
-        : typeof rawBody?.content === "string"
-          ? rawBody.content
+    typeof payload?.message === "string"
+      ? payload.message
+      : typeof payload?.text === "string"
+        ? payload.text
+        : typeof payload?.content === "string"
+          ? payload.content
         : undefined;
 
   const normalizedMessages = normalizeMessages(rawMessages);
