@@ -119,6 +119,19 @@
   animation: loading-bar 1.6s ease-in-out infinite;
 }
 
+@keyframes daisy-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-daisy-spin {
+  animation: daisy-spin 6s linear infinite;
+}
+
 @layer base {
   * {
     @apply border-border;

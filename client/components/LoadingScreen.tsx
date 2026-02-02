@@ -17,8 +17,12 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({
     <div className={cn("flex min-h-[60vh] w-full items-center justify-center px-4", className)}>
       <div className="w-full max-w-lg rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
         <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[#E5DEFF] text-[#3A12DB] shadow-sm">
-            🌼
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#E5DEFF] shadow-sm">
+            <img
+              src="/docdaisy.png"
+              alt="DocDaisy"
+              className="h-40 w-40 object-contain animate-daisy-spin"
+            />
           </div>
           <div>
             <p className="text-base font-semibold text-slate-800">{title}</p>

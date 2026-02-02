@@ -448,12 +448,7 @@ export default function Clinics() {
               </p>
             </div>
             <DocDaisyBanner variant="card" onClick={() => navigate("/docdaisy")} />
-            <div className="rounded-3xl border border-[#D4EBFF] bg-[#F5FAFF] p-6 text-sm text-slate-600">
-              <p className="font-semibold text-[#002D55]">{t("Need directions?")}</p>
-              <p className="mt-2 flex items-center gap-2">
-                <MapPin className="w-4 h-4 text-[#0089FF]" /> {t("Open in Maps")}
-              </p>
-            </div>
+            
           </aside>
         </div>
       </main>

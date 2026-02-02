@@ -13,7 +13,7 @@ export function DocDaisyBanner({ className, onClick, onClose, variant = "button"
   const { t } = useTranslation();
 
   return (
-    <div className={cn("relative w-full", className)}>
+    <div className={cn("relative w-full lg:max-w-[360px]", className)}>
       {onClose && (
         <button
           onClick={(e) => {
@@ -30,22 +30,22 @@ export function DocDaisyBanner({ className, onClick, onClose, variant = "button"
         onClick={onClick}
         className={cn(
           "w-full bg-[#EEE9FF] border border-[#3A12DB] rounded-[14px] shadow-[0_4px_9px_0_rgba(0,0,0,0.15)] p-4 text-left transition-all duration-200",
-          variant === "card" && "lg:p-6 lg:shadow-xl"
+          variant === "card" && "lg:p-4 lg:shadow-xl"
         )}
       >
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex-1 text-left min-w-0">
-            <h4 className="text-sm font-bold text-black leading-tight mb-1">{t("Have any queries?")}</h4>
-            <p className="text-lg font-bold bg-gradient-to-r from-[#3A12DB] to-[#7C53FF] bg-clip-text text-transparent leading-tight mb-1">
+        <div className="flex items-center justify-start gap-0">
+          <div className="flex-1 text-left min-w-0 pr-0">
+            <h4 className="text-base font-bold text-black leading-tight mb-1">{t("Have any queries?")}</h4>
+            <p className="text-xl font-bold bg-gradient-to-r from-[#3A12DB] to-[#7C53FF] bg-clip-text text-transparent leading-tight mb-1">
               DOCDAISY
             </p>
-            <p className="text-sm font-semibold text-black leading-tight mb-1">{t("is here for you!")}</p>
-            <p className="text-xs text-black leading-tight">{t("Click on the banner to ask")}</p>
+            <p className="text-base font-semibold text-black leading-tight mb-1">{t("is here for you!")}</p>
+            <p className="text-sm text-black leading-tight">{t("Click on the banner to ask")}</p>
           </div>
           <img
-            src="https://api.builder.io/api/v1/image/assets/TEMP/df6e44a93787679647c1cbdaa440c62c2e37e816?width=110"
+            src="/docdaisy.png"
             alt="DocDaisy AI Assistant"
-            className="w-[60px] h-[60px] rounded-[14px] object-cover flex-shrink-0"
+            className="-ml-2 w-[140px] h-[140px] rounded-[14px] object-contain flex-shrink-0 lg:w-[120px] lg:h-[120px]"
           />
         </div>
       </button>

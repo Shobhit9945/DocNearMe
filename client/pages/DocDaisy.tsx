@@ -240,21 +240,22 @@ const DocDaisy: React.FC = () => {
   };
 
   return (
-    <PageScaffold contentClassName="pb-0">
-      <div className="flex flex-1 flex-col">
-        <header className="bg-[#3A12DB] text-white py-4 px-4 font-extrabold text-xl flex items-center lg:px-10 lg:rounded-t-3xl lg:shadow-md">
+    <PageScaffold contentClassName="pb-0 lg:pr-0">
+      <div className="flex flex-1 flex-col min-h-0">
+        <header className="w-full bg-[#3A12DB] text-white py-4 px-4 font-extrabold text-xl flex items-center lg:px-10 lg:rounded-t-3xl lg:shadow-md">
           <button
             onClick={() => navigate("/home")}
             className="mr-3 p-1 rounded-full hover:bg-[#2A0F9D] transition-colors"
           >
             <ChevronLeft className="w-6 h-6" />
           </button>
-          <span className="text-2xl mr-2">🌼</span> DocDaisy AI Assistant
+          <img src="/docdaisy.png" alt="DocDaisy" className="mr-2 h-9 w-9 object-contain" />
+          DocDaisy AI Assistant
         </header>
 
-        <div className="flex flex-1 flex-col lg:grid lg:grid-cols-[2.3fr_0.7fr]">
+        <div className="flex flex-1 flex-col lg:grid lg:grid-cols-[2.3fr_0.7fr] min-h-0">
           {/* Chat section */}
-          <section className="flex flex-col bg-gray-50">
+          <section className="flex flex-col bg-gray-50 min-h-0">
             <div className="flex-1 overflow-y-auto p-4 space-y-4 pt-6 pb-2 sm:p-6 sm:space-y-5">
               {messages.map((msg, i) => (
                 <div
@@ -287,7 +288,7 @@ const DocDaisy: React.FC = () => {
               <div ref={messagesEndRef} />
             </div>
 
-            <div className="p-4 border-t border-gray-200 bg-white space-y-3">
+            <div className="p-4 border-t border-gray-200 bg-white space-y-3 pb-safe">
               {recommendedSpecialization && (
                 <div className="p-3 bg-[#E5DEFF] rounded-xl border border-[#3A12DB] shadow-lg">
                   <p className="text-sm font-semibold text-[#002D55] mb-3">
@@ -328,7 +329,7 @@ const DocDaisy: React.FC = () => {
                     if (inputError) setInputError("");
                   }}
                   onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-                  className="flex-1 border border-gray-300 focus:border-[#3A12DB] rounded-xl px-4 py-3 text-gray-700 outline-none transition-all duration-200"
+                  className="flex-1 border border-gray-300 focus:border-[#3A12DB] rounded-xl px-4 py-3 text-[16px] leading-6 text-gray-700 outline-none transition-all duration-200"
                   placeholder="Ask DocDaisy a question..."
                   disabled={isLoading}
                 />
