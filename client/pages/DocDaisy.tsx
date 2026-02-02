@@ -23,6 +23,8 @@ async function askDocDaisyWithRetry(
   retries = 3
 ): Promise<{ reply: string; specialization?: string | null }> {
   let lastError: Error | null = null;
+  const lastUserMessage =
+    [...conversation].reverse().find((msg) => msg.sender === "user")?.text ?? "";
 
   for (let attempt = 0; attempt < retries; attempt++) {
     try {
@@ -34,6 +36,7 @@ async function askDocDaisyWithRetry(
         body: JSON.stringify({
           mode,
           messages: conversation,
+          message: lastUserMessage,
         }),
       });
 
