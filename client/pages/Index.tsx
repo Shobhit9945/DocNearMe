@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { Activity, Ambulance, ClipboardList, Navigation } from "lucide-react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { Activity, Ambulance, ClipboardList, Info, Lock, Navigation } from "lucide-react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { BottomNav } from "@/components/BottomNav";
@@ -77,8 +77,60 @@ type QuickAction = {
   onClick?: () => void;
 };
 
+type StepBodyProps = {
+  text?: string;
+};
+
+const StepBody: React.FC<StepBodyProps> = ({ text }) => {
+  if (!text) return null;
+  const parts = text
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  if (parts.length <= 1) {
+    return <p className="text-sm text-slate-700 leading-relaxed">{text}</p>;
+  }
+
+  return (
+    <ul className="space-y-2 text-sm text-slate-700 leading-relaxed">
+      {parts.map((line, index) => (
+        <li key={`${line}-${index}`} className="flex gap-2">
+          <span className="mt-2 h-1.5 w-1.5 rounded-full bg-slate-400" />
+          <span>{line}</span>
+        </li>
+      ))}
+    </ul>
+  );
+};
+
+type NoteProps = {
+  text: string;
+};
+
+const TrustChip: React.FC<NoteProps> = ({ text }) => (
+  <div className="inline-flex max-w-full items-start gap-2 rounded-full bg-slate-100 px-3 py-2 text-xs text-slate-700">
+    <Lock className="mt-0.5 h-3.5 w-3.5 text-slate-500" />
+    <span className="leading-relaxed">{text}</span>
+  </div>
+);
+
+const InfoCard: React.FC<NoteProps> = ({ text }) => (
+  <div className="flex items-start gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700">
+    <Info className="mt-0.5 h-4 w-4 text-slate-500" />
+    <span className="leading-relaxed">{text}</span>
+  </div>
+);
+
 const TOKEN_KEY = "docnearme_patient_token";
 const EMAIL_KEY = "docnearme_user_email";
+
+type HowVisitStep = {
+  title: string;
+  body: string;
+  helper?: string;
+  note?: string;
+};
 
 const Index: React.FC = () => {
   const navigate = useNavigate();
@@ -99,6 +151,8 @@ const Index: React.FC = () => {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const [showVaultUnlock, setShowVaultUnlock] = useState(false);
+  const [showHowVisits, setShowHowVisits] = useState(false);
+  const [howVisitStep, setHowVisitStep] = useState(0);
   const [vaultPassword, setVaultPassword] = useState("");
   const [vaultError, setVaultError] = useState<string | null>(null);
   const [vaultKeyPayload, setVaultKeyPayload] = useState<MedicalRecordKeyResponse | null>(null);
@@ -112,6 +166,52 @@ const Index: React.FC = () => {
     fetchPlaceDetails,
     geocodeAddress,
   } = useAddressSearch(manualLocationInput);
+  const touchStartYRef = useRef<number | null>(null);
+
+  const howVisitSteps = useMemo<HowVisitStep[]>(
+    () => [
+      {
+        title: t("Find the right clinic"),
+        body: t(
+          "Search by specialization or describe your symptoms. Not sure which doctor to visit? DocDaisy can guide you."
+        ),
+      },
+      {
+        title: t("Request a visit"),
+        body: t(
+          "Choose your preferred date and time. We’ll send a visit request to the clinic on your behalf."
+        ),
+        helper: t("This is a request, not an instant booking."),
+      },
+      {
+        title: t("Share medical information (optional)"),
+        body: t(
+          "You can share symptoms or medical records to help the clinic prepare. Only what you choose is shared, and everything is encrypted."
+        ),
+        note: t("Your privacy is our priority. DocNearMe can’t access your medical records."),
+      },
+      {
+        title: t("What happens after you request"),
+        body: t(
+          "The clinic will review your request based on availability.\nDocNearMe will keep you updated if anything changes before your visit."
+        ),
+        note: t("No payment is made in the app. You pay directly at the clinic. DocNearMe doesn't charge any fees."),
+      },
+      {
+        title: t("Visit the clinic"),
+        body: t(
+          "Go to the clinic at the requested time. At reception, mention that you used DocNearMe App."
+        ),
+      },
+      {
+        title: t("After your visit"),
+        body: t(
+          "If the clinic provides digital reports or results, you can access them securely in the app — only if you choose to."
+        ),
+      },
+    ],
+    [t]
+  );
 
   const locationStatus = useMemo(() => {
     if (manualLocation) return "Manual address";
@@ -294,8 +394,12 @@ const Index: React.FC = () => {
       headline: t("WITH DOCNEARME"),
       description: t("Plan, book and manage visits in seconds."),
       cta: t("Learn more"),
+      onClick: () => {
+        setHowVisitStep(0);
+        setShowHowVisits(true);
+      },
       image:
-        "https://api.builder.io/api/v1/image/assets/TEMP/94dd9abcae8bb5e056848f9449decbaac63a2b5f?width=312",
+        "/applogo.png",
       accent: "from-[#FAFAFE] to-[#E1F6FF]",
     },
     {
@@ -303,6 +407,7 @@ const Index: React.FC = () => {
       headline: t("FAST CLINIC MATCHING"),
       description: t("Find nearby clinics and specialists instantly."),
       cta: t("Find clinics"),
+      onClick: () => navigate("/clinics"),
       image:
         "https://api.builder.io/api/v1/image/assets/TEMP/efd1a0a0a615de8dfe2ff92c5e5efa34e4764d7a?width=584",
       accent: "from-[#F4FAFF] to-[#DDF1FF]",
@@ -312,7 +417,8 @@ const Index: React.FC = () => {
       headline: t("DOCDAISY SUPPORT"),
       description: t("Ask questions and get guidance in real time."),
       cta: t("Ask DocDaisy"),
-      image: "/applogo.png",
+      onClick: () => navigate("/docdaisy"),
+      image: "/docdaisy.png",
       accent: "from-[#F9F7FF] to-[#E8E7FF]",
     },
   ];
@@ -450,7 +556,11 @@ const Index: React.FC = () => {
                         />
                       </div>
                       <div className="mt-3 flex">
-                        <button className="bg-[#002D55] text-white text-xs font-semibold px-4 py-2 rounded-[12px] shadow-[0_3px_16px_0_rgba(15,39,74,0.10)] hover:bg-[#003366] transition-colors sm:text-sm">
+                        <button
+                          onClick={slide.onClick}
+                          disabled={!slide.onClick}
+                          className="bg-[#002D55] text-white text-xs font-semibold px-4 py-2 rounded-[12px] shadow-[0_3px_16px_0_rgba(15,39,74,0.10)] hover:bg-[#003366] transition-colors sm:text-sm disabled:opacity-60 disabled:cursor-not-allowed"
+                        >
                           {slide.cta}
                         </button>
                       </div>
@@ -581,6 +691,143 @@ const Index: React.FC = () => {
               {isUnlockingVault ? t("Unlocking...") : t("Unlock and continue")}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={showHowVisits}
+        onOpenChange={(open) => {
+          setShowHowVisits(open);
+          if (!open) {
+            setHowVisitStep(0);
+          }
+        }}
+      >
+        <DialogContent
+          className="left-0 right-0 top-auto bottom-0 w-full max-w-none translate-x-0 translate-y-0 rounded-t-[32px] border border-slate-200/80 bg-white/95 p-0 shadow-[0_20px_60px_-30px_rgba(15,23,42,0.45)] sm:left-[50%] sm:top-[50%] sm:bottom-auto sm:w-full sm:max-w-xl sm:translate-x-[-50%] sm:translate-y-[-50%] sm:rounded-[28px]"
+          onTouchStart={(event) => {
+            touchStartYRef.current = event.touches[0]?.clientY ?? null;
+          }}
+          onTouchEnd={(event) => {
+            const startY = touchStartYRef.current;
+            const endY = event.changedTouches[0]?.clientY ?? null;
+            if (startY && endY && endY - startY > 90) {
+              setShowHowVisits(false);
+              setHowVisitStep(0);
+            }
+            touchStartYRef.current = null;
+          }}
+        >
+          <DialogHeader className="border-b border-slate-100 px-7 pb-5 pt-6 sm:px-8">
+            <DialogTitle className="text-sm font-medium text-slate-500">
+              {t("How visits work")}
+            </DialogTitle>
+            <DialogDescription className="mt-2 flex items-center gap-3 text-xs text-slate-400">
+              <span>
+                {t("Step")} {howVisitStep + 1} {t("of")} {howVisitSteps.length}
+              </span>
+              <div className="flex items-center gap-1.5">
+                {howVisitSteps.map((_, index) => (
+                  <span
+                    key={index}
+                    className={`h-1.5 w-1.5 rounded-full ${
+                      index === howVisitStep ? "bg-[#1E6FD9]" : "bg-slate-200"
+                    }`}
+                  />
+                ))}
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="max-h-[70dvh] overflow-y-auto px-7 pb-7 pt-5 sm:max-h-[70vh] sm:px-8">
+            <motion.div
+              key={howVisitStep}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.25 }}
+              className="space-y-4"
+            >
+              <h2 className="text-2xl font-semibold text-slate-900">
+                {howVisitSteps[howVisitStep]?.title}
+              </h2>
+              <StepBody text={howVisitSteps[howVisitStep]?.body} />
+              {howVisitSteps[howVisitStep]?.helper && (
+                <p className="text-xs font-semibold text-[#1E6FD9]">
+                  {howVisitSteps[howVisitStep]?.helper}
+                </p>
+              )}
+              {howVisitSteps[howVisitStep]?.note && (
+                <div>
+                  {howVisitStep === 2 ? (
+                    <TrustChip text={howVisitSteps[howVisitStep]?.note ?? ""} />
+                  ) : (
+                    <InfoCard text={howVisitSteps[howVisitStep]?.note ?? ""} />
+                  )}
+                </div>
+              )}
+            </motion.div>
+
+            <div className="mt-6 flex items-center justify-between">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setHowVisitStep((prev) => Math.max(prev - 1, 0))}
+                disabled={howVisitStep === 0}
+              >
+                {t("Back")}
+              </Button>
+              <Button
+                size="sm"
+                onClick={() =>
+                  setHowVisitStep((prev) =>
+                    Math.min(prev + 1, howVisitSteps.length - 1)
+                  )
+                }
+                disabled={howVisitStep === howVisitSteps.length - 1}
+              >
+                {t("Next")}
+              </Button>
+            </div>
+
+            {howVisitStep === howVisitSteps.length - 1 && (
+              <div className="mt-6 rounded-3xl border border-slate-200 bg-slate-50 p-5">
+                <h3 className="text-base font-semibold text-slate-900">{t("Still unsure?")}</h3>
+                <p className="mt-2 text-sm text-slate-600">
+                  {t(
+                    "Healthcare works differently at every clinic. DocNearMe helps make the process clearer without replacing how clinics work."
+                  )}
+                </p>
+                <div className="mt-4 grid gap-2 sm:grid-cols-3">
+                  <Button
+                    className="bg-[#1E6FD9] hover:bg-[#185DB8]"
+                    onClick={() => {
+                      setShowHowVisits(false);
+                      setHowVisitStep(0);
+                      navigate("/appointment?view=booking");
+                    }}
+                  >
+                    {t("Start request")}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setShowHowVisits(false);
+                      setHowVisitStep(0);
+                      navigate("/docdaisy");
+                    }}
+                  >
+                    {t("Ask DocDaisy")}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => (window.location.href = "mailto:docnearme.jp@gmail.com")}
+                  >
+                    {t("Contact support")}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </PageScaffold>

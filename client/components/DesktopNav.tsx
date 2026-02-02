@@ -17,7 +17,7 @@ export function DesktopNav() {
   const { t } = useTranslation();
 
   return (
-    <div className="sticky top-0 hidden min-h-[100dvh] w-full flex-col border-r border-slate-200 bg-white p-6 lg:flex">
+    <div className="fixed left-0 top-0 z-30 hidden h-[100dvh] w-[260px] flex-col border-r border-slate-200 bg-white p-6 lg:flex overflow-y-auto">
       <div className="flex items-center gap-3 mb-8">
         <img src="/applogo.png" alt="DocNearMe" className="w-12 h-12 object-contain" />
         <div>

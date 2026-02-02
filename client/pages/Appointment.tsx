@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import {
   CalendarClock,
   ChevronLeft,
@@ -8,7 +8,9 @@ import {
   Calendar as CalendarIcon,
   Download,
   Loader2,
-  Star
+  Star,
+  Info,
+  Lock
 } from "lucide-react";
 import { DocDaisyBanner } from "@/components/DocDaisyBanner";
 import { PageScaffold } from "@/components/PageScaffold";
@@ -108,6 +110,58 @@ type UpcomingAppointment = {
   notes?: string;
 };
 
+type HowVisitStep = {
+  title: string;
+  body: string;
+  helper?: string;
+  note?: string;
+};
+
+type StepBodyProps = {
+  text?: string;
+};
+
+const StepBody: React.FC<StepBodyProps> = ({ text }) => {
+  if (!text) return null;
+  const parts = text
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  if (parts.length <= 1) {
+    return <p className="text-sm text-slate-700 leading-relaxed">{text}</p>;
+  }
+
+  return (
+    <ul className="space-y-2 text-sm text-slate-700 leading-relaxed">
+      {parts.map((line, index) => (
+        <li key={`${line}-${index}`} className="flex gap-2">
+          <span className="mt-2 h-1.5 w-1.5 rounded-full bg-slate-400" />
+          <span>{line}</span>
+        </li>
+      ))}
+    </ul>
+  );
+};
+
+type NoteProps = {
+  text: string;
+};
+
+const TrustChip: React.FC<NoteProps> = ({ text }) => (
+  <div className="inline-flex max-w-full items-start gap-2 rounded-full bg-slate-100 px-3 py-2 text-xs text-slate-700">
+    <Lock className="mt-0.5 h-3.5 w-3.5 text-slate-500" />
+    <span className="leading-relaxed">{text}</span>
+  </div>
+);
+
+const InfoCard: React.FC<NoteProps> = ({ text }) => (
+  <div className="flex items-start gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700">
+    <Info className="mt-0.5 h-4 w-4 text-slate-500" />
+    <span className="leading-relaxed">{text}</span>
+  </div>
+);
+
 export default function Appointment() {
   const navigate = useNavigate();
   const { t, language } = useTranslation();
@@ -171,6 +225,54 @@ export default function Appointment() {
   const [authSession, setAuthSession] = useState<AuthSession | null>(null);
   const [authError, setAuthError] = useState<string | null>(null);
   const [availabilityNotice, setAvailabilityNotice] = useState<string | null>(null);
+  const [showHowVisits, setShowHowVisits] = useState(false);
+  const [howVisitStep, setHowVisitStep] = useState(0);
+  const touchStartYRef = useRef<number | null>(null);
+
+  const howVisitSteps = useMemo<HowVisitStep[]>(
+    () => [
+      {
+        title: t("Find the right clinic"),
+        body: t(
+          "Search by specialization or describe your symptoms. Not sure which doctor to visit? DocDaisy can guide you."
+        ),
+      },
+      {
+        title: t("Request a visit"),
+        body: t(
+          "Choose your preferred date and time. We’ll send a visit request to the clinic on your behalf."
+        ),
+        helper: t("This is a request, not an instant booking."),
+      },
+      {
+        title: t("Share medical information (optional)"),
+        body: t(
+          "You can share symptoms or medical records to help the clinic prepare. Only what you choose is shared, and everything is encrypted."
+        ),
+        note: t("Your privacy is our priority. DocNearMe can’t access your medical records."),
+      },
+      {
+        title: t("What happens after you request"),
+        body: t(
+          "The clinic will review your request based on availability.\nDocNearMe will keep you updated if anything changes before your visit."
+        ),
+        note: t("No payment is made in the app. You pay directly at the clinic. DocNearMe doesn't charge any fees."),
+      },
+      {
+        title: t("Visit the clinic"),
+        body: t(
+          "Go to the clinic at the requested time. At reception, mention that you used DocNearMe App."
+        ),
+      },
+      {
+        title: t("After your visit"),
+        body: t(
+          "If the clinic provides digital reports or results, you can access them securely in the app — only if you choose to."
+        ),
+      },
+    ],
+    [t]
+  );
 
   const generateBookingId = () =>
     `DNM-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
@@ -1478,6 +1580,51 @@ export default function Appointment() {
               </button>
             </div>
           ) : null}
+
+          <div className="mb-6 rounded-2xl border border-[#D4EBFF] bg-gradient-to-br from-[#F4FAFF] to-[#E7F2FF] p-5 shadow-sm">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-xs uppercase tracking-wide text-[#1E6FD9] font-semibold">
+                  {t("How visits work")}
+                </p>
+                <h2 className="text-lg font-semibold text-slate-900">
+                  {t("Know what happens next")}
+                </h2>
+                <p className="text-sm text-slate-600">
+                  {t("Follow the guided steps to understand the visit flow before you request.")}
+                </p>
+              </div>
+              <Button
+                onClick={() => {
+                  setHowVisitStep(0);
+                  setShowHowVisits(true);
+                }}
+                className="bg-[#1E6FD9] hover:bg-[#185DB8]"
+              >
+                {t("View guide")}
+              </Button>
+            </div>
+            <div className="mt-4 grid gap-2 text-xs text-slate-600 sm:grid-cols-3">
+              <div className="flex items-center gap-2">
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-[11px] font-semibold text-[#1E6FD9]">
+                  1
+                </span>
+                <span>{t("Find a clinic")}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-[11px] font-semibold text-[#1E6FD9]">
+                  2
+                </span>
+                <span>{t("Send a request")}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-[11px] font-semibold text-[#1E6FD9]">
+                  3
+                </span>
+                <span>{t("Visit the clinic")}</span>
+              </div>
+            </div>
+          </div>
           {/* Specialization Selection - Full Width */}
           <div className="mb-6 grid gap-4 rounded-2xl border border-slate-200 bg-white shadow-sm p-6 lg:grid-cols-[1fr_1fr]">
             <div className="flex items-center gap-4">
@@ -2118,6 +2265,98 @@ export default function Appointment() {
           </div>
         </div>
       </main>
+
+      <Dialog
+        open={showHowVisits}
+        onOpenChange={(open) => {
+          setShowHowVisits(open);
+          if (!open) {
+            setHowVisitStep(0);
+          }
+        }}
+      >
+        <DialogContent
+          className="left-0 right-0 top-auto bottom-0 w-full max-w-none translate-x-0 translate-y-0 rounded-t-[32px] border border-slate-200/80 bg-white/95 p-0 shadow-[0_20px_60px_-30px_rgba(15,23,42,0.45)] sm:left-[50%] sm:top-[50%] sm:bottom-auto sm:w-full sm:max-w-xl sm:translate-x-[-50%] sm:translate-y-[-50%] sm:rounded-[28px]"
+          onTouchStart={(event) => {
+            touchStartYRef.current = event.touches[0]?.clientY ?? null;
+          }}
+          onTouchEnd={(event) => {
+            const startY = touchStartYRef.current;
+            const endY = event.changedTouches[0]?.clientY ?? null;
+            if (startY && endY && endY - startY > 90) {
+              setShowHowVisits(false);
+              setHowVisitStep(0);
+            }
+            touchStartYRef.current = null;
+          }}
+        >
+          <DialogHeader className="border-b border-slate-100 px-7 pb-5 pt-6 sm:px-8">
+            <DialogTitle className="text-sm font-medium text-slate-500">
+              {t("How visits work")}
+            </DialogTitle>
+            <DialogDescription className="mt-2 flex items-center gap-3 text-xs text-slate-400">
+              <span>
+                {t("Step")} {howVisitStep + 1} {t("of")} {howVisitSteps.length}
+              </span>
+              <div className="flex items-center gap-1.5">
+                {howVisitSteps.map((_, index) => (
+                  <span
+                    key={index}
+                    className={`h-1.5 w-1.5 rounded-full ${
+                      index === howVisitStep ? "bg-[#1E6FD9]" : "bg-slate-200"
+                    }`}
+                  />
+                ))}
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="max-h-[70dvh] overflow-y-auto px-7 pb-7 pt-5 sm:max-h-[70vh] sm:px-8">
+            <div key={howVisitStep} className="space-y-4">
+              <h2 className="text-2xl font-semibold text-slate-900">
+                {howVisitSteps[howVisitStep]?.title}
+              </h2>
+              <StepBody text={howVisitSteps[howVisitStep]?.body} />
+              {howVisitSteps[howVisitStep]?.helper && (
+                <p className="text-xs font-semibold text-[#1E6FD9]">
+                  {howVisitSteps[howVisitStep]?.helper}
+                </p>
+              )}
+              {howVisitSteps[howVisitStep]?.note && (
+                <div>
+                  {howVisitStep === 2 ? (
+                    <TrustChip text={howVisitSteps[howVisitStep]?.note ?? ""} />
+                  ) : (
+                    <InfoCard text={howVisitSteps[howVisitStep]?.note ?? ""} />
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="mt-6 flex items-center justify-between">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setHowVisitStep((prev) => Math.max(prev - 1, 0))}
+                disabled={howVisitStep === 0}
+              >
+                {t("Back")}
+              </Button>
+              <Button
+                size="sm"
+                onClick={() =>
+                  setHowVisitStep((prev) =>
+                    Math.min(prev + 1, howVisitSteps.length - 1)
+                  )
+                }
+                disabled={howVisitStep === howVisitSteps.length - 1}
+              >
+                {t("Next")}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <div className="lg:hidden">
         <BottomNav />

@@ -1,12 +1,13 @@
 import { BottomNav } from "@/components/BottomNav";
 import { PageScaffold } from "@/components/PageScaffold";
-import { User, ShieldCheck, LogOut, Lock } from "lucide-react";
+import { User, ShieldCheck, LogOut, Lock, Phone } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { phoneCountryOptions } from "@/lib/phone-countries";
 import type { PatientProfile, PatientProfileResponse, PatientProfileUpdateRequest } from "@shared/api";
 
 export default function Profile() {
@@ -20,6 +21,9 @@ export default function Profile() {
   const [profileAddress, setProfileAddress] = useState("");
   const [profileVisaType, setProfileVisaType] = useState("");
   const [emergencyContact, setEmergencyContact] = useState("");
+  const [emergencyContactName, setEmergencyContactName] = useState("");
+  const [emergencyContactCountryIso, setEmergencyContactCountryIso] = useState("JP");
+  const [emergencyContactNumber, setEmergencyContactNumber] = useState("");
   const [preferredLanguage, setPreferredLanguage] = useState("Japanese");
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [vaultEnabled, setVaultEnabled] = useState(true);
@@ -28,6 +32,31 @@ export default function Profile() {
   const [isSyncingProfile, setIsSyncingProfile] = useState(false);
 
   const TOKEN_KEY = "docnearme_patient_token";
+  const emergencyCountry = useMemo(
+    () => phoneCountryOptions.find((option) => option.iso === emergencyContactCountryIso) ?? phoneCountryOptions[0],
+    [emergencyContactCountryIso],
+  );
+
+  const formatEmergencyNumber = (value: string) => {
+    const digits = value.replace(/\D/g, "").slice(0, 15);
+    if (digits.length <= 3) return digits;
+    if (digits.length <= 7) return `${digits.slice(0, 3)} ${digits.slice(3)}`.trim();
+    return `${digits.slice(0, 3)} ${digits.slice(3, 7)} ${digits.slice(7)}`.trim();
+  };
+
+  const parseEmergencyContact = (value?: string) => {
+    if (!value) return;
+    const match = value.match(/(\+\d{1,4})\s*([\d\s-]{4,})/);
+    const dialCode = match?.[1];
+    const number = match?.[2];
+    const name = value.replace(match?.[0] ?? "", "").replace(/[()·|-]/g, " ").trim();
+    if (name) setEmergencyContactName(name);
+    if (dialCode) {
+      const country = phoneCountryOptions.find((option) => option.dialCode === dialCode);
+      if (country) setEmergencyContactCountryIso(country.iso);
+    }
+    if (number) setEmergencyContactNumber(formatEmergencyNumber(number));
+  };
 
   const loadProfileFromStorage = () => {
     const storedProfile = localStorage.getItem("docnearme_profile");
@@ -61,6 +90,7 @@ export default function Profile() {
     setProfileAddress(parsed.address ?? "");
     setProfileVisaType(parsed.visaType ?? "");
     setEmergencyContact(parsed.emergencyContact ?? "");
+    parseEmergencyContact(parsed.emergencyContact);
     setPreferredLanguage(parsed.preferredLanguage ?? "Japanese");
     setNotificationsEnabled(parsed.notificationsEnabled ?? true);
   };
@@ -90,6 +120,7 @@ export default function Profile() {
     setProfileAddress(profile.address ?? "");
     setProfileVisaType(profile.visaType ?? "");
     setEmergencyContact(profile.emergencyContact ?? "");
+    parseEmergencyContact(profile.emergencyContact);
     setPreferredLanguage(profile.preferredLanguage ?? "Japanese");
     setNotificationsEnabled(profile.notificationsEnabled ?? true);
     setUserName(profile.name);
@@ -155,13 +186,21 @@ export default function Profile() {
 
   const handleProfileSave = async () => {
     const token = localStorage.getItem(TOKEN_KEY);
+    const composedEmergencyContact = [
+      emergencyContactName.trim(),
+      `${emergencyCountry.dialCode} ${emergencyContactNumber}`.trim(),
+    ]
+      .filter(Boolean)
+      .join(" · ")
+      .trim();
+
     const profilePayload: PatientProfileUpdateRequest = {
       name: profileName,
       email: profileEmail,
       phone: profilePhone,
       address: profileAddress,
       visaType: profileVisaType || undefined,
-      emergencyContact,
+      emergencyContact: composedEmergencyContact,
       preferredLanguage,
       notificationsEnabled,
     };
@@ -194,7 +233,7 @@ export default function Profile() {
         phone: profilePhone,
         address: profileAddress,
         visaType: profileVisaType || undefined,
-        emergencyContact,
+        emergencyContact: composedEmergencyContact,
         preferredLanguage,
         notificationsEnabled,
       });
@@ -437,17 +476,71 @@ export default function Profile() {
               </div>
 
               <div className="mt-5 rounded-xl border border-[#D6E8FF] bg-white p-4">
-                <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  {t("Emergency contact")}
-                </label>
-                <Input
-                  type="text"
-                  value={emergencyContact}
-                  onChange={(event) => setEmergencyContact(event.target.value)}
-                  placeholder={t("Emergency contact")}
-                  className="mt-2"
-                  disabled={!isEditingProfile}
-                />
+                <div className="flex items-start gap-3">
+                  <div className="mt-1 flex h-8 w-8 items-center justify-center rounded-full bg-[#EAF4FF]">
+                    <Phone className="h-4 w-4 text-[#1E6FD9]" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900">
+                      {t("Emergency contact (for clinics)")}
+                    </p>
+                    <p className="text-xs text-slate-500">
+                      {t("Used only if a clinic needs to reach someone on your behalf.")}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-4 grid gap-4">
+                  <div>
+                    <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      {t("Full name")}
+                    </label>
+                    <Input
+                      type="text"
+                      value={emergencyContactName}
+                      onChange={(event) => setEmergencyContactName(event.target.value)}
+                      placeholder={t("Full name")}
+                      className="mt-2"
+                      disabled={!isEditingProfile}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      {t("Phone number")}
+                    </label>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <Select
+                        value={emergencyContactCountryIso}
+                        onValueChange={(value) => setEmergencyContactCountryIso(value)}
+                        disabled={!isEditingProfile}
+                      >
+                        <SelectTrigger className="w-[150px]">
+                          <SelectValue placeholder={emergencyCountry.dialCode} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {phoneCountryOptions.map((option) => (
+                            <SelectItem key={option.iso} value={option.iso}>
+                              {option.flag} {option.name} ({option.dialCode})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Input
+                        type="tel"
+                        value={emergencyContactNumber}
+                        onChange={(event) =>
+                          setEmergencyContactNumber(formatEmergencyNumber(event.target.value))
+                        }
+                        placeholder={t("Phone number")}
+                        className="flex-1 min-w-[180px]"
+                        disabled={!isEditingProfile}
+                      />
+                    </div>
+                  </div>
+                </div>
+                <p className="mt-3 text-xs text-slate-600">
+                  {t("We never contact this person unless requested by a clinic.")}
+                </p>
               </div>
 
               <div className="mt-4 flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3">
