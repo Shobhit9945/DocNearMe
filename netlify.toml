@@ -1,0 +1,34 @@
+[build]
+  # Align Netlify's build with the full production pipeline we run locally
+  # so both the SPA bundle and SSR/server bundle stay in sync.
+  command = "npm run build"
+  functions = "netlify/functions"
+  publish = "dist/spa"
+
+[build.environment]
+  # Ensure Netlify installs the expected pnpm + Node versions instead of
+  # falling back to npm defaults, which previously caused failed deploys.
+  NODE_VERSION = "22"
+  PNPM_VERSION = "10.14.0"
+  NETLIFY_USE_PNPM = "true"
+  # Allow Netlify to refresh the lockfile when dependencies change so installs
+  # don't fail if package.json and pnpm-lock.yaml drift locally.
+  PNPM_FLAGS = "--no-frozen-lockfile"
+
+
+[functions]
+  # Bundle dependencies (including Express) directly into the function so they
+  # are available at runtime. Leaving Express as an external module resulted in
+  # Netlify not packaging it, causing "Cannot find module 'express'" errors.
+  node_bundler = "esbuild"
+  
+[[redirects]]
+  force = true
+  from = "/api/*"
+  status = 200
+  to = "/.netlify/functions/api/:splat"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
