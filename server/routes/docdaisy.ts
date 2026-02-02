@@ -281,12 +281,20 @@ const getAvailableSpecializations = async () => {
 router.post("/respond", async (req, res) => {
   const rawBody = parseRawBody(req.body);
   const payload = parseRawBody(rawBody?.body ?? rawBody?.data ?? rawBody);
-  const rawMode = payload?.mode as "followup" | "conclusion" | undefined;
+  const headerMode = req.header("x-docdaisy-mode")?.toLowerCase();
+  const headerConversation = req.header("x-docdaisy-conversation");
+  const headerMessage = req.header("x-docdaisy-message");
+  const rawMode =
+    (payload?.mode as "followup" | "conclusion" | undefined) ??
+    (headerMode === "followup" || headerMode === "conclusion"
+      ? (headerMode as "followup" | "conclusion")
+      : undefined);
   const rawMessages =
     payload?.messages ??
     payload?.conversation ??
     payload?.history ??
     payload?.conversationHistory ??
+    (headerConversation ? parseMaybeJson<unknown>(headerConversation) : undefined) ??
     (Array.isArray(payload) ? payload : undefined);
   const fallbackText =
     typeof payload?.message === "string"
@@ -295,7 +303,9 @@ router.post("/respond", async (req, res) => {
         ? payload.text
         : typeof payload?.content === "string"
           ? payload.content
-        : undefined;
+          : typeof headerMessage === "string" && headerMessage.trim().length > 0
+            ? headerMessage
+            : undefined;
 
   const normalizedMessages = normalizeMessages(rawMessages);
   const messages =

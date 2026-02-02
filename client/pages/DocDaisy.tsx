@@ -25,6 +25,15 @@ async function askDocDaisyWithRetry(
   let lastError: Error | null = null;
   const lastUserMessage =
     [...conversation].reverse().find((msg) => msg.sender === "user")?.text ?? "";
+  const conversationHeader = (() => {
+    try {
+      const serialized = JSON.stringify(conversation);
+      if (serialized.length <= 6000) return serialized;
+      return "";
+    } catch {
+      return "";
+    }
+  })();
 
   for (let attempt = 0; attempt < retries; attempt++) {
     try {
@@ -32,6 +41,9 @@ async function askDocDaisyWithRetry(
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "x-docdaisy-message": lastUserMessage,
+          "x-docdaisy-mode": mode,
+          ...(conversationHeader ? { "x-docdaisy-conversation": conversationHeader } : {}),
         },
         cache: "no-store",
         body: JSON.stringify({
