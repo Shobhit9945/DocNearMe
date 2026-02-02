@@ -44,7 +44,7 @@ const DOCDAISY_SPECIALIZATIONS = [
   "Physical Therapy",
 ];
 
-const getOpenAIKey = () => process.env.OPENAI_API_KEY ?? process.env.OPENAI;
+const getOpenAIKey = () => process.env.OPENAI_API_KEY;
 
 const buildConversationTranscript = (messages: ChatMessage[]) =>
   messages
