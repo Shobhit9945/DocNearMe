@@ -10,10 +10,15 @@ import { formatAvailabilityForLanguage } from "@/lib/time-format";
 import { GoogleReviews } from "@/components/GoogleReviews";
 import { useGooglePlaceDetails } from "@/hooks/useGooglePlaceDetails";
 import { TranslatedText } from "@/components/TranslatedText";
-import { CalendarClock, MapPin, Star, Users } from "lucide-react";
+import { CalendarClock, Info, MapPin, Star, Users } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type {
   ClinicReviewListResponse,
 } from "@shared/api";
+
+const WOUND_CARE_TOOLTIP =
+  "Minor injury treatment (cuts, burns, sprains, wound dressing) during clinic hours. Not ER care.";
 
 export default function ClinicDetail() {
   const { clinicId } = useParams<{ clinicId: string }>();
@@ -99,6 +104,27 @@ export default function ClinicDetail() {
             <p className="flex items-center gap-2 text-sm text-slate-600">
               <MapPin className="h-4 w-4 text-[#0089FF]" /> <TranslatedText text={clinic.location} inline />
             </p>
+            {clinic.immediateWoundCare && (
+              <div className="mt-2 flex items-center gap-2">
+                <Badge variant="outline" className="border-slate-200 text-slate-700">
+                  {t("Immediate Wound Care")}
+                </Badge>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      className="text-slate-400 hover:text-slate-600"
+                      aria-label={t("Immediate Wound Care info")}
+                    >
+                      <Info className="h-4 w-4" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="max-w-xs text-xs">
+                    {t(WOUND_CARE_TOOLTIP)}
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+            )}
             <div className="flex flex-wrap items-center gap-4 text-sm text-slate-500">
               <span className="flex items-center gap-1 text-[#B06B00]">
                 {clinic.googlePlaceId ? (

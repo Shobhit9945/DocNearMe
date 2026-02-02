@@ -14,7 +14,7 @@ import {
 } from "../types";
 import { sendEmail } from "../services/mailer";
 import { findConfirmedOverlap } from "./appointment-utils";
-import { getDateKey } from "../lib/scheduling";
+import { getDateKey, isSlotInFutureJst } from "../lib/scheduling";
 
 const parseRequestBody = (body: unknown): Record<string, unknown> => {
   if (body instanceof Buffer) {
@@ -428,6 +428,10 @@ export const handleRequestAppointment = async (req: Request, res: Response) => {
   const preferredTimes = resolvePreferredTimes(payload);
   if (!preferredTimes) {
     return res.status(400).json({ error: "Invalid preferred appointment time" });
+  }
+
+  if (!isSlotInFutureJst(preferredTimes.dateKey, preferredTimes.slot, new Date(), preferredTimes.preferredStart)) {
+    return res.status(400).json({ error: "Preferred appointment time has already passed." });
   }
 
   const clinicKey = String(clinicId);

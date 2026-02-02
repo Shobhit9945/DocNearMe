@@ -39,6 +39,7 @@ export default function ClinicInfo() {
   const [followUp, setFollowUp] = useState("");
   const [otherServices, setOtherServices] = useState("");
   const [photoUrls, setPhotoUrls] = useState<string[]>([]);
+  const [immediateWoundCare, setImmediateWoundCare] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
   const specializationLabels = useMemo(
@@ -63,6 +64,7 @@ export default function ClinicInfo() {
     setFollowUp(clinic.pricing?.followUp ?? "");
     setOtherServices(clinic.pricing?.otherServices ?? "");
     setPhotoUrls((clinic.photos ?? []).map((photo) => photo.url));
+    setImmediateWoundCare(Boolean(clinic.immediateWoundCare));
   }, [clinic]);
 
   const normalizedPhotos = useMemo(
@@ -110,6 +112,7 @@ export default function ClinicInfo() {
       location: trimmedLocation || undefined,
       phone: trimmedPhone || undefined,
       image: trimmedImage || undefined,
+      immediateWoundCare,
       hours: {
         weekdays: { start: weekdayStart, end: weekdayEnd },
         weekend: { start: weekendStart, end: weekendEnd },
@@ -196,6 +199,24 @@ export default function ClinicInfo() {
                 ? specializationLabels
                 : t("Add doctor profiles to populate specialties.")}
             </div>
+          </div>
+          <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+            <label className="text-sm font-medium text-gray-700 flex items-start gap-2">
+              <input
+                type="checkbox"
+                checked={immediateWoundCare}
+                onChange={(event) => setImmediateWoundCare(event.target.checked)}
+                className="mt-1 h-4 w-4 rounded border-slate-300 text-[#3A12DB] focus:ring-[#3A12DB]"
+              />
+              <span>
+                {t("Immediate Wound Care")}
+                <span className="block text-xs text-slate-500 mt-1">
+                  {t(
+                    "For minor injuries such as cuts, burns, sprains, and basic wound dressing during clinic hours. Not for life-threatening emergencies."
+                  )}
+                </span>
+              </span>
+            </label>
           </div>
           <div>
             <label className="text-sm font-medium text-gray-700 block mb-2">{t("Next availability")}</label>

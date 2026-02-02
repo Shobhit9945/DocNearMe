@@ -29,8 +29,9 @@ const encodeHeaderValue = (value: string) => {
 async function askDocDaisyWithRetry(
   mode: Mode,
   conversation: ChatMessage[],
+  relevantTurns: number,
   retries = 3
-): Promise<{ reply: string; specialization?: string | null }> {
+): Promise<{ reply: string; specialization?: string | null; relevant?: boolean; mode?: Mode }> {
   let lastError: Error | null = null;
   const lastUserMessage =
     [...conversation].reverse().find((msg) => msg.sender === "user")?.text ?? "";
@@ -64,6 +65,7 @@ async function askDocDaisyWithRetry(
           conversationHistory: conversation,
           history: conversation,
           message: lastUserMessage,
+          relevantTurns,
         }),
       });
 
@@ -83,7 +85,12 @@ async function askDocDaisyWithRetry(
         throw new Error("Empty response from DocDaisy.");
       }
 
-      return { reply: content, specialization: data?.specialization ?? null };
+      return {
+        reply: content,
+        specialization: data?.specialization ?? null,
+        relevant: data?.relevant ?? true,
+        mode: data?.mode ?? mode,
+      };
     } catch (err) {
       lastError = err instanceof Error ? err : new Error("Unknown DocDaisy error");
       if (attempt < retries - 1) {
@@ -112,11 +119,14 @@ const DocDaisy: React.FC = () => {
   const [inputError, setInputError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [relevantTurns, setRelevantTurns] = useState(0);
 
   // State to hold the AI's final recommended specialization
   const [recommendedSpecialization, setRecommendedSpecialization] = useState<
     string | null
   >(null);
+  const [lastConclusionReply, setLastConclusionReply] = useState<string | null>(null);
+  const [lastConclusionUnavailable, setLastConclusionUnavailable] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
@@ -149,6 +159,8 @@ const DocDaisy: React.FC = () => {
 
   const handleReevaluation = () => {
     setRecommendedSpecialization(null);
+    setLastConclusionReply(null);
+    setLastConclusionUnavailable(false);
     setMessages((prev) => [
       ...prev,
       {
@@ -190,29 +202,38 @@ const DocDaisy: React.FC = () => {
     setInputError("");
     setIsLoading(true);
     setRecommendedSpecialization(null);
+    setLastConclusionReply(null);
+    setLastConclusionUnavailable(false);
 
     try {
-      const userTurns = updatedConversation.filter(
-        (msg) => msg.sender === "user"
-      ).length;
-      const shouldConclude = userTurns >= 3;
+      const shouldConclude = relevantTurns + 1 >= 5;
 
       let finalBotReply = "";
       let specialization: string | null | undefined = null;
 
       if (shouldConclude) {
-        const { reply, specialization: spec } = await askDocDaisyWithRetry(
+        const { reply, specialization: spec, relevant } = await askDocDaisyWithRetry(
           "conclusion",
-          updatedConversation
+          updatedConversation,
+          relevantTurns
         );
         finalBotReply = reply;
         specialization = spec;
+        setLastConclusionReply(reply);
+        setLastConclusionUnavailable(spec === "Unsure");
+        if (relevant !== false) {
+          setRelevantTurns((prev) => prev + 1);
+        }
       } else {
-        const { reply } = await askDocDaisyWithRetry(
+        const { reply, relevant } = await askDocDaisyWithRetry(
           "followup",
-          updatedConversation
+          updatedConversation,
+          relevantTurns
         );
         finalBotReply = reply;
+        if (relevant !== false) {
+          setRelevantTurns((prev) => prev + 1);
+        }
       }
 
       setMessages((prev) => [...prev, { sender: "bot", text: finalBotReply }]);
@@ -351,6 +372,23 @@ const DocDaisy: React.FC = () => {
                           You can continue chatting for clarifications.
                         </span>
                       </div>
+                    </div>
+                  )}
+                  {!recommendedSpecialization && lastConclusionReply && (
+                    <div className="p-3 bg-[#F4F4FF] rounded-xl border border-[#B9A8FF] shadow-sm">
+                      <p className="text-sm text-[#2B215A] font-semibold mb-2">Assessment summary</p>
+                      <p className="text-sm text-slate-700">{lastConclusionReply}</p>
+                      {lastConclusionUnavailable && (
+                        <p className="text-xs text-slate-500 mt-2">
+                          A clinic offering this specialization isn’t currently available in the app.
+                        </p>
+                      )}
+                      <button
+                        onClick={handleReevaluation}
+                        className="mt-3 inline-flex items-center justify-center rounded-lg border border-[#3A12DB] px-3 py-2 text-sm font-semibold text-[#3A12DB] hover:bg-[#F2EEFF]"
+                      >
+                        Re-evaluate with DocDaisy
+                      </button>
                     </div>
                   )}
 

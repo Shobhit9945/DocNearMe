@@ -21,8 +21,12 @@ export const DEFAULT_CLINIC_HOURS: NormalizedClinicHours = {
 
 const dayFormatter = new Intl.DateTimeFormat("en-US", { weekday: "long" });
 
+const JST_OFFSET_MS = 9 * 60 * 60 * 1000;
+
 const formatDateKey = (year: number, month: number, day: number) =>
   `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+
+const toJstDate = (date: Date) => new Date(date.getTime() + JST_OFFSET_MS);
 
 export const parseDateKey = (value: string) => {
   const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
@@ -114,8 +118,48 @@ export const buildSlotsForDate = (date: Date, hours: NormalizedClinicHours): str
   return slots;
 };
 
-export const getDateKey = (date: Date) =>
-  formatDateKey(date.getFullYear(), date.getMonth() + 1, date.getDate());
+export const getDateKey = (date: Date) => {
+  const jst = toJstDate(date);
+  return formatDateKey(jst.getUTCFullYear(), jst.getUTCMonth() + 1, jst.getUTCDate());
+};
+
+export const getJstNowMinutes = () => {
+  const jst = toJstDate(new Date());
+  return jst.getUTCHours() * 60 + jst.getUTCMinutes();
+};
+
+export const getJstMinutesFromDate = (date: Date) => {
+  const jst = toJstDate(date);
+  return jst.getUTCHours() * 60 + jst.getUTCMinutes();
+};
+
+export const parseSlotLabelToMinutes = (slotLabel: string) => {
+  const match = slotLabel.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (!match) return null;
+  const hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  const period = match[3].toUpperCase();
+  if (Number.isNaN(hours) || Number.isNaN(minutes)) return null;
+  let adjustedHours = hours % 12;
+  if (period === "PM") adjustedHours += 12;
+  return adjustedHours * 60 + minutes;
+};
+
+export const isSlotInFutureJst = (
+  dateKey: string,
+  slotLabel: string,
+  now: Date = new Date(),
+  fallbackDate?: Date,
+) => {
+  const todayKey = getDateKey(now);
+  if (dateKey < todayKey) return false;
+  if (dateKey > todayKey) return true;
+  const nowMinutes = getJstMinutesFromDate(now);
+  const slotMinutes =
+    parseSlotLabelToMinutes(slotLabel) ?? (fallbackDate ? getJstMinutesFromDate(fallbackDate) : null);
+  if (slotMinutes === null) return false;
+  return slotMinutes > nowMinutes;
+};
 
 const resolveTimeMinutes = (time?: string) => (time ? timeToMinutes(time) : null);
 

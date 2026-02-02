@@ -43,6 +43,7 @@ const clinicUpdateSchema = z.object({
   phone: z.string().trim().min(3).max(40).optional(),
   image: z.string().trim().min(5).optional(),
   nextAvailability: z.string().trim().min(2).max(80).optional(),
+  immediateWoundCare: z.boolean().optional(),
   hours: z
     .object({
       weekdays: z
@@ -197,7 +198,7 @@ const collectClinicSpecializations = (doctors: any[]) => {
   return Array.from(specializations).sort((a, b) => a.localeCompare(b));
 };
 
-const buildClinicProfile = (clinic: any, specializations?: string[], nextAvailability?: string) => ({
+export const buildClinicProfile = (clinic: any, specializations?: string[], nextAvailability?: string) => ({
   id: clinic.clinicId ?? clinic.id,
   name: clinic.name,
   type: clinic.type,
@@ -208,6 +209,7 @@ const buildClinicProfile = (clinic: any, specializations?: string[], nextAvailab
   image: clinic.image,
   specializations: specializations ?? [],
   nextAvailability: nextAvailability ?? clinic.nextAvailability,
+  immediateWoundCare: Boolean(clinic.immediateWoundCare),
   googlePlaceId: clinic.googlePlaceId,
   phone: clinic.phone,
   hours: clinic.hours,

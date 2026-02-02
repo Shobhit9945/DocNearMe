@@ -14,6 +14,8 @@ import {
   MedicalConsent,
   MedicalRecord,
   MedicalRecordKey,
+  VaultDocument,
+  VaultKeyRecord,
   PatientUser,
 } from "./types";
 
@@ -162,6 +164,8 @@ export type InMemoryPatientDb = {
     medicalRecords: InMemoryCollection<MedicalRecord>;
     medicalConsents: InMemoryCollection<MedicalConsent>;
     medicalRecordKeys: InMemoryCollection<MedicalRecordKey>;
+    vaultKeys: InMemoryCollection<VaultKeyRecord>;
+    vaultDocs: InMemoryCollection<VaultDocument>;
     intakeResponses: InMemoryCollection<IntakeFormResponse>;
   };
 };
@@ -186,6 +190,8 @@ const inMemoryPatientDb: InMemoryPatientDb = {
     medicalRecords: new InMemoryCollection<MedicalRecord>([]),
     medicalConsents: new InMemoryCollection<MedicalConsent>([]),
     medicalRecordKeys: new InMemoryCollection<MedicalRecordKey>([]),
+    vaultKeys: new InMemoryCollection<VaultKeyRecord>([]),
+    vaultDocs: new InMemoryCollection<VaultDocument>([]),
     intakeResponses: new InMemoryCollection<IntakeFormResponse>([]),
   },
 };
@@ -215,6 +221,8 @@ const getPatientCollection = <T>(
     | "medicalRecords"
     | "medicalConsents"
     | "medicalRecordKeys"
+    | "vaultKeys"
+    | "vaultDocs"
     | "intakeResponses",
 ) => (isMemoryPatientDb(db) ? db.collections[name] : db.collection<T>(name));
 
@@ -245,6 +253,8 @@ async function preparePatientOnce(db: Db | InMemoryPatientDb) {
   const medicalRecords = getPatientCollection<MedicalRecord>(db, "medicalRecords");
   const medicalConsents = getPatientCollection<MedicalConsent>(db, "medicalConsents");
   const medicalRecordKeys = getPatientCollection<MedicalRecordKey>(db, "medicalRecordKeys");
+  const vaultKeys = getPatientCollection<VaultKeyRecord>(db, "vaultKeys");
+  const vaultDocs = getPatientCollection<VaultDocument>(db, "vaultDocs");
   const intakeResponses = getPatientCollection<IntakeFormResponse>(db, "intakeResponses");
 
   // Run in parallel, but only once per warm container
@@ -257,6 +267,9 @@ async function preparePatientOnce(db: Db | InMemoryPatientDb) {
     medicalRecords.createIndex({ patientId: 1, createdAt: -1 }),
     medicalConsents.createIndex({ patientId: 1, consentVersion: 1 }, { unique: true }),
     medicalRecordKeys.createIndex({ patientId: 1 }, { unique: true }),
+    vaultKeys.createIndex({ userId: 1 }, { unique: true }),
+    vaultDocs.createIndex({ userId: 1, docId: 1 }, { unique: true }),
+    vaultDocs.createIndex({ userId: 1, createdAt: -1 }),
     intakeResponses.createIndex({ appointmentId: 1 }, { unique: true }),
     intakeResponses.createIndex({ clinicId: 1, createdAt: -1 }),
   ]);
@@ -417,6 +430,20 @@ export async function getMedicalRecordKeysCollection(): Promise<
   return getPatientCollection<MedicalRecordKey>(db, "medicalRecordKeys") as
     | Collection<MedicalRecordKey>
     | InMemoryCollection<MedicalRecordKey>;
+}
+
+export async function getVaultKeysCollection(): Promise<Collection<VaultKeyRecord> | InMemoryCollection<VaultKeyRecord>> {
+  const db = await connectToDatabase();
+  return getPatientCollection<VaultKeyRecord>(db, "vaultKeys") as
+    | Collection<VaultKeyRecord>
+    | InMemoryCollection<VaultKeyRecord>;
+}
+
+export async function getVaultDocsCollection(): Promise<Collection<VaultDocument> | InMemoryCollection<VaultDocument>> {
+  const db = await connectToDatabase();
+  return getPatientCollection<VaultDocument>(db, "vaultDocs") as
+    | Collection<VaultDocument>
+    | InMemoryCollection<VaultDocument>;
 }
 
 export async function getIntakeResponsesCollection(): Promise<

@@ -6,6 +6,7 @@ import {
   Building2,
   CalendarClock,
   Filter,
+  Info,
   MapPin,
   Star,
   Users,
@@ -19,6 +20,11 @@ import { useClinics } from "@/lib/clinic-data";
 import { getSpecializationLabel, matchSpecialization } from "@/lib/specializations";
 import { TranslatedText } from "@/components/TranslatedText";
 import { LoadingScreen } from "@/components/LoadingScreen";
+import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+
+const WOUND_CARE_TOOLTIP =
+  "Minor injury treatment (cuts, burns, sprains, wound dressing) during clinic hours. Not ER care.";
 
 export default function Clinics() {
   const navigate = useNavigate();
@@ -374,6 +380,27 @@ export default function Clinics() {
                           <h3 className="text-xl font-semibold text-[#002D55]">
                             <TranslatedText text={clinic.name} />
                           </h3>
+                          {clinic.immediateWoundCare && (
+                            <div className="mt-2 flex items-center gap-2">
+                              <Badge variant="outline" className="border-slate-200 text-slate-700">
+                                {t("Immediate Wound Care")}
+                              </Badge>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <button
+                                    type="button"
+                                    className="text-slate-400 hover:text-slate-600"
+                                    aria-label={t("Immediate Wound Care info")}
+                                  >
+                                    <Info className="h-4 w-4" />
+                                  </button>
+                                </TooltipTrigger>
+                                <TooltipContent side="top" className="max-w-xs text-xs">
+                                  {t(WOUND_CARE_TOOLTIP)}
+                                </TooltipContent>
+                              </Tooltip>
+                            </div>
+                          )}
                         </div>
                       </div>
 

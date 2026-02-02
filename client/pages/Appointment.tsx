@@ -52,7 +52,7 @@ import {
 import { useTranslation } from "@/lib/i18n";
 import { formatAvailabilityForLanguage, getLocaleForLanguage } from "@/lib/time-format";
 import { getDateKey, isDateWithinClosure, normalizeClinicHours } from "@/lib/scheduling";
-import { arrayBufferToBase64, base64ToArrayBuffer, getStoredVaultKey } from "@/lib/medicalVault";
+import { arrayBufferToBase64, decryptDoc, getStoredVaultKey } from "@/lib/medicalVault";
 import type {
   AppointmentCancelRequest,
   AppointmentCancelResponse,
@@ -62,8 +62,8 @@ import type {
   AppointmentRescheduleRequest,
   AppointmentRescheduleResponse,
   ClinicDoctor,
-  MedicalRecordDetail,
-  MedicalRecordListResponse,
+  VaultDocDetail,
+  VaultDocListResponse,
   PatientProfileResponse,
   SharedMedicalRecord,
   ClinicIntakeFormResponse,
@@ -192,10 +192,10 @@ export default function Appointment() {
   const [patientEmail, setPatientEmail] = useState("");
   const [patientPhone, setPatientPhone] = useState("");
   const [selectedVaultRecordId, setSelectedVaultRecordId] = useState("");
-  const [selectedVaultRecord, setSelectedVaultRecord] = useState<MedicalRecordDetail | null>(null);
+  const [selectedVaultRecord, setSelectedVaultRecord] = useState<VaultDocDetail | null>(null);
   const [vaultRecordError, setVaultRecordError] = useState<string | null>(null);
   const [isVaultRecordLoading, setIsVaultRecordLoading] = useState(false);
-  const [recordToDelete, setRecordToDelete] = useState<MedicalRecordDetail | null>(null);
+  const [recordToDelete, setRecordToDelete] = useState<VaultDocDetail | null>(null);
   const [isDeletingRecord, setIsDeletingRecord] = useState(false);
   const [intakeResponses, setIntakeResponses] = useState<Record<string, IntakeAnswerValue>>({});
   const [intakeFieldErrors, setIntakeFieldErrors] = useState<Record<string, string>>({});
@@ -500,7 +500,7 @@ export default function Appointment() {
     queryKey: ["medical-records", authSession?.token],
     enabled: isAuthenticated,
     queryFn: async () => {
-      const res = await fetch("/api/medical-records", {
+      const res = await fetch("/api/vault/docs", {
         headers: {
           Authorization: `Bearer ${authSession?.token}`,
         },
@@ -508,11 +508,11 @@ export default function Appointment() {
       if (!res.ok) {
         throw new Error("Unable to load medical records");
       }
-      return (await res.json()) as MedicalRecordListResponse;
+      return (await res.json()) as VaultDocListResponse;
     },
   });
 
-  const vaultRecords = vaultRecordsData?.records ?? [];
+  const vaultRecords = vaultRecordsData?.docs ?? [];
 
   const { data: intakeFormData } = useQuery({
     queryKey: ["clinic-intake-form", selectedClinicId],
@@ -607,7 +607,7 @@ export default function Appointment() {
     }
     setIsVaultRecordLoading(true);
     setVaultRecordError(null);
-    void fetch(`/api/medical-records/${selectedVaultRecordId}`, {
+    void fetch(`/api/vault/docs?docId=${selectedVaultRecordId}`, {
       headers: {
         Authorization: `Bearer ${authSession.token}`,
       },
@@ -616,10 +616,10 @@ export default function Appointment() {
         if (!res.ok) {
           throw new Error("Unable to load the selected medical record.");
         }
-        return (await res.json()) as { record: MedicalRecordDetail };
+        return (await res.json()) as { doc: VaultDocDetail };
       })
       .then((data) => {
-        setSelectedVaultRecord(data.record);
+        setSelectedVaultRecord(data.doc);
       })
       .catch((error) => {
         setSelectedVaultRecord(null);
@@ -634,7 +634,7 @@ export default function Appointment() {
     if (!recordToDelete || !authSession?.token) return;
     setIsDeletingRecord(true);
     try {
-      const response = await fetch(`/api/medical-records/${recordToDelete.id}`, {
+      const response = await fetch(`/api/vault/docs/${recordToDelete.id}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${authSession.token}`,
@@ -849,7 +849,7 @@ export default function Appointment() {
     const clinicKey = selectedClinicId;
     let sharedRecordPayload: SharedMedicalRecord | undefined;
     if (selectedVaultRecord) {
-      if (!selectedVaultRecord.iv || !selectedVaultRecord.data) {
+      if (!selectedVaultRecord.iv || !selectedVaultRecord.ciphertext) {
         setAuthError("Selected medical record is missing encryption data.");
         setIsBooking(false);
         return;
@@ -862,11 +862,11 @@ export default function Appointment() {
         return;
       }
       try {
-        const decrypted = await window.crypto.subtle.decrypt(
-          { name: "AES-GCM", iv: new Uint8Array(base64ToArrayBuffer(selectedVaultRecord.iv)) },
-          vaultKey,
-          base64ToArrayBuffer(selectedVaultRecord.data),
-        );
+        const decrypted = await decryptDoc(vaultKey, {
+          iv: selectedVaultRecord.iv,
+          ciphertext: selectedVaultRecord.ciphertext,
+          aad: selectedVaultRecord.aad,
+        });
         sharedRecordPayload = {
           recordId: selectedVaultRecord.id,
           name: selectedVaultRecord.name,

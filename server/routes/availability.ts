@@ -5,6 +5,7 @@ import {
   buildSlotsForDate,
   getDateKey,
   isClinicClosedOnDate,
+  isSlotInFutureJst,
   normalizeClinicHours,
   parseDateKey,
 } from "../lib/scheduling";
@@ -22,7 +23,12 @@ export const handleAvailability = async (req: Request, res: Response) => {
   }
   const dateKey = getDateKey(selectedDate);
   const clinicKey = (clinicId as string) || "global";
+  const todayKey = getDateKey(new Date());
   let availableSlots: string[] = [];
+
+  if (dateKey < todayKey) {
+    return res.json({ date: dateKey, clinicId: clinicKey, slots: [], isClosed: true, reason: "Date has passed." });
+  }
 
   try {
     const clinics = await getClinicInfoCollection();
@@ -59,6 +65,10 @@ export const handleAvailability = async (req: Request, res: Response) => {
         .map((appt) => appt.slot),
     );
     availableSlots = availableSlots.filter((slot) => !bookedSlots.has(slot));
+
+    if (dateKey === todayKey) {
+      availableSlots = availableSlots.filter((slot) => isSlotInFutureJst(dateKey, slot));
+    }
 
     res.json({ date: dateKey, clinicId: clinicKey, slots: availableSlots, isClosed: false });
   } catch (error) {

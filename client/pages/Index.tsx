@@ -19,8 +19,6 @@ import { Input } from "@/components/ui/input";
 import { useLiveLocation } from "@/hooks/useLiveLocation";
 import { useAddressSearch } from "@/hooks/useAddressSearch";
 import { useTranslation } from "@/lib/i18n";
-import { getKeyStorageKey, storeLocalVaultKey, unwrapVaultKey } from "@/lib/medicalVault";
-import type { MedicalRecordKeyResponse } from "@shared/api";
 
 const VIEW_APPOINTMENTS_ICON = (
   <svg className="w-8 h-8" viewBox="0 0 32 32" fill="none">
@@ -150,14 +148,8 @@ const Index: React.FC = () => {
   const [isResolvingAddress, setIsResolvingAddress] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
-  const [showVaultUnlock, setShowVaultUnlock] = useState(false);
   const [showHowVisits, setShowHowVisits] = useState(false);
   const [howVisitStep, setHowVisitStep] = useState(0);
-  const [vaultPassword, setVaultPassword] = useState("");
-  const [vaultError, setVaultError] = useState<string | null>(null);
-  const [vaultKeyPayload, setVaultKeyPayload] = useState<MedicalRecordKeyResponse | null>(null);
-  const [isCheckingVault, setIsCheckingVault] = useState(false);
-  const [isUnlockingVault, setIsUnlockingVault] = useState(false);
   const [carouselApi, setCarouselApi] = useState<CarouselApi | null>(null);
   const {
     suggestions,
@@ -238,64 +230,7 @@ const Index: React.FC = () => {
   }, []);
 
   const handleMedicalRecordsClick = async () => {
-    if (isCheckingVault) return;
-    const token = localStorage.getItem(TOKEN_KEY)?.trim();
-    const email = localStorage.getItem(EMAIL_KEY) ?? undefined;
-    if (!token) {
-      navigate("/medical-records");
-      return;
-    }
-
-    const hasLocalKey = Boolean(localStorage.getItem(getKeyStorageKey(email)));
-    if (hasLocalKey) {
-      navigate("/medical-records");
-      return;
-    }
-
-    setIsCheckingVault(true);
-    setVaultError(null);
-    try {
-      const response = await fetch("/api/medical-records/key", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = (await response.json()) as MedicalRecordKeyResponse;
-      if (response.ok && data.hasKey && data.key) {
-        setVaultKeyPayload(data);
-        setShowVaultUnlock(true);
-        return;
-      }
-      navigate("/medical-records");
-    } catch {
-      navigate("/medical-records");
-    } finally {
-      setIsCheckingVault(false);
-    }
-  };
-
-  const handleVaultUnlock = async () => {
-    const token = localStorage.getItem(TOKEN_KEY)?.trim();
-    const email = localStorage.getItem(EMAIL_KEY) ?? undefined;
-    if (!token || !vaultKeyPayload?.key) {
-      setShowVaultUnlock(false);
-      return;
-    }
-    if (!vaultPassword.trim()) {
-      setVaultError(t("Please enter your account password to unlock the vault."));
-      return;
-    }
-    setVaultError(null);
-    setIsUnlockingVault(true);
-    try {
-      const key = await unwrapVaultKey(vaultKeyPayload.key, vaultPassword);
-      await storeLocalVaultKey(email, key);
-      setVaultPassword("");
-      setShowVaultUnlock(false);
-      navigate("/medical-records");
-    } catch (error) {
-      setVaultError(t("Unable to unlock the vault. Please check your password."));
-    } finally {
-      setIsUnlockingVault(false);
-    }
+    navigate("/medical-records");
   };
 
   useEffect(() => {
@@ -572,14 +507,11 @@ const Index: React.FC = () => {
 
             <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
               {quickActions.map((action) => {
-                const isMedicalRecords = action.label === "Medical Records";
-                const isDisabled = isMedicalRecords && isCheckingVault;
                 return (
                   <button
                     key={action.label}
-                    className={`${action.className} ${isDisabled ? "cursor-not-allowed opacity-70" : ""}`}
+                    className={action.className}
                     onClick={action.onClick}
-                    disabled={isDisabled}
                   >
                     {action.icon}
                     <span className={action.textClassName}>{t(action.label)}</span>
@@ -647,48 +579,6 @@ const Index: React.FC = () => {
               }}
             >
               {t("Login")}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog
-        open={showVaultUnlock}
-        onOpenChange={(open) => {
-          setShowVaultUnlock(open);
-          if (!open) {
-            setVaultPassword("");
-            setVaultError(null);
-          }
-        }}
-      >
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>{t("Unlock your vault")}</DialogTitle>
-            <DialogDescription>
-              {t("Enter your account password to access encrypted medical records on this device.")}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3">
-            <Input
-              type="password"
-              placeholder={t("Enter your account password")}
-              value={vaultPassword}
-              onChange={(event) => setVaultPassword(event.target.value)}
-            />
-            {vaultError && <p className="text-xs text-red-500">{vaultError}</p>}
-          </div>
-          <DialogFooter className="mt-4 flex-col gap-2 sm:flex-row sm:justify-end">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setShowVaultUnlock(false)}
-              disabled={isUnlockingVault}
-            >
-              {t("Cancel")}
-            </Button>
-            <Button type="button" onClick={() => void handleVaultUnlock()} disabled={isUnlockingVault}>
-              {isUnlockingVault ? t("Unlocking...") : t("Unlock and continue")}
             </Button>
           </DialogFooter>
         </DialogContent>

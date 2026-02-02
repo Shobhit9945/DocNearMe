@@ -1,3 +1,5 @@
+import type { ObjectId } from "mongodb";
+
 export type AppointmentStatus =
   | "PENDING_CLINIC"
   | "RESCHEDULE_REQUESTED"
@@ -182,6 +184,53 @@ export interface MedicalRecordKey {
   updatedAt: Date;
 }
 
+export interface VaultKeyRecord {
+  _id?: ObjectId;
+  userId: string;
+  dekWrappedByPassword: string;
+  dekWrappedByRecovery: string;
+  kdfSaltPassword: string;
+  kdfSaltRecovery: string;
+  kdfParams:
+    | {
+        algo: "argon2id";
+        opslimit: number;
+        memlimit: number;
+        keyLen: number;
+      }
+    | {
+        algo: "scrypt";
+        N: number;
+        r: number;
+        p: number;
+        keyLen: number;
+      }
+    | {
+        algo: "pbkdf2";
+        iterations: number;
+        keyLen: number;
+        hash: "SHA-256";
+      };
+  aead: "aes-256-gcm";
+  wrapIvPassword: string;
+  wrapIvRecovery: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface VaultDocument {
+  _id?: ObjectId | string;
+  userId: string;
+  docId: string;
+  name: string;
+  type: string;
+  size: number;
+  iv: string;
+  ciphertext: string;
+  aad?: string;
+  createdAt: Date;
+}
+
 export interface ClinicReview {
   _id?: unknown;
   clinicId: string;
@@ -212,6 +261,7 @@ export interface ClinicInfo {
   distance: string;
   location: string;
   image: string;
+  immediateWoundCare?: boolean;
   specializations: string[];
   nextAvailability: string;
   googlePlaceId?: string;

@@ -199,6 +199,106 @@ export interface SharedMedicalRecord {
   data?: string;
 }
 
+export type VaultAead = "aes-256-gcm";
+
+export type VaultKdfParams =
+  | {
+      algo: "argon2id";
+      opslimit: number;
+      memlimit: number;
+      keyLen: number;
+    }
+  | {
+      algo: "scrypt";
+      N: number;
+      r: number;
+      p: number;
+      keyLen: number;
+    }
+  | {
+      algo: "pbkdf2";
+      iterations: number;
+      keyLen: number;
+      hash: "SHA-256";
+    };
+
+export interface VaultKeyPayload {
+  dekWrappedByPassword: string;
+  dekWrappedByRecovery: string;
+  kdfSaltPassword: string;
+  kdfSaltRecovery: string;
+  kdfParams: VaultKdfParams;
+  aead: VaultAead;
+  wrapIvPassword: string;
+  wrapIvRecovery: string;
+}
+
+export interface VaultKeyGetResponse {
+  hasKey: boolean;
+  key?: VaultKeyPayload;
+}
+
+export interface VaultKeyCreateRequest extends VaultKeyPayload {}
+
+export interface VaultKeyPasswordUpdateRequest {
+  dekWrappedByPassword: string;
+  kdfSaltPassword: string;
+  kdfParams: VaultKdfParams;
+  aead: VaultAead;
+  wrapIvPassword: string;
+}
+
+export interface VaultKeyUpsertResponse {
+  success: boolean;
+  updatedAt: string;
+}
+
+export interface VaultDocSummary {
+  id: string;
+  name: string;
+  type: string;
+  size: number;
+  createdAt: string;
+}
+
+export interface VaultDocDetail extends VaultDocSummary {
+  iv: string;
+  ciphertext: string;
+  aad?: string;
+}
+
+export interface VaultDocListResponse {
+  docs: VaultDocSummary[];
+}
+
+export interface VaultDocFetchResponse {
+  doc: VaultDocDetail;
+}
+
+export interface VaultDocCreateRequest {
+  id?: string;
+  name: string;
+  type: string;
+  size: number;
+  iv: string;
+  ciphertext: string;
+  aad?: string;
+}
+
+export interface VaultDocCreateResponse {
+  success: boolean;
+  doc: VaultDocSummary;
+}
+
+export interface VaultDocRenameResponse {
+  success: boolean;
+  doc: VaultDocSummary;
+}
+
+export interface VaultDocDeleteResponse {
+  success: boolean;
+}
+
 export interface SignupPhotoPayload {
   dataUrl: string;
   fileName: string;
@@ -435,6 +535,7 @@ export interface ClinicProfile {
   image: string;
   specializations: string[];
   nextAvailability: string;
+  immediateWoundCare: boolean;
   googlePlaceId?: string;
   phone?: string;
   hours?: ClinicHours;
@@ -483,6 +584,7 @@ export interface ClinicProfileUpdateRequest {
   phone?: string;
   image?: string;
   nextAvailability?: string;
+  immediateWoundCare?: boolean;
   hours?: ClinicHours;
   bookingClosures?: ClinicBookingClosure[];
   pricing?: ClinicPricing;

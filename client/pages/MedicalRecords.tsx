@@ -5,29 +5,40 @@ import { BottomNav } from "@/components/BottomNav";
 import { PageScaffold } from "@/components/PageScaffold";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useTranslation } from "@/lib/i18n";
 import {
-  arrayBufferToBase64,
-  base64ToArrayBuffer,
+  decryptDoc,
+  encryptDoc,
   getKeyStorageKey,
+  getStoredVaultKey,
   storeLocalVaultKey,
-  unwrapVaultKey,
-  wrapVaultKey,
+  clearLocalVaultKey,
 } from "@/lib/medicalVault";
+import VaultSetup from "@/pages/vault/VaultSetup";
+import VaultUnlock from "@/pages/vault/VaultUnlock";
+import VaultRecovery from "@/pages/vault/VaultRecovery";
 import type {
   MedicalConsentRequest,
   MedicalConsentResponse,
   MedicalConsentStatusResponse,
-  MedicalRecordDetail,
-  MedicalRecordFetchResponse,
-  MedicalRecordListResponse,
-  MedicalRecordRenameResponse,
-  MedicalRecordSummary,
-  MedicalRecordDeleteResponse,
-  MedicalRecordUploadRequest,
-  MedicalRecordUploadResponse,
-  MedicalRecordKeyResponse,
-  MedicalRecordKeyUpsertResponse,
+  VaultDocCreateRequest,
+  VaultDocCreateResponse,
+  VaultDocDeleteResponse,
+  VaultDocFetchResponse,
+  VaultDocListResponse,
+  VaultDocRenameResponse,
+  VaultDocSummary,
+  VaultKeyGetResponse,
 } from "@shared/api";
 import { useNavigate } from "react-router-dom";
 
@@ -38,9 +49,10 @@ type PreviewRecord = {
   url: string;
 };
 
-type MedicalRecordListItem = MedicalRecordSummary & {
+type MedicalRecordListItem = VaultDocSummary & {
   iv?: string;
-  data?: string;
+  ciphertext?: string;
+  aad?: string;
 };
 
 const TOKEN_KEY = "docnearme_patient_token";
@@ -50,18 +62,16 @@ const CONSENT_TEXT =
   "I consent to the secure storage of my encrypted medical records on DocNearMe servers. " +
   "I understand the files are encrypted in my browser and only I can decrypt them.";
 const MAX_UPLOAD_SIZE_BYTES = 8 * 1024 * 1024;
-const getOrCreateKey = async (email?: string) => {
-  const storedKey = localStorage.getItem(getKeyStorageKey(email));
-  if (storedKey) {
-    const rawKey = base64ToArrayBuffer(storedKey);
-    return window.crypto.subtle.importKey("raw", rawKey, "AES-GCM", true, ["encrypt", "decrypt"]);
+const getUserIdFromToken = (tokenValue: string) => {
+  try {
+    const payload = tokenValue.split(".")[1];
+    if (!payload) return null;
+    const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const json = JSON.parse(window.atob(normalized)) as { sub?: string };
+    return json.sub ?? null;
+  } catch {
+    return null;
   }
-  const key = await window.crypto.subtle.generateKey({ name: "AES-GCM", length: 256 }, true, [
-    "encrypt",
-    "decrypt",
-  ]);
-  await storeLocalVaultKey(email, key);
-  return key;
 };
 
 export default function MedicalRecords() {
@@ -76,16 +86,13 @@ export default function MedicalRecords() {
   const [isLoading, setIsLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [consentStatus, setConsentStatus] = useState<MedicalConsentStatusResponse | null>(null);
-  const [consentChecked, setConsentChecked] = useState(false);
+  const [showConsentDialog, setShowConsentDialog] = useState(false);
   const [isConsentSubmitting, setIsConsentSubmitting] = useState(false);
   const [editingRecordId, setEditingRecordId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const [isRenaming, setIsRenaming] = useState(false);
-  const [vaultKeyStatus, setVaultKeyStatus] = useState<MedicalRecordKeyResponse | null>(null);
-  const [vaultPassword, setVaultPassword] = useState("");
-  const [vaultMessage, setVaultMessage] = useState<string | null>(null);
-  const [vaultError, setVaultError] = useState<string | null>(null);
-  const [isVaultSubmitting, setIsVaultSubmitting] = useState(false);
+  const [vaultKeyStatus, setVaultKeyStatus] = useState<VaultKeyGetResponse | null>(null);
+  const [showRecovery, setShowRecovery] = useState(false);
   const [hasLocalKey, setHasLocalKey] = useState(false);
 
   const token = localStorage.getItem(TOKEN_KEY)?.trim();
@@ -107,24 +114,24 @@ export default function MedicalRecords() {
   }, [email]);
 
   const clearLocalKey = () => {
-    localStorage.removeItem(getKeyStorageKey(email));
+    clearLocalVaultKey(email);
     setHasLocalKey(false);
   };
 
   const refreshRecords = async (authToken: string) => {
     setIsLoading(true);
     try {
-      const response = await fetch("/api/medical-records", {
+      const response = await fetch("/api/vault/docs", {
         headers: { Authorization: `Bearer ${authToken}` },
       });
-      const data = (await response.json()) as MedicalRecordListResponse;
+      const data = (await response.json()) as VaultDocListResponse;
       if (!response.ok) {
         if (response.status === 401) {
           throw new Error("Please sign in again to access your records.");
         }
         throw new Error("Unable to load records.");
       }
-      setRecords(data.records ?? []);
+      setRecords(data.docs ?? []);
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : t("Unable to load records."));
     } finally {
@@ -152,10 +159,10 @@ export default function MedicalRecords() {
 
   const refreshVaultKeyStatus = async (authToken: string) => {
     try {
-      const response = await fetch("/api/medical-records/key", {
+      const response = await fetch("/api/vault/keys", {
         headers: { Authorization: `Bearer ${authToken}` },
       });
-      const data = (await response.json()) as MedicalRecordKeyResponse;
+      const data = (await response.json()) as VaultKeyGetResponse;
       if (!response.ok) {
         throw new Error("Unable to load vault key status.");
       }
@@ -172,6 +179,15 @@ export default function MedicalRecords() {
     void refreshVaultKeyStatus(token);
   }, [token]);
 
+  useEffect(() => {
+    if (!token || !consentStatus) return;
+    if (!consentStatus.hasConsented) {
+      setShowConsentDialog(true);
+    } else {
+      setShowConsentDialog(false);
+    }
+  }, [consentStatus, token]);
+
   const handleUpload = async (file: File) => {
     if (!token) {
       setErrorMessage(t("Please sign in to upload medical records."));
@@ -185,7 +201,7 @@ export default function MedicalRecords() {
       setErrorMessage(t("Please provide consent before uploading medical records."));
       return;
     }
-    if (vaultKeyStatus?.hasKey && !hasLocalKey) {
+    if (!hasLocalKey) {
       setErrorMessage(t("Unlock your vault on this device before uploading new records."));
       return;
     }
@@ -194,21 +210,25 @@ export default function MedicalRecords() {
     setIsEncrypting(true);
     setIsUploading(true);
     try {
-      const key = await getOrCreateKey(email);
-      if (!hasLocalKey) {
-        setHasLocalKey(true);
+      const key = await getStoredVaultKey(email);
+      if (!key) {
+        throw new Error("Unlock your vault on this device before uploading new records.");
       }
       const buffer = await file.arrayBuffer();
-      const iv = window.crypto.getRandomValues(new Uint8Array(12));
-      const encrypted = await window.crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, buffer);
-      const payload: MedicalRecordUploadRequest = {
+      const docId = window.crypto.randomUUID();
+      const userId = getUserIdFromToken(token) ?? email ?? "unknown";
+      const aad = `${userId}:${docId}`;
+      const encrypted = await encryptDoc(key, buffer, aad);
+      const payload: VaultDocCreateRequest = {
+        id: docId,
         name: file.name,
         type: file.type,
         size: file.size,
-        iv: arrayBufferToBase64(iv.buffer),
-        data: arrayBufferToBase64(encrypted),
+        iv: encrypted.iv,
+        ciphertext: encrypted.ciphertext,
+        aad: encrypted.aad,
       };
-      const response = await fetch("/api/medical-records", {
+      const response = await fetch("/api/vault/docs", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -216,15 +236,16 @@ export default function MedicalRecords() {
         },
         body: JSON.stringify(payload),
       });
-      const data = (await response.json()) as MedicalRecordUploadResponse;
+      const data = (await response.json()) as VaultDocCreateResponse;
       if (!response.ok) {
         if (response.status === 401) {
           throw new Error("Please sign in again to upload records.");
         }
         throw new Error("Unable to store the encrypted record.");
       }
-      setRecords((prev) => [data.record, ...prev]);
+      setRecords((prev) => [data.doc, ...prev]);
       setInfoMessage(t("Encrypted record saved to your account."));
+      setHasLocalKey(true);
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
@@ -239,17 +260,17 @@ export default function MedicalRecords() {
   };
 
   const fetchRecordDetail = async (recordId: string, authToken: string) => {
-    const response = await fetch(`/api/medical-records/${recordId}`, {
+    const response = await fetch(`/api/vault/docs?docId=${recordId}`, {
       headers: { Authorization: `Bearer ${authToken}` },
     });
-    const data = (await response.json()) as MedicalRecordFetchResponse;
+    const data = (await response.json()) as VaultDocFetchResponse;
     if (!response.ok) {
       if (response.status === 401) {
         throw new Error("Please sign in again to access your records.");
       }
       throw new Error("Unable to load this record.");
     }
-    return data.record;
+    return data.doc;
   };
 
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -275,26 +296,32 @@ export default function MedicalRecords() {
       if (!token) {
         throw new Error("Please sign in again to access your records.");
       }
-      if (vaultKeyStatus?.hasKey && !hasLocalKey) {
+      if (!hasLocalKey) {
         throw new Error("Unlock your vault on this device to view encrypted records.");
       }
-      const key = await getOrCreateKey(email);
-      let detail: MedicalRecordDetail | null = null;
-      if (record.iv && record.data) {
-        detail = record as MedicalRecordDetail;
+      const key = await getStoredVaultKey(email);
+      if (!key) {
+        throw new Error("Unlock your vault on this device to view encrypted records.");
+      }
+      let detail: MedicalRecordListItem | null = null;
+      if (record.iv && record.ciphertext) {
+        detail = record;
       } else {
-        detail = await fetchRecordDetail(record.id, token);
+        const fetched = await fetchRecordDetail(record.id, token);
+        detail = fetched;
         setRecords((prev) =>
           prev.map((item) =>
-            item.id === detail?.id ? { ...item, iv: detail.iv, data: detail.data } : item
-          )
+            item.id === fetched?.id
+              ? { ...item, iv: fetched.iv, ciphertext: fetched.ciphertext, aad: fetched.aad }
+              : item,
+          ),
         );
       }
-      const decrypted = await window.crypto.subtle.decrypt(
-        { name: "AES-GCM", iv: new Uint8Array(base64ToArrayBuffer(detail.iv)) },
-        key,
-        base64ToArrayBuffer(detail.data)
-      );
+      const decrypted = await decryptDoc(key, {
+        iv: detail.iv!,
+        ciphertext: detail.ciphertext!,
+        aad: detail.aad,
+      });
       const blob = new Blob([decrypted], { type: record.type });
       const url = URL.createObjectURL(blob);
       if (previewRecord) {
@@ -307,7 +334,7 @@ export default function MedicalRecords() {
       if (isCryptoFailure && vaultKeyStatus?.hasKey) {
         clearLocalKey();
         setErrorMessage(
-          t("Unable to decrypt this file. Unlock your vault with your account password to sync this device.")
+          t("Unable to decrypt this file. Unlock your vault with your Vault Password to sync this device.")
         );
         return;
       }
@@ -324,11 +351,11 @@ export default function MedicalRecords() {
     setErrorMessage(null);
     setInfoMessage(null);
     try {
-      const response = await fetch(`/api/medical-records/${recordId}`, {
+      const response = await fetch(`/api/vault/docs/${recordId}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
-      const data = (await response.json()) as MedicalRecordDeleteResponse;
+      const data = (await response.json()) as VaultDocDeleteResponse;
       if (!response.ok || !data.success) {
         if (response.status === 401) {
           throw new Error("Please sign in again to manage your records.");
@@ -372,7 +399,7 @@ export default function MedicalRecords() {
     setInfoMessage(null);
     setIsRenaming(true);
     try {
-      const response = await fetch(`/api/medical-records/${recordId}`, {
+      const response = await fetch(`/api/vault/docs/${recordId}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -380,7 +407,7 @@ export default function MedicalRecords() {
         },
         body: JSON.stringify({ name: trimmedName }),
       });
-      const data = (await response.json()) as MedicalRecordRenameResponse;
+      const data = (await response.json()) as VaultDocRenameResponse;
       if (!response.ok || !data.success) {
         if (response.status === 401) {
           throw new Error("Please sign in again to rename your records.");
@@ -428,7 +455,7 @@ export default function MedicalRecords() {
         consentVersion: data.consentVersion,
         consentedAt: data.consentedAt,
       });
-      setConsentChecked(false);
+      setShowConsentDialog(false);
       setInfoMessage(t("Consent saved. You can now upload your records."));
     } catch (error) {
       setErrorMessage(t("Unable to save your consent. Please try again."));
@@ -437,71 +464,33 @@ export default function MedicalRecords() {
     }
   };
 
-  const handleVaultUnlock = async () => {
-    if (!token || !vaultKeyStatus?.hasKey || !vaultKeyStatus.key) return;
-    if (!vaultPassword.trim()) {
-      setVaultError(t("Please enter your account password to unlock the vault."));
-      return;
-    }
-    setVaultError(null);
-    setVaultMessage(null);
-    setIsVaultSubmitting(true);
-    try {
-      const key = await unwrapVaultKey(vaultKeyStatus.key, vaultPassword);
-      await storeLocalVaultKey(email, key);
-      setHasLocalKey(true);
-      setErrorMessage(null);
-      setVaultMessage(t("Vault unlocked on this device."));
-      setVaultPassword("");
-    } catch (error) {
-      setVaultError(t("Unable to unlock the vault. Please check your password."));
-    } finally {
-      setIsVaultSubmitting(false);
-    }
+  const handleVaultSetupComplete = async () => {
+    if (!token) return;
+    await refreshVaultKeyStatus(token);
+    setHasLocalKey(true);
+    setShowRecovery(false);
+    setInfoMessage(t("Vault setup complete. Your device is ready."));
   };
 
-  const handleVaultSync = async () => {
+  const handleVaultUnlocked = () => {
+    setHasLocalKey(true);
+    setShowRecovery(false);
+    setInfoMessage(t("Vault unlocked on this device."));
+  };
+
+  const handleVaultRecovered = async () => {
     if (!token) return;
-    if (!vaultPassword.trim()) {
-      setVaultError(t("Please enter your account password to secure the vault."));
-      return;
-    }
-    if (!hasLocalKey) {
-      setVaultError(t("Upload or unlock a record first to create your vault key."));
-      return;
-    }
-    setVaultError(null);
-    setVaultMessage(null);
-    setIsVaultSubmitting(true);
-    try {
-      const key = await getOrCreateKey(email);
-      const payload = await wrapVaultKey(key, vaultPassword);
-      const response = await fetch("/api/medical-records/key", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(payload),
-      });
-      const data = (await response.json()) as MedicalRecordKeyUpsertResponse;
-      if (!response.ok || !data.success) {
-        throw new Error("Unable to sync vault key.");
-      }
-      setVaultKeyStatus({ hasKey: true, key: payload });
-      setVaultMessage(t("Vault access synced to your account."));
-      setVaultPassword("");
-    } catch (error) {
-      setVaultError(t("Unable to sync vault access. Please try again."));
-    } finally {
-      setIsVaultSubmitting(false);
-    }
+    await refreshVaultKeyStatus(token);
+    setHasLocalKey(true);
+    setShowRecovery(false);
+    setInfoMessage(t("Vault password updated."));
   };
 
   const hasServerKey = Boolean(vaultKeyStatus?.hasKey);
-  const needsUnlock = hasServerKey && !hasLocalKey;
-  const canSync = hasLocalKey && !hasServerKey;
-  const isSynced = hasLocalKey && hasServerKey;
+  const needsVaultSetup = Boolean(token && consentStatus?.hasConsented && !hasServerKey);
+  const needsUnlock = Boolean(token && hasServerKey && !hasLocalKey && !showRecovery);
+  const needsRecovery = Boolean(token && hasServerKey && showRecovery);
+  const vaultReady = Boolean(token && hasServerKey && hasLocalKey);
 
   return (
     <PageScaffold contentClassName="pb-28 lg:pb-12">
@@ -520,6 +509,30 @@ export default function MedicalRecords() {
         </div>
       </header>
 
+      <AlertDialog open={showConsentDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("Medical data consent required")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t(CONSENT_TEXT)}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => {
+                setShowConsentDialog(false);
+                navigate("/");
+              }}
+            >
+              {t("Decline")}
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={handleConsentSubmit} disabled={isConsentSubmitting}>
+              {isConsentSubmitting ? t("Saving consent...") : t("Agree and continue")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <main className="flex-1 px-4 pt-6 lg:px-10 lg:pt-10">
         {!token && (
           <section className="mb-6 rounded-[24px] border border-slate-200 bg-white p-6 shadow-sm lg:p-8">
@@ -534,118 +547,63 @@ export default function MedicalRecords() {
         )}
         <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
           <section className="rounded-[24px] border border-slate-200 bg-white p-6 shadow-sm lg:p-8">
-            <div className="flex items-start gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#0089FF]/10">
-                <UploadCloud className="h-6 w-6 text-[#0089FF]" />
-              </div>
-              <div>
-                <h2 className="text-lg font-bold text-[#002D55]">{t("Upload a medical record")}</h2>
-                <p className="text-sm text-slate-500 mt-1">
-                  {t("Files are encrypted in your browser before they are stored on DocNearMe.")}
-                </p>
-              </div>
-            </div>
-            <div className="mt-6">
-              {!consentStatus?.hasConsented && token && (
-                <div className="mb-4 rounded-2xl border border-[#FFE2B3] bg-[#FFF7E6] p-4 text-sm text-slate-600">
-                  <p className="font-semibold text-[#7A4B00]">{t("Medical data consent required")}</p>
-                  <p className="mt-2">{t(CONSENT_TEXT)}</p>
-                  <label className="mt-3 flex items-start gap-2 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={consentChecked}
-                      onChange={(event) => setConsentChecked(event.target.checked)}
-                      className="mt-1 h-4 w-4 rounded border-slate-300 text-[#0089FF] focus:ring-[#0089FF]"
-                    />
-                    <span>{t("I agree to the medical data consent terms.")}</span>
-                  </label>
-                  <Button
-                    type="button"
-                    className="mt-3 bg-[#0089FF] hover:bg-[#0077E6]"
-                    disabled={!consentChecked || isConsentSubmitting}
-                    onClick={handleConsentSubmit}
-                  >
-                    {isConsentSubmitting ? t("Saving consent...") : t("Agree and continue")}
-                  </Button>
-                </div>
-              )}
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="application/pdf,image/*"
-                onChange={handleFileChange}
-                disabled={!token || !consentStatus?.hasConsented || isUploading}
-                className="w-full rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-sm text-slate-500 file:mr-4 file:rounded-lg file:border-0 file:bg-[#0089FF] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:border-[#0089FF]/60"
+            {needsVaultSetup && token && (
+              <VaultSetup token={token} email={email} onComplete={handleVaultSetupComplete} />
+            )}
+            {needsUnlock && vaultKeyStatus?.key && (
+              <VaultUnlock
+                vaultKey={vaultKeyStatus.key}
+                email={email}
+                onUnlocked={handleVaultUnlocked}
+                onStartRecovery={() => setShowRecovery(true)}
               />
-              <p className="text-xs text-slate-500 mt-3">{recordsCountLabel}</p>
-              {isEncrypting && <p className="text-xs text-slate-500 mt-2">{t("Encrypting your file...")}</p>}
-              {isUploading && <p className="text-xs text-slate-500 mt-2">{t("Uploading encrypted file...")}</p>}
-              {errorMessage && <p className="text-xs text-red-500 mt-2">{errorMessage}</p>}
-              {infoMessage && <p className="text-xs text-emerald-600 mt-2">{infoMessage}</p>}
-            </div>
-            <div className="mt-6 rounded-2xl bg-[#F8FBFF] p-4 text-sm text-slate-600">
-              <p className="font-semibold text-slate-700">{t("Privacy-first storage")}</p>
-              <p className="mt-2">
-                {t(
-                  "Your encryption key stays in this browser. DocNearMe only stores encrypted files and cannot view them."
-                )}
-              </p>
-            </div>
-            {token && (
-              <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-600">
-                <p className="font-semibold text-slate-700">{t("Vault access across devices")}</p>
-                <p className="mt-2">
-                  {t(
-                    "Secure your vault with your account password so you can decrypt records on any signed-in browser."
-                  )}
-                </p>
-                <div className="mt-4 space-y-3">
-                  <Input
-                    type="password"
-                    placeholder={t("Enter your account password")}
-                    value={vaultPassword}
-                    onChange={(event) => setVaultPassword(event.target.value)}
-                    className="h-10"
-                  />
-                  {vaultError && <p className="text-xs text-red-500">{vaultError}</p>}
-                  {vaultMessage && <p className="text-xs text-emerald-600">{vaultMessage}</p>}
-                  {needsUnlock && (
-                    <Button
-                      type="button"
-                      className="bg-[#0089FF] hover:bg-[#0077E6]"
-                      onClick={handleVaultUnlock}
-                      disabled={isVaultSubmitting}
-                    >
-                      {isVaultSubmitting ? t("Unlocking...") : t("Unlock vault on this device")}
-                    </Button>
-                  )}
-                  {canSync && (
-                    <Button
-                      type="button"
-                      className="bg-[#0089FF] hover:bg-[#0077E6]"
-                      onClick={handleVaultSync}
-                      disabled={isVaultSubmitting}
-                    >
-                      {isVaultSubmitting ? t("Syncing...") : t("Enable access on other devices")}
-                    </Button>
-                  )}
-                  {isSynced && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={handleVaultSync}
-                      disabled={isVaultSubmitting}
-                    >
-                      {isVaultSubmitting ? t("Updating...") : t("Update vault password")}
-                    </Button>
-                  )}
-                  {!hasLocalKey && !hasServerKey && (
-                    <p className="text-xs text-slate-500">
-                      {t("Upload a record first to create your vault key, then enable access here.")}
+            )}
+            {needsRecovery && vaultKeyStatus?.key && token && (
+              <VaultRecovery
+                vaultKey={vaultKeyStatus.key}
+                token={token}
+                email={email}
+                onRecovered={handleVaultRecovered}
+                onCancel={() => setShowRecovery(false)}
+              />
+            )}
+            {!needsVaultSetup && !needsUnlock && !needsRecovery && (
+              <>
+                <div className="flex items-start gap-4">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#0089FF]/10">
+                    <UploadCloud className="h-6 w-6 text-[#0089FF]" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold text-[#002D55]">{t("Upload a medical record")}</h2>
+                    <p className="text-sm text-slate-500 mt-1">
+                      {t("Files are encrypted in your browser before they are stored on DocNearMe.")}
                     </p>
-                  )}
+                  </div>
                 </div>
-              </div>
+                <div className="mt-6">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="application/pdf,image/*"
+                    onChange={handleFileChange}
+                    disabled={!vaultReady || isUploading}
+                    className="w-full rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-sm text-slate-500 file:mr-4 file:rounded-lg file:border-0 file:bg-[#0089FF] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:border-[#0089FF]/60"
+                  />
+                  <p className="text-xs text-slate-500 mt-3">{recordsCountLabel}</p>
+                  {isEncrypting && <p className="text-xs text-slate-500 mt-2">{t("Encrypting your file...")}</p>}
+                  {isUploading && <p className="text-xs text-slate-500 mt-2">{t("Uploading encrypted file...")}</p>}
+                  {errorMessage && <p className="text-xs text-red-500 mt-2">{errorMessage}</p>}
+                  {infoMessage && <p className="text-xs text-emerald-600 mt-2">{infoMessage}</p>}
+                </div>
+                <div className="mt-6 rounded-2xl bg-[#F8FBFF] p-4 text-sm text-slate-600">
+                  <p className="font-semibold text-slate-700">{t("Privacy-first storage")}</p>
+                  <p className="mt-2">
+                    {t(
+                      "Your vault key never leaves your device. DocNearMe only stores encrypted files and wrapped keys."
+                    )}
+                  </p>
+                </div>
+              </>
             )}
           </section>
 
@@ -655,85 +613,91 @@ export default function MedicalRecords() {
               <span className="text-xs text-slate-500">{t("View or delete")}</span>
             </div>
             <div className="mt-4 space-y-3">
-              {isLoading && <p className="text-sm text-slate-500">{t("Loading your records...")}</p>}
-              {!isLoading && records.length === 0 && (
+              {!vaultReady && token && (
+                <p className="text-sm text-slate-500">
+                  {t("Unlock your vault to view and manage encrypted records.")}
+                </p>
+              )}
+              {vaultReady && isLoading && <p className="text-sm text-slate-500">{t("Loading your records...")}</p>}
+              {vaultReady && !isLoading && records.length === 0 && (
                 <p className="text-sm text-slate-500">{t("Upload a record to see it listed here.")}</p>
               )}
-              {records.map((record) => (
-                <div
-                  key={record.id}
-                  className="flex items-center justify-between gap-4 rounded-2xl border border-slate-100 p-4"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#F5FAFF]">
-                      <FileText className="h-5 w-5 text-[#0089FF]" />
-                    </div>
-                    <div>
-                      {editingRecordId === record.id ? (
-                        <div className="space-y-2">
-                          <Input
-                            value={renameValue}
-                            onChange={(event) => setRenameValue(event.target.value)}
-                            className="h-8 text-sm"
-                          />
-                          <div className="flex items-center gap-2">
-                            <Button
-                              type="button"
-                              size="sm"
-                              className="gap-2 bg-[#0089FF] hover:bg-[#0077E6]"
-                              disabled={isRenaming}
-                              onClick={() => void handleRenameSave(record.id)}
-                            >
-                              <Check className="h-4 w-4" />
-                              {isRenaming ? t("Saving...") : t("Save")}
-                            </Button>
-                            <Button type="button" size="sm" variant="ghost" onClick={handleRenameCancel}>
-                              <X className="h-4 w-4" />
-                            </Button>
+              {vaultReady &&
+                records.map((record) => (
+                  <div
+                    key={record.id}
+                    className="flex items-center justify-between gap-4 rounded-2xl border border-slate-100 p-4"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#F5FAFF]">
+                        <FileText className="h-5 w-5 text-[#0089FF]" />
+                      </div>
+                      <div>
+                        {editingRecordId === record.id ? (
+                          <div className="space-y-2">
+                            <Input
+                              value={renameValue}
+                              onChange={(event) => setRenameValue(event.target.value)}
+                              className="h-8 text-sm"
+                            />
+                            <div className="flex items-center gap-2">
+                              <Button
+                                type="button"
+                                size="sm"
+                                className="gap-2 bg-[#0089FF] hover:bg-[#0077E6]"
+                                disabled={isRenaming}
+                                onClick={() => void handleRenameSave(record.id)}
+                              >
+                                <Check className="h-4 w-4" />
+                                {isRenaming ? t("Saving...") : t("Save")}
+                              </Button>
+                              <Button type="button" size="sm" variant="ghost" onClick={handleRenameCancel}>
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </div>
-                        </div>
-                      ) : (
-                        <p className="text-sm font-semibold text-slate-700">{record.name}</p>
-                      )}
-                      <p className="text-xs text-slate-500">
-                        {new Date(record.createdAt).toLocaleDateString()} · {(record.size / 1024).toFixed(1)} KB
-                      </p>
+                        ) : (
+                          <p className="text-sm font-semibold text-slate-700">{record.name}</p>
+                        )}
+                        <p className="text-xs text-slate-500">
+                          {new Date(record.createdAt).toLocaleDateString()} · {(record.size / 1024).toFixed(1)} KB
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      className="gap-2"
-                      onClick={() => void handleView(record)}
-                    >
-                      <Eye className="h-4 w-4" />
-                      {t("View")}
-                    </Button>
-                    {editingRecordId !== record.id && (
+                    <div className="flex items-center gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="gap-2"
+                        onClick={() => void handleView(record)}
+                      >
+                        <Eye className="h-4 w-4" />
+                        {t("View")}
+                      </Button>
+                      {editingRecordId !== record.id && (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          className="text-slate-600 hover:text-[#1648CE] hover:bg-[#E8F3FF]"
+                          onClick={() => handleRenameStart(record)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                      )}
                       <Button
                         type="button"
                         size="sm"
                         variant="ghost"
-                        className="text-slate-600 hover:text-[#1648CE] hover:bg-[#E8F3FF]"
-                        onClick={() => handleRenameStart(record)}
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                        onClick={() => handleDelete(record.id)}
                       >
-                        <Pencil className="h-4 w-4" />
+                        <Trash2 className="h-4 w-4" />
                       </Button>
-                    )}
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                      onClick={() => handleDelete(record.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
             </div>
           </section>
         </div>

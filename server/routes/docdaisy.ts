@@ -157,7 +157,7 @@ const checkReplyRelevance = async (question: string, reply: string) => {
       {
         role: "system" as const,
         content:
-          "You are a strict relevance checker for a medical intake chat. Decide whether the user reply addresses the last question or adds symptom details. If off-topic, request a concise clarification. Return JSON only.",
+          "You are a medical intake relevance checker. Decide whether the user reply answers the last question or provides clinically relevant context. Accept multi-part answers (e.g., duration + cause) and synonyms. Only mark irrelevant if it does not answer the question or add symptom context. If irrelevant, request a concise clarification. Return JSON only.",
       },
       {
         role: "user" as const,
@@ -321,19 +321,35 @@ router.post("/respond", async (req, res) => {
     .reverse()
     .find((msg) => msg.sender === "bot")?.text;
 
+  let isRelevant = true;
   if (lastUserText && lastBotText) {
     const relevance = await checkReplyRelevance(lastBotText, lastUserText);
+    isRelevant = relevance.relevant;
     if (!relevance.relevant) {
       return res.json({
         reply:
           relevance.redirect ||
           "Please answer the last question with symptom details so I can help.",
         specialization: null,
+        relevant: false,
+        mode: "followup",
       });
     }
   }
+
   const userTurns = messages.filter((msg) => msg.sender === "user").length;
-  const inferredMode = userTurns >= 5 ? "conclusion" : "followup";
+  const relevantTurns =
+    typeof payload?.relevantTurns === "number" && Number.isFinite(payload.relevantTurns)
+      ? Math.max(0, Math.floor(payload.relevantTurns))
+      : null;
+  const inferredMode =
+    relevantTurns !== null
+      ? relevantTurns + (isRelevant ? 1 : 0) >= 5
+        ? "conclusion"
+        : "followup"
+      : userTurns >= 5
+        ? "conclusion"
+        : "followup";
   const mode = rawMode ?? inferredMode;
 
   if (!mode || (mode !== "followup" && mode !== "conclusion")) {
@@ -389,7 +405,7 @@ router.post("/respond", async (req, res) => {
       const reply =
         extractOpenAIText(completion) || "I couldn't generate a response. Please try again.";
 
-      return res.json({ reply: typeof reply === "string" ? reply.trim() : reply });
+      return res.json({ reply: typeof reply === "string" ? reply.trim() : reply, relevant: true, mode });
     }
 
     const schema = {
@@ -444,12 +460,14 @@ router.post("/respond", async (req, res) => {
     const summary = String(parsed.summary ?? "").trim();
     if (specialization && specialization !== "Unsure" && !isInAppSpecialization(specialization, availableSpecializations)) {
       return res.json({
-        reply: `${summary} The recommended specialization is ${specialization}, but no clinics with that specialty are currently available in the app.`,
+        reply: `${summary} The recommended specialization is ${specialization}, but a clinic offering that service isn't currently available in the app. Please try elsewhere.`,
         specialization: "Unsure",
+        relevant: true,
+        mode,
       });
     }
 
-    return res.json({ reply: summary, specialization });
+    return res.json({ reply: summary, specialization, relevant: true, mode });
   } catch (error) {
     console.error("DocDaisy OpenAI error", error);
     return res.status(500).json({
