@@ -37,23 +37,6 @@ const parseMaybeJson = <T,>(value: unknown): T | undefined => {
   }
 };
 
-const parseRawBody = (value: unknown): Record<string, unknown> => {
-  if (typeof value === "string") {
-    return parseMaybeJson<Record<string, unknown>>(value) ?? {};
-  }
-
-  if (value instanceof Uint8Array || Buffer.isBuffer(value)) {
-    const text = Buffer.from(value).toString("utf8");
-    return parseMaybeJson<Record<string, unknown>>(text) ?? {};
-  }
-
-  if (value && typeof value === "object") {
-    return value as Record<string, unknown>;
-  }
-
-  return {};
-};
-
 const coerceMessage = (value: unknown): ChatMessage | null => {
   if (!value || typeof value !== "object") return null;
   const record = value as MessageLike;
