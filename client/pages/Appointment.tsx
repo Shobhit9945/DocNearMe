@@ -45,7 +45,6 @@ import {
   getSpecializationLabel,
   matchSpecialization,
   resolveSpecializationId,
-  SPECIALIZATION_OPTIONS,
 } from "@/lib/specializations";
 import { useTranslation } from "@/lib/i18n";
 import { formatAvailabilityForLanguage, getLocaleForLanguage } from "@/lib/time-format";
@@ -122,7 +121,7 @@ export default function Appointment() {
   const [view, setView] = useState<"upcoming" | "booking">(initialView);
   const [step, setStep] = useState<"booking" | "confirmation">("booking");
 
-  const fallbackSpecializationId = resolveSpecializationId("");
+  const fallbackSpecializationId = "";
   const normalizedParam = specializationParam
     ? resolveSpecializationId(specializationParam, fallbackSpecializationId)
     : "";
@@ -308,12 +307,6 @@ export default function Appointment() {
       });
     });
 
-    if (specializationMap.size === 0) {
-      SPECIALIZATION_OPTIONS.forEach((specialization) => {
-        specializationMap.set(specialization.id, specialization.label);
-      });
-    }
-
     return Array.from(specializationMap.entries())
       .map(([id, label]) => ({ id, label }))
       .sort((a, b) => a.label.localeCompare(b.label));
@@ -321,12 +314,13 @@ export default function Appointment() {
 
   const clinicsForSpecialization = useMemo(
     () =>
-      clinics.filter((clinic) =>
-        clinic.specializations.some((spec) => {
+      clinics.filter((clinic) => {
+        if (!selectedSpecializationId) return true;
+        return clinic.specializations.some((spec) => {
           const normalized = matchSpecialization(spec) ?? spec;
           return normalized.toLowerCase() === selectedSpecializationId.toLowerCase();
-        })
-      ),
+        });
+      }),
     [clinics, selectedSpecializationId]
   );
 
@@ -334,43 +328,19 @@ export default function Appointment() {
     if (!selectedClinicId) return [];
 
     return doctors.filter((doctor) => {
+      if (doctor.clinicId !== selectedClinicId) return false;
+      if (!selectedSpecializationId) return true;
       const normalized = matchSpecialization(doctor.specialization) ?? doctor.specialization;
-      return (
-        doctor.clinicId === selectedClinicId &&
-        normalized.toLowerCase() === selectedSpecializationId.toLowerCase()
-      );
+      return normalized.toLowerCase() === selectedSpecializationId.toLowerCase();
     });
   }, [doctors, selectedClinicId, selectedSpecializationId]);
 
-  const fallbackDoctor = useMemo<ClinicDoctor | null>(() => {
-    if (!selectedClinic) return null;
-    const clinicLabelParts = selectedClinic.name.split(" ");
-    const clinicSeed = clinicLabelParts[clinicLabelParts.length - 1] || selectedClinic.name;
-    const fallbackNames = ["Hayashi", "Kondo", "Fujita", "Ishikawa", "Tanaka"];
-    const nameIndex = (selectedClinic.id.length + selectedSpecialization.length) % fallbackNames.length;
-    const fallbackLastName = clinicSeed.length > 2 ? clinicSeed : fallbackNames[nameIndex];
-    return {
-      id: `fallback-${selectedClinic.id}-${selectedSpecialization}`,
-      name: `Dr. ${fallbackLastName}`,
-      clinicId: selectedClinic.id,
-      specialization: selectedSpecializationLabel,
-      languages: ["Japanese", "English"],
-      rating: 4.6,
-      nextAvailable: "Within 24 hours",
-    };
-  }, [selectedClinic, selectedSpecialization, selectedSpecializationLabel]);
-
-  const doctorOptions = useMemo(() => {
-    if (doctorsForSelection.length > 0) return doctorsForSelection;
-    return fallbackDoctor ? [fallbackDoctor] : [];
-  }, [doctorsForSelection, fallbackDoctor]);
+  const doctorOptions = useMemo(() => doctorsForSelection, [doctorsForSelection]);
 
   const selectedDoctor = doctorOptions.find((doctor) => doctor.id === selectedDoctorId) ?? null;
   const doctorDisplayName =
     selectedDoctor?.name ??
-    (doctorsForSelection.length > 0
-      ? "Any available doctor"
-      : fallbackDoctor?.name ?? "Assigned doctor");
+    (doctorsForSelection.length > 0 ? "Any available doctor" : "No doctors available");
 
   // Fetch available slots based on selected date
   const { data: slotsData, isLoading: isLoadingSlots } = useQuery({
@@ -503,11 +473,7 @@ export default function Appointment() {
     setSelectedDoctorId(null);
   }, [selectedClinicId, selectedSpecializationId]);
 
-  useEffect(() => {
-    if (doctorsForSelection.length === 0 && fallbackDoctor) {
-      setSelectedDoctorId(fallbackDoctor.id);
-    }
-  }, [doctorsForSelection.length, fallbackDoctor]);
+
 
   // Reset selected slot when date changes
   useEffect(() => {

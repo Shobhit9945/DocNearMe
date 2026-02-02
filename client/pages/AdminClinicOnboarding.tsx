@@ -77,7 +77,6 @@ export default function AdminClinicOnboarding() {
     photos: [],
   });
 
-  const [specializationsText, setSpecializationsText] = useState("");
   const [closedDaysText, setClosedDaysText] = useState(defaultHours.closedDays);
   const [pricing, setPricing] = useState({
     firstVisit: "",
@@ -283,7 +282,7 @@ export default function AdminClinicOnboarding() {
         ...clinic,
         id: clinic.id.trim(),
         rating: Number(clinic.rating),
-        specializations: normalizeList(specializationsText),
+        specializations: [],
         hours: clinic.hours
           ? {
               ...clinic.hours,
@@ -563,20 +562,6 @@ export default function AdminClinicOnboarding() {
                   value={clinic.googlePlaceId ?? ""}
                   onChange={(event) => handleClinicChange("googlePlaceId", event.target.value)}
                   placeholder="Optional"
-                />
-              </div>
-              <div className="md:col-span-2">
-                <label className="text-sm font-medium text-slate-700" htmlFor="clinic-specializations">
-                  Specializations (comma separated)
-                </label>
-                <textarea
-                  id="clinic-specializations"
-                  className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                  rows={3}
-                  value={specializationsText}
-                  onChange={(event) => setSpecializationsText(event.target.value)}
-                  placeholder="Cardiology, Dermatology"
-                  required
                 />
               </div>
             </div>

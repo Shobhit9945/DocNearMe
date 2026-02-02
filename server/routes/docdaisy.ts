@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getClinicDoctorsCollection, getClinicInfoCollection } from "../db";
+import { getClinicDoctorsCollection } from "../db";
 
 interface ChatMessage {
   sender: "user" | "bot";
@@ -20,31 +20,6 @@ const router = Router();
 const OPENAI_MODEL = process.env.OPENAI_MODEL ?? "gpt-4o-mini";
 const OPENAI_BASE_URL = (process.env.OPENAI_BASE_URL ?? "https://api.openai.com")
   .replace(/\/$/, "");
-const DOCDAISY_SPECIALIZATIONS = [
-  "General Physician",
-  "Internal Medicine",
-  "Cardiologist",
-  "Dermatologist",
-  "Pediatrician",
-  "Orthopedic Surgeon",
-  "Gastroenterology",
-  "Neurology",
-  "Psychiatry",
-  "Psychology",
-  "Ophthalmology",
-  "Endocrinology",
-  "Oncology",
-  "Pulmonology",
-  "Rheumatology",
-  "Allergy & Immunology",
-  "Nephrology",
-  "ENT",
-  "Gynecology",
-  "Obstetrics",
-  "Urology",
-  "Sports Medicine",
-  "Physical Therapy",
-];
 
 const getOpenAIKey = () => process.env.OPENAI_API_KEY;
 
@@ -240,61 +215,86 @@ const isInAppSpecialization = (value: string, available: string[]) => {
   return available.some((spec) => spec.toLowerCase() === normalized);
 };
 
+const detectResponseLanguage = async (text: string) => {
+  const sample = text.trim();
+  if (!sample) return "English";
+
+  const payload = {
+    model: OPENAI_MODEL,
+    messages: [
+      {
+        role: "system" as const,
+        content:
+          "You are a language detector. Identify the primary language of the user's message, even if it's romanized (e.g., Hindi in Latin script). Return JSON only.",
+      },
+      {
+        role: "user" as const,
+        content: `Message:\n${sample}\n\nReturn JSON: {"language":"<English name>","iso":"<ISO 639-1 or 639-3>"}`,
+      },
+    ],
+    temperature: 0,
+    response_format: { type: "json_object" as const },
+  };
+
+  try {
+    const completion = await callOpenAI(payload);
+    const rawContent = extractOpenAIText(completion);
+    if (typeof rawContent !== "string") return "English";
+    const parsed = JSON.parse(rawContent) as { language?: string };
+    return (parsed?.language || "English").trim() || "English";
+  } catch (error) {
+    console.warn("[DocDaisy] Language detection failed, defaulting to English.", error);
+    return "English";
+  }
+};
+
 const getAvailableSpecializations = async () => {
   try {
-    const [clinicInfoCollection, clinicDoctorsCollection] = await Promise.all([
-      getClinicInfoCollection(),
-      getClinicDoctorsCollection(),
-    ]);
-
-    const [clinicInfo, clinicDoctors] = await Promise.all([
-      clinicInfoCollection.find({}).toArray(),
-      clinicDoctorsCollection.find({}).toArray(),
-    ]);
+    const clinicDoctorsCollection = await getClinicDoctorsCollection();
+    const clinicDoctors = await clinicDoctorsCollection.find({}).toArray();
 
     const collected = new Set<string>();
-    clinicInfo.forEach((clinic: any) => {
-      const specializations = Array.isArray(clinic.specializations)
-        ? clinic.specializations
-        : typeof clinic.specializations === "string"
-          ? [clinic.specializations]
-          : [];
-      specializations.forEach((spec: string) => {
-        const trimmed = typeof spec === "string" ? spec.trim() : "";
-        if (trimmed) collected.add(trimmed);
-      });
-    });
-
     clinicDoctors.forEach((doctor: any) => {
       const specialization = typeof doctor.specialization === "string" ? doctor.specialization.trim() : "";
       if (specialization) collected.add(specialization);
     });
 
-    const list = Array.from(collected).sort((a, b) => a.localeCompare(b));
-    return list.length ? list : [...DOCDAISY_SPECIALIZATIONS];
+    return Array.from(collected).sort((a, b) => a.localeCompare(b));
   } catch (error) {
-    console.warn("[DocDaisy] Failed to load clinic specializations, using defaults.", error);
-    return [...DOCDAISY_SPECIALIZATIONS];
+    console.warn("[DocDaisy] Failed to load doctor specializations.", error);
+    return [];
   }
 };
 
 router.post("/respond", async (req, res) => {
-  const rawBody = parseRawBody(req.body);
-  const payload = parseRawBody(rawBody?.body ?? rawBody?.data ?? rawBody);
+  const rawBody = parseRawBody(req.body) as any;
+  const payload = parseRawBody(rawBody?.body ?? rawBody?.data ?? rawBody) as any;
   const headerMode = req.header("x-docdaisy-mode")?.toLowerCase();
   const headerConversation = req.header("x-docdaisy-conversation");
   const headerMessage = req.header("x-docdaisy-message");
+  const headerConversationB64 = req.header("x-docdaisy-conversation-b64");
+  const headerMessageB64 = req.header("x-docdaisy-message-b64");
+  const decodeHeader = (value?: string) => {
+    if (!value) return undefined;
+    try {
+      return Buffer.from(value, "base64").toString("utf8");
+    } catch {
+      return undefined;
+    }
+  };
   const rawMode =
     (payload?.mode as "followup" | "conclusion" | undefined) ??
     (headerMode === "followup" || headerMode === "conclusion"
       ? (headerMode as "followup" | "conclusion")
       : undefined);
+  const decodedConversation = decodeHeader(headerConversationB64) ?? headerConversation;
+  const decodedMessage = decodeHeader(headerMessageB64) ?? headerMessage;
   const rawMessages =
     payload?.messages ??
     payload?.conversation ??
     payload?.history ??
     payload?.conversationHistory ??
-    (headerConversation ? parseMaybeJson<unknown>(headerConversation) : undefined) ??
+    (decodedConversation ? parseMaybeJson<unknown>(decodedConversation) : undefined) ??
     (Array.isArray(payload) ? payload : undefined);
   const fallbackText =
     typeof payload?.message === "string"
@@ -303,16 +303,16 @@ router.post("/respond", async (req, res) => {
         ? payload.text
         : typeof payload?.content === "string"
           ? payload.content
-          : typeof headerMessage === "string" && headerMessage.trim().length > 0
-            ? headerMessage
+          : typeof decodedMessage === "string" && decodedMessage.trim().length > 0
+            ? decodedMessage
             : undefined;
 
   const normalizedMessages = normalizeMessages(rawMessages);
-  const messages =
+  const messages: ChatMessage[] =
     normalizedMessages.length > 0
       ? normalizedMessages
       : fallbackText
-        ? [{ sender: "user", text: fallbackText }]
+        ? [{ sender: "user", text: String(fallbackText) }]
         : [];
   const lastUserText = [...messages]
     .reverse()
@@ -358,6 +358,15 @@ router.post("/respond", async (req, res) => {
   try {
     const availableSpecializations = await getAvailableSpecializations();
     const conversation = buildConversationTranscript(messages);
+    const availableSpecializationsLabel =
+      availableSpecializations.length > 0
+        ? availableSpecializations.join(", ")
+        : "None configured";
+
+    const lastUserMessage = [...messages]
+      .reverse()
+      .find((msg) => msg.sender === "user")?.text ?? "";
+    const requiredLanguage = await detectResponseLanguage(lastUserMessage);
 
     if (mode === "followup") {
       const payload = {
@@ -366,13 +375,11 @@ router.post("/respond", async (req, res) => {
           {
             role: "system" as const,
             content:
-              "You are DocDaisy, a warm and concise medical navigator. Ask only one short follow-up question at a time (under 35 words). Be systematic: prioritize duration/onset, severity, key associated symptoms, red-flag symptoms, triggers, and current meds/conditions—ask the next missing item. Keep asking until you have at least 5 user answers. Respond using plain text only.",
+              `You are DocDaisy, a warm and concise medical navigator. Ask only one short follow-up question at a time (under 35 words). Be systematic: prioritize duration/onset, severity, key associated symptoms, red-flag symptoms, triggers, and current meds/conditions—ask the next missing item. Keep asking until you have at least 5 user answers. Respond using plain text only. You MUST reply ONLY in ${requiredLanguage} and do not switch languages.`,
           },
           {
             role: "user" as const,
-            content: `Conversation so far:\n${conversation}\n\nAvailable specializations in the app:\n${availableSpecializations.join(
-              ", "
-            )}\n\nAsk the next clarifying question.`,
+            content: `Conversation so far:\n${conversation}\n\nUser's most recent message (reply only in ${requiredLanguage}):\n${lastUserMessage}\n\nAvailable specializations in the app:\n${availableSpecializationsLabel}\n\nAsk the next clarifying question.`,
           },
         ],
         temperature: 0.2,
@@ -406,20 +413,17 @@ router.post("/respond", async (req, res) => {
       },
     } as const;
 
-    const payload = {
+      const payload = {
       model: OPENAI_MODEL,
       messages: [
         {
           role: "system" as const,
           content:
-            "You are DocDaisy, a medical navigator. Review the conversation and return a JSON object with a short summary and the single best specialization. Write the summary in second person (" +
-            "e.g., 'Based on what you shared, you have...') and avoid third-person phrasing like 'the user has'. Prefer General Physician or Internal Medicine for common, early, or mild symptoms unless red flags clearly suggest a specialty. Choose from the in-app list when possible. If no in-app specialization fits, set specialization to Unsure and clearly say which specialization is needed but not available in the app.",
+            `You are DocDaisy, a medical navigator. Review the conversation and return a JSON object with a short summary and the single best specialization. Write the summary in second person (e.g., 'Based on what you shared, you have...') and avoid third-person phrasing like 'the user has'. Prefer General Physician or Internal Medicine for common, early, or mild symptoms unless red flags clearly suggest a specialty. Choose from the in-app list when possible. If the list is empty or no in-app specialization fits, set specialization to Unsure and clearly say which specialization is needed but not available in the app. You MUST write the summary ONLY in ${requiredLanguage} and do not switch languages.`,
         },
         {
           role: "user" as const,
-          content: `Conversation history:\n${conversation}\n\nAvailable specializations in the app:\n${availableSpecializations.join(
-            ", "
-          )}\n\nReturn only the JSON object conforming to the schema.`,
+          content: `Conversation history:\n${conversation}\n\nUser's most recent message (reply only in ${requiredLanguage}):\n${lastUserMessage}\n\nAvailable specializations in the app:\n${availableSpecializationsLabel}\n\nReturn only the JSON object conforming to the schema.`,
         },
       ],
       temperature: 0.2,

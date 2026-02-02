@@ -16,7 +16,7 @@ import { useAddressSearch } from "@/hooks/useAddressSearch";
 import { useTranslation } from "@/lib/i18n";
 import { formatAvailabilityForLanguage } from "@/lib/time-format";
 import { useClinics } from "@/lib/clinic-data";
-import { getSpecializationLabel, matchSpecialization, SPECIALIZATION_OPTIONS } from "@/lib/specializations";
+import { getSpecializationLabel, matchSpecialization } from "@/lib/specializations";
 import { TranslatedText } from "@/components/TranslatedText";
 
 export default function Clinics() {
@@ -63,44 +63,45 @@ export default function Clinics() {
       });
     });
 
-    if (specializationMap.size === 0) {
-      SPECIALIZATION_OPTIONS.forEach((specialization) => {
-        specializationMap.set(specialization.id, specialization.label);
-      });
-    }
-
     return Array.from(specializationMap.entries())
       .map(([id, label]) => ({ id, label }))
       .sort((a, b) => a.label.localeCompare(b.label));
   }, [clinicsData?.clinics]);
 
   const availableSpecializations = useMemo(() => {
-    if (!normalizedSpecialization) return baseSpecializations;
+    const baseList = [
+      { id: "all", label: t("All specializations") },
+      ...baseSpecializations,
+    ];
+    if (!normalizedSpecialization) return baseList;
 
     const exists = baseSpecializations.some(
       (spec) => spec.id.toLowerCase() === normalizedSpecialization.toLowerCase(),
     );
 
     return exists
-      ? baseSpecializations
+      ? baseList
       : [
-          ...baseSpecializations,
+          ...baseList,
           { id: normalizedSpecialization, label: normalizedSpecialization },
         ];
-  }, [baseSpecializations, normalizedSpecialization]);
+  }, [baseSpecializations, normalizedSpecialization, t]);
 
   const selectedSpecialization =
     availableSpecializations.find(
       (spec) => spec.id.toLowerCase() === (normalizedSpecialization ?? "").toLowerCase()
-    )?.id ?? availableSpecializations[0].id;
+    )?.id ?? availableSpecializations[0]?.id ?? "all";
 
   const clinics = useMemo(
     () =>
       (clinicsData?.clinics ?? []).filter((clinic) => {
-        const specializationMatch = clinic.specializations.some((spec) => {
-          const normalized = matchSpecialization(spec) ?? spec;
-          return normalized.toLowerCase() === selectedSpecialization.toLowerCase();
-        });
+        const specializationMatch =
+          selectedSpecialization === "all"
+            ? true
+            : clinic.specializations.some((spec) => {
+                const normalized = matchSpecialization(spec) ?? spec;
+                return normalized.toLowerCase() === selectedSpecialization.toLowerCase();
+              });
         const ratingMatch = clinic.rating >= minRating;
 
         return specializationMatch && ratingMatch;

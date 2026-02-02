@@ -290,53 +290,13 @@ async function prepareClinicOnce(db: Db | InMemoryClinicDb) {
 
 async function seedClinicData(db: Db | InMemoryClinicDb) {
   const clinics = getClinicCollection<ClinicInfo>(db, "clinicInfo");
-  const clinicAccounts = getClinicCollection<ClinicAccount>(db, "clinicAccounts");
-  const clinicDoctors = getClinicCollection<ClinicDoctorRecord>(db, "clinicDoctors");
-
   const existingClinic = await clinics.findOne({});
   if (existingClinic) {
     return;
   }
 
-  const { CLINIC_SEED, DOCTOR_SEED } = await import("../shared/clinic-seed");
-
-  const clinicInsertions = CLINIC_SEED.map((clinic) =>
-    clinics.insertOne({
-      ...clinic,
-      clinicId: clinic.id,
-      updatedAt: new Date(),
-    }),
-  );
-  await Promise.all(clinicInsertions);
-
-  await Promise.all(
-    CLINIC_SEED.map(async (clinic) => {
-      const tempPassword = `clinic-${clinic.id}-2024`;
-      const passwordHash = await bcryptjs.hash(tempPassword, 10);
-      return clinicAccounts.insertOne({
-        clinicId: clinic.id,
-        userId: `${clinic.id}-admin`,
-        passwordHash,
-        tempPassword,
-        createdAt: new Date(),
-      });
-    }),
-  );
-
-  const doctorInsertions = DOCTOR_SEED.map((doctor) =>
-    clinicDoctors.insertOne({
-      clinicId: doctor.clinicId,
-      doctorId: doctor.id,
-      name: doctor.name,
-      specialization: doctor.specialization,
-      languages: doctor.languages,
-      rating: doctor.rating,
-      nextAvailable: doctor.nextAvailable,
-      availability: doctor.availability,
-      updatedAt: new Date(),
-    }),
-  );
-  await Promise.all(doctorInsertions);
+  // Seed data has been removed to ensure clinic/doctor data comes only from MongoDB.
+  return;
 }
 
 async function connectToMongoClient() {

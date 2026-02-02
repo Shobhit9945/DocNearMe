@@ -1,12 +1,10 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/components/ui/use-toast";
 import { getClinicAuthHeader, getClinicSession } from "@/lib/clinic-auth";
 import { useClinicDoctors } from "@/lib/clinic-data";
 import { useTranslation } from "@/lib/i18n";
-import { SPECIALIZATION_OPTIONS, matchSpecialization } from "@/lib/specializations";
 import { supportedLanguages } from "@/lib/translations";
 import type { ClinicDoctor, ClinicDoctorsUpdateRequest } from "@shared/api";
 import { TranslatedText } from "@/components/TranslatedText";
@@ -277,12 +275,6 @@ export default function ClinicDoctors() {
         <h2 className="text-lg font-semibold text-gray-900">{t("Doctors")}</h2>
         <div className="space-y-4">
           {doctors.map((doctor, index) => {
-            const matchedSpecializationId = matchSpecialization(doctor.specialization ?? "");
-            const matchedSpecialization =
-              SPECIALIZATION_OPTIONS.find((spec) => spec.id === matchedSpecializationId) ??
-              SPECIALIZATION_OPTIONS.find((spec) => spec.label === doctor.specialization) ??
-              null;
-            const selectedSpecialization = matchedSpecialization?.label ?? "";
             const specializationFallback = doctor.specialization?.trim() ?? "";
             const isEditing = editingDoctors[doctor.id] ?? false;
             const visibleLanguages =
@@ -299,13 +291,11 @@ export default function ClinicDoctors() {
                       )}
                     </p>
                     <p className="text-xs text-gray-500">
-                      {selectedSpecialization
-                        ? t(selectedSpecialization)
-                        : specializationFallback
-                          ? (
-                              <TranslatedText text={specializationFallback} inline />
-                            )
-                          : t("Select specialization")}
+                      {specializationFallback ? (
+                        <TranslatedText text={specializationFallback} inline />
+                      ) : (
+                        t("Add specialization")
+                      )}
                     </p>
                     <div className="flex flex-wrap gap-2 text-xs text-gray-500">
                       {visibleLanguages.map((languageItem) => (
@@ -337,21 +327,11 @@ export default function ClinicDoctors() {
                       </div>
                       <div>
                         <label className="text-xs font-medium text-gray-500 block mb-1">{t("Specialization")}</label>
-                        <Select
-                          value={selectedSpecialization}
-                          onValueChange={(value) => handleFieldChange(index, "specialization", value)}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder={t("Select specialization")} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {SPECIALIZATION_OPTIONS.map((spec) => (
-                              <SelectItem key={spec.id} value={spec.label}>
-                                {t(spec.label)}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <Input
+                          value={doctor.specialization ?? ""}
+                          onChange={(event) => handleFieldChange(index, "specialization", event.target.value)}
+                          placeholder={t("e.g. Cardiology")}
+                        />
                       </div>
                       <div>
                         <label className="text-xs font-medium text-gray-500 block mb-1">{t("Schedule")}</label>

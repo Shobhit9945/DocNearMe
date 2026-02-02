@@ -6,7 +6,7 @@ import { formatAvailabilityForLanguage } from "@/lib/time-format";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAllDoctors, useClinics } from "@/lib/clinic-data";
-import { getSpecializationLabel, matchSpecialization, SPECIALIZATION_OPTIONS } from "@/lib/specializations";
+import { getSpecializationLabel, matchSpecialization } from "@/lib/specializations";
 import { TranslatedText } from "@/components/TranslatedText";
 
 export default function Search() {
@@ -55,13 +55,6 @@ export default function Search() {
         }
       });
     });
-
-    if (specializationMap.size === 0) {
-      SPECIALIZATION_OPTIONS.forEach((specialization) => {
-        specializationMap.set(specialization.id, specialization.label);
-      });
-    }
-
     const dynamicOptions = Array.from(specializationMap.entries())
       .map(([id, label]) => ({ id, label: t(label) }))
       .sort((a, b) => a.label.localeCompare(b.label));

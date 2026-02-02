@@ -10,7 +10,6 @@ import type {
   AdminAuthCheckResponse,
   AdminCreateClinicRequest,
   AdminCreateClinicResponse,
-  ClinicDoctor,
   ClinicProfile,
 } from "@shared/api";
 
@@ -55,7 +54,6 @@ const clinicSchema = z.object({
   distance: z.string().trim().min(1).max(120),
   location: z.string().trim().min(2).max(200),
   image: z.string().trim().min(5).max(500),
-  specializations: z.array(z.string().trim().min(2).max(120)),
   nextAvailability: z.string().trim().min(2).max(80),
   googlePlaceId: z.string().trim().min(2).max(120).optional(),
   phone: z.string().trim().min(3).max(40).optional(),
@@ -112,15 +110,6 @@ const adminCreateClinicSchema = z.object({
   adminPassword: z.string().trim().min(6).max(120).optional(),
 });
 
-const resolveSpecializations = (clinic: ClinicProfile, doctors: ClinicDoctor[] = []) => {
-  if (clinic.specializations.length) return clinic.specializations;
-  const collected = new Set<string>();
-  doctors.forEach((doctor) => {
-    const specialization = doctor.specialization.trim();
-    if (specialization) collected.add(specialization);
-  });
-  return Array.from(collected);
-};
 
 export const handleAdminAuthCheck: RequestHandler = (_req, res) => {
   const response: AdminAuthCheckResponse = { ok: true };
@@ -155,7 +144,7 @@ export const handleAdminCreateClinic: RequestHandler = async (req, res, next) =>
     const clinic: ClinicProfile = {
       ...clinicPayload,
       id: clinicId,
-      specializations: resolveSpecializations(clinicPayload, doctors),
+      specializations: [],
     };
 
     await clinics.insertOne({

@@ -16,6 +16,15 @@ type Mode = "followup" | "conclusion";
 // ---------- Helpers ----------
 const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
 
+const encodeHeaderValue = (value: string) => {
+  if (!value) return "";
+  try {
+    return window.btoa(unescape(encodeURIComponent(value)));
+  } catch {
+    return "";
+  }
+};
+
 // Call DocDaisy via the backend
 async function askDocDaisyWithRetry(
   mode: Mode,
@@ -35,15 +44,18 @@ async function askDocDaisyWithRetry(
     }
   })();
 
+  const encodedMessage = encodeHeaderValue(lastUserMessage);
+  const encodedConversation = conversationHeader ? encodeHeaderValue(conversationHeader) : "";
+
   for (let attempt = 0; attempt < retries; attempt++) {
     try {
       const res = await fetch("/api/docdaisy/respond", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-docdaisy-message": lastUserMessage,
           "x-docdaisy-mode": mode,
-          ...(conversationHeader ? { "x-docdaisy-conversation": conversationHeader } : {}),
+          ...(encodedMessage ? { "x-docdaisy-message-b64": encodedMessage } : {}),
+          ...(encodedConversation ? { "x-docdaisy-conversation-b64": encodedConversation } : {}),
         },
         cache: "no-store",
         body: JSON.stringify({
