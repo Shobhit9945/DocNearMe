@@ -331,10 +331,10 @@ router.post("/respond", async (req, res) => {
   }
 
   if (!Array.isArray(messages) || messages.length === 0) {
-    return res.json({
-      reply:
-        "Hello! I'm DocDaisy, your medical navigator. Please describe your main symptom so I can ask a few quick follow-up questions.",
-      specialization: null,
+    return res.status(400).json({
+      error: "Missing conversation payload.",
+      detail: "docdaisy_missing_payload",
+      hint: "Ensure the POST body includes messages or message fields and that rewrites preserve the request body.",
     });
   }
 

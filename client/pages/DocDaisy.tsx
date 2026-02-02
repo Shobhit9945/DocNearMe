@@ -188,13 +188,16 @@ const DocDaisy: React.FC = () => {
         setRecommendedSpecialization(safeSpecialization);
       }
     } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
       console.error("DocDaisy Error:", err);
+      const isMissingPayload = message.includes("docdaisy_missing_payload");
       setMessages((prev) => [
         ...prev,
         {
           sender: "bot",
-          text:
-            "Sorry, I’m having trouble connecting right now. Please try again in a moment.",
+          text: isMissingPayload
+            ? "I couldn't receive your message on the server. Please refresh and try again. If this persists, the deployment may be dropping the request body."
+            : "Sorry, I’m having trouble connecting right now. Please try again in a moment.",
         },
       ]);
     } finally {
