@@ -5,6 +5,15 @@ interface ChatMessage {
   text: string;
 }
 
+type MessageLike = {
+  sender?: string;
+  role?: string;
+  author?: string;
+  text?: string;
+  content?: string;
+  message?: string;
+};
+
 const router = Router();
 const OPENAI_MODEL = process.env.OPENAI_MODEL ?? "gpt-5-mini";
 const OPENAI_BASE_URL = (process.env.OPENAI_BASE_URL ?? "https://api.openai.com")
@@ -28,21 +37,62 @@ const parseMaybeJson = <T,>(value: unknown): T | undefined => {
   }
 };
 
-const normalizeMessages = (value: unknown): ChatMessage[] => {
-  if (Array.isArray(value)) {
-    return value.filter((entry): entry is ChatMessage => {
-      if (!entry || typeof entry !== "object") return false;
-      const record = entry as Partial<ChatMessage>;
-      return (
-        (record.sender === "user" || record.sender === "bot") &&
-        typeof record.text === "string" &&
-        record.text.trim().length > 0
-      );
-    });
+const coerceMessage = (value: unknown): ChatMessage | null => {
+  if (!value || typeof value !== "object") return null;
+  const record = value as MessageLike;
+  const rawSender =
+    typeof record.sender === "string"
+      ? record.sender
+      : typeof record.role === "string"
+        ? record.role
+        : typeof record.author === "string"
+          ? record.author
+          : undefined;
+  const normalizedSender = rawSender?.trim().toLowerCase();
+  const sender: ChatMessage["sender"] | null =
+    normalizedSender === "user"
+      ? "user"
+      : normalizedSender === "assistant" ||
+          normalizedSender === "bot" ||
+          normalizedSender === "docdaisy"
+        ? "bot"
+        : null;
+  const text =
+    typeof record.text === "string"
+      ? record.text
+      : typeof record.content === "string"
+        ? record.content
+        : typeof record.message === "string"
+          ? record.message
+          : undefined;
+
+  if (!sender || typeof text !== "string" || text.trim().length === 0) {
+    return null;
   }
 
-  const parsed = parseMaybeJson<unknown[]>(value);
-  return Array.isArray(parsed) ? normalizeMessages(parsed) : [];
+  return { sender, text: text.trim() };
+};
+
+const normalizeMessages = (value: unknown): ChatMessage[] => {
+  if (Array.isArray(value)) {
+    return value.map((entry) => coerceMessage(entry)).filter(Boolean) as ChatMessage[];
+  }
+
+  if (value && typeof value === "object") {
+    const single = coerceMessage(value);
+    return single ? [single] : [];
+  }
+
+  const parsed = parseMaybeJson<unknown>(value);
+  if (parsed !== undefined) {
+    return normalizeMessages(parsed);
+  }
+
+  if (typeof value === "string" && value.trim().length > 0) {
+    return [{ sender: "user", text: value.trim() }];
+  }
+
+  return [];
 };
 
 const callOpenAI = async (body: Record<string, unknown>) => {
@@ -91,12 +141,15 @@ router.post("/respond", async (req, res) => {
     rawBody?.messages ??
     rawBody?.conversation ??
     rawBody?.history ??
-    rawBody?.conversationHistory;
+    rawBody?.conversationHistory ??
+    (Array.isArray(rawBody) ? rawBody : undefined);
   const fallbackText =
     typeof rawBody?.message === "string"
       ? rawBody.message
       : typeof rawBody?.text === "string"
         ? rawBody.text
+        : typeof rawBody?.content === "string"
+          ? rawBody.content
         : undefined;
 
   const normalizedMessages = normalizeMessages(rawMessages);
