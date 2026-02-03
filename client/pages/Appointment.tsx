@@ -920,6 +920,11 @@ export default function Appointment() {
       const data = (await response.json()) as AppointmentCreateResponse | { error?: string };
       if (!response.ok) {
         const message = "error" in data && data.error ? data.error : "Unable to request appointment.";
+        console.info("[appointment-request] failed", {
+          status: response.status,
+          error: message,
+          detail: "detail" in data ? data.detail : undefined,
+        });
         if (response.status === 401) {
           setAuthError("Your session has expired. Please sign in again.");
         } else {
@@ -935,6 +940,8 @@ export default function Appointment() {
           queued: Boolean(data.phoneCallQueued),
           reason: "phoneCallReason" in data ? data.phoneCallReason : undefined,
         });
+      } else {
+        console.info("[clinic-call] missing status", { appointmentId: bookingId });
       }
 
       setConfirmationDetails({
