@@ -106,6 +106,7 @@ export async function createServer(): Promise<Express> {
     "https://docnearme.app",
     "https://www.docnearme.app",
     "https://clinic.docnearme.app",
+    "https://www.clinic.docnearme.app",
     "https://admin.docnearme.app",
     "https://clinics.docnearme.app",
     "http://localhost:5173", 
