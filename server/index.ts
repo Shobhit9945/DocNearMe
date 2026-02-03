@@ -91,7 +91,7 @@ export async function createServer(): Promise<Express> {
 
   // Middleware
   const allowedOrigins = [
-    "https://docnearby.netlify.app", 
+    process.env.VOICE_WEBHOOK_BASE_URL, 
     "https://docnearme.jp",
     "https://www.docnearme.jp",
     "https://clinic.docnearme.jp",
