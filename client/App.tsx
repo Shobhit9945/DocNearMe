@@ -9,8 +9,13 @@ const getApp = () => {
   const hostname = window.location.hostname;
   const pathname = window.location.pathname;
   
-  // PRODUCTION: Start the clinic app if the URL starts with clinic. or www.clinic.
-  if (hostname.startsWith("clinic.") || hostname.startsWith("www.clinic.")) {
+  // PRODUCTION: Start the clinic app for clinic subdomains (e.g., clinic.*, www.clinic.*)
+  if (
+    hostname.startsWith("clinic.") ||
+    hostname.startsWith("www.clinic.") ||
+    hostname.endsWith(".clinic.docnearme.app") ||
+    hostname.includes(".clinic.")
+  ) {
     return <ClinicApp />;
   }
 
