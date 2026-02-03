@@ -9,6 +9,9 @@ import { useAllDoctors, useClinics } from "@/lib/clinic-data";
 import { getSpecializationLabel, matchSpecialization } from "@/lib/specializations";
 import { TranslatedText } from "@/components/TranslatedText";
 import { LoadingScreen } from "@/components/LoadingScreen";
+import { useLiveLocation } from "@/hooks/useLiveLocation";
+import { ClinicDistance } from "@/components/ClinicDistance";
+import { getDistanceKm } from "@/lib/distance";
 
 export default function Search() {
   const { t, language } = useTranslation();
@@ -17,9 +20,12 @@ export default function Search() {
   const [query, setQuery] = useState("");
   const [specializationFilter, setSpecializationFilter] = useState("all");
   const [languageFilter, setLanguageFilter] = useState("all");
+  const [distanceFilter, setDistanceFilter] = useState("any");
   const [resultType, setResultType] = useState<"all" | "doctor" | "clinic">("all");
   const { data: clinicsData, isLoading: isClinicsLoading } = useClinics();
   const { data: doctorsData, isLoading: isDoctorsLoading } = useAllDoctors();
+  const { coordinates } = useLiveLocation();
+  const [distanceMap, setDistanceMap] = useState<Record<string, number>>({});
   const doctorScrollerRef = useRef<HTMLDivElement | null>(null);
   const clinicScrollerRef = useRef<HTMLDivElement | null>(null);
 
@@ -79,6 +85,47 @@ export default function Search() {
 
   const normalizedLanguage = languageFilter === "all" ? null : languageFilter.toLowerCase();
 
+  const normalizedDistance = distanceFilter === "any" ? null : Number(distanceFilter);
+
+  useEffect(() => {
+    if (!coordinates || !(clinicsData?.clinics ?? []).length) return;
+    let cancelled = false;
+
+    const loadDistances = async () => {
+      const entries = await Promise.all(
+        (clinicsData?.clinics ?? []).map(async (clinic) => {
+          if (!clinic.googlePlaceId) return null;
+          try {
+            const response = await fetch(
+              `/api/google-maps/places/details?placeId=${encodeURIComponent(clinic.googlePlaceId)}`,
+            );
+            if (!response.ok) return null;
+            const data = await response.json();
+            const location = data?.result?.geometry?.location;
+            if (!location?.lat || !location?.lng) return null;
+            const km = getDistanceKm(coordinates, { lat: location.lat, lng: location.lng });
+            return [clinic.id, km] as const;
+          } catch {
+            return null;
+          }
+        }),
+      );
+
+      if (cancelled) return;
+      const map: Record<string, number> = {};
+      entries.filter(Boolean).forEach((entry) => {
+        if (!entry) return;
+        map[entry[0]] = entry[1];
+      });
+      setDistanceMap(map);
+    };
+
+    void loadDistances();
+    return () => {
+      cancelled = true;
+    };
+  }, [coordinates, clinicsData?.clinics]);
+
   const clinicLanguages = useMemo(() => {
     const map = new Map<string, Set<string>>();
     (doctorsData?.doctors ?? []).forEach((doctor) => {
@@ -104,9 +151,21 @@ export default function Search() {
       const matchesLanguage = normalizedLanguage
         ? (clinicLanguages.get(clinic.id) ?? new Set<string>()).has(normalizedLanguage)
         : true;
-      return matchesQuery && matchesSpecialization && matchesLanguage;
+      const distanceKm = distanceMap[clinic.id];
+      const matchesDistance = normalizedDistance
+        ? typeof distanceKm === "number" && distanceKm <= normalizedDistance
+        : true;
+      return matchesQuery && matchesSpecialization && matchesLanguage && matchesDistance;
     });
-  }, [clinicLanguages, clinicsData?.clinics, normalizedQuery, normalizedLanguage, normalizedSpecialization]);
+  }, [
+    clinicLanguages,
+    clinicsData?.clinics,
+    normalizedQuery,
+    normalizedLanguage,
+    normalizedSpecialization,
+    normalizedDistance,
+    distanceMap,
+  ]);
 
   const filteredDoctors = useMemo(() => {
     return (doctorsData?.doctors ?? []).filter((doctor) => {
@@ -172,7 +231,7 @@ export default function Search() {
                   {visibleDoctors.length + visibleClinics.length} {t("matches")}
                 </div>
                 </div>
-              <div className="mt-5 grid gap-4 lg:grid-cols-2 2xl:grid-cols-[2fr_1fr_1fr_1fr]">
+              <div className="mt-5 grid gap-4 lg:grid-cols-2 2xl:grid-cols-[2fr_1fr_1fr_1fr_1fr]">
                 <label className="flex flex-col gap-2 text-sm font-semibold text-slate-700">
                   {t("Search term")}
                   <div className="relative">
@@ -212,6 +271,20 @@ export default function Search() {
                         {language === "all" ? t("All languages") : t(language)}
                       </option>
                     ))}
+                  </select>
+                </label>
+                <label className="flex flex-col gap-2 text-sm font-semibold text-slate-700">
+                  {t("Distance")}
+                  <select
+                    value={distanceFilter}
+                    onChange={(event) => setDistanceFilter(event.target.value)}
+                    className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-[#0089FF] focus:outline-none"
+                  >
+                    <option value="any">{t("Any distance")}</option>
+                    <option value="2">{t("Within 2 km")}</option>
+                    <option value="5">{t("Within 5 km")}</option>
+                    <option value="10">{t("Within 10 km")}</option>
+                    <option value="20">{t("Within 20 km")}</option>
                   </select>
                 </label>
                 <label className="flex flex-col gap-2 text-sm font-semibold text-slate-700">
@@ -380,6 +453,13 @@ export default function Search() {
                             </span>
                           ))}
                         </div>
+                        <p className="mt-2 flex items-center gap-2 text-xs text-slate-500">
+                          <ClinicDistance
+                            placeId={clinic.googlePlaceId}
+                            userCoordinates={coordinates}
+                            fallback={clinic.distance}
+                          />
+                        </p>
                         <p className="mt-3 text-sm text-slate-500">
                           {t("Next availability")}: {formatAvailabilityForLanguage(clinic.nextAvailability, language, t)}
                         </p>

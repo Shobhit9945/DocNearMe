@@ -592,6 +592,7 @@ export interface ClinicProfileUpdateRequest {
   location?: string;
   phone?: string;
   email?: string;
+  googlePlaceId?: string;
   image?: string;
   nextAvailability?: string;
   immediateWoundCare?: boolean;

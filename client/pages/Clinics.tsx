@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useLiveLocation } from "@/hooks/useLiveLocation";
+import { ClinicDistance } from "@/components/ClinicDistance";
 import { useAddressSearch } from "@/hooks/useAddressSearch";
 import { useTranslation } from "@/lib/i18n";
 import { formatAvailabilityForLanguage } from "@/lib/time-format";
@@ -38,6 +39,7 @@ export default function Clinics() {
     manualLocation,
     setManualLocation,
     clearManualLocation,
+    coordinates,
   } = useLiveLocation();
   const { t, language } = useTranslation();
   const [isEditingLocation, setIsEditingLocation] = useState(false);
@@ -405,12 +407,24 @@ export default function Clinics() {
                       </div>
 
                       <div className="flex flex-wrap gap-4 text-sm text-slate-600">
-                        <div className="flex items-center gap-1">
-                          <Users className="w-4 h-4 text-[#0089FF]" /> {clinic.patients}
-                        </div>
+                        {clinic.patients ? (
+                          <div className="flex items-center gap-1">
+                            <Users className="w-4 h-4 text-[#0089FF]" /> {clinic.patients}
+                          </div>
+                        ) : null}
                         <div className="flex items-center gap-1">
                           <MapPin className="w-4 h-4 text-[#0089FF]" />
-                          <TranslatedText text={clinic.location} inline /> · {clinic.distance}
+                          <TranslatedText text={clinic.location} inline />
+                          {(clinic.googlePlaceId || clinic.distance) ? (
+                            <>
+                              <span className="text-slate-300">·</span>
+                              <ClinicDistance
+                                placeId={clinic.googlePlaceId}
+                                userCoordinates={coordinates}
+                                fallback={clinic.distance}
+                              />
+                            </>
+                          ) : null}
                         </div>
                       </div>
 

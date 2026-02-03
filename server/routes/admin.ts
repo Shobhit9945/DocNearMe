@@ -6,6 +6,7 @@ import {
   getClinicDoctorsCollection,
   getClinicInfoCollection,
 } from "../db";
+import { computeDoctorNextAvailability } from "./clinic";
 import type {
   AdminAuthCheckResponse,
   AdminCreateClinicRequest,
@@ -49,12 +50,12 @@ const clinicSchema = z.object({
   id: z.string().trim().min(2).max(80),
   name: z.string().trim().min(2).max(120),
   type: z.enum(["Hospital", "Clinic"]),
-  rating: z.number().min(0).max(5),
-  patients: z.string().trim().min(1).max(120),
-  distance: z.string().trim().min(1).max(120),
+  rating: z.number().min(0).max(5).optional(),
+  patients: z.string().trim().min(1).max(120).optional(),
+  distance: z.string().trim().min(1).max(120).optional(),
   location: z.string().trim().min(2).max(200),
   image: z.string().trim().min(5).max(500),
-  nextAvailability: z.string().trim().min(2).max(80),
+  nextAvailability: z.string().trim().min(2).max(80).optional(),
   googlePlaceId: z.string().trim().min(2).max(120).optional(),
   phone: z.string().trim().min(3).max(40).optional(),
   email: z.string().trim().email().optional(),
@@ -108,7 +109,7 @@ const doctorSchema = z.object({
   specialization: z.string().trim().min(2).max(120),
   languages: z.array(z.string().trim().min(2).max(60)),
   rating: z.number().min(0).max(5),
-  nextAvailable: z.string().trim().min(2).max(80),
+  nextAvailable: z.string().trim().min(2).max(80).optional(),
   availability: z.array(availabilitySlotSchema).optional(),
 });
 
@@ -163,6 +164,10 @@ export const handleAdminCreateClinic: RequestHandler = async (req, res, next) =>
     const clinic: ClinicProfile = {
       ...clinicPayload,
       id: clinicId,
+      rating: clinicPayload.rating ?? 0,
+      patients: clinicPayload.patients ?? "",
+      distance: clinicPayload.distance ?? "",
+      nextAvailability: clinicPayload.nextAvailability ?? "",
       specializations: [],
     };
 
@@ -189,7 +194,7 @@ export const handleAdminCreateClinic: RequestHandler = async (req, res, next) =>
             specialization: doctor.specialization,
             languages: doctor.languages,
             rating: doctor.rating,
-            nextAvailable: doctor.nextAvailable,
+            nextAvailable: computeDoctorNextAvailability(doctor.availability) ?? doctor.nextAvailable ?? "Schedule TBD",
             availability: doctor.availability,
             updatedAt: new Date(),
           }),

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { AdminCreateClinicRequest, AdminCreateClinicResponse, ClinicDoctor, ClinicProfile } from "@shared/api";
+import { useAddressSearch } from "@/hooks/useAddressSearch";
 
 type DoctorDraft = ClinicDoctor & { languagesText: string };
 type ClosureDraft = {
@@ -26,6 +27,8 @@ const normalizeList = (value: string) =>
     .filter(Boolean);
 
 const weekdayOptions = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+const isValidEmail = (value: string) => /\S+@\S+\.\S+/.test(value);
 
 const makeDoctorDraft = (clinicId: string): DoctorDraft => ({
   id:
@@ -62,6 +65,7 @@ export default function AdminClinicOnboarding() {
     image: "",
     specializations: [],
     nextAvailability: "",
+    immediateWoundCare: false,
     googlePlaceId: "",
     phone: "",
     email: "",
@@ -90,6 +94,14 @@ export default function AdminClinicOnboarding() {
   const [doctors, setDoctors] = useState<DoctorDraft[]>([]);
   const [adminUserId, setAdminUserId] = useState("");
   const [adminPassword, setAdminPassword] = useState("");
+  const [locationInput, setLocationInput] = useState("");
+
+  const {
+    suggestions: locationSuggestions,
+    isLoading: isLocationLoading,
+    error: locationError,
+    fetchPlaceDetails,
+  } = useAddressSearch(locationInput);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -144,6 +156,12 @@ export default function AdminClinicOnboarding() {
         setIsChecking(false);
       });
   }, [credentials]);
+
+  useEffect(() => {
+    if (clinic.location && !locationInput) {
+      setLocationInput(clinic.location);
+    }
+  }, [clinic.location, locationInput]);
 
   const clinicIdHint = useMemo(() => {
     if (!clinic.id) return "clinic-id";
@@ -293,6 +311,31 @@ export default function AdminClinicOnboarding() {
     setSubmitError("");
     setSubmitSuccess(null);
 
+    const validationErrors: string[] = [];
+    const trimmedEmail = clinic.email?.trim() ?? "";
+    const resolvedLocation = clinic.location.trim() || locationInput.trim();
+    if (!clinic.id.trim()) validationErrors.push("Clinic ID is required.");
+    if (!clinic.name.trim()) validationErrors.push("Clinic name is required.");
+    if (!resolvedLocation) validationErrors.push("Location is required.");
+    if (!clinic.image.trim()) validationErrors.push("Hero image URL is required.");
+    if (!trimmedEmail) {
+      validationErrors.push("Notification email is required.");
+    } else if (!isValidEmail(trimmedEmail)) {
+      validationErrors.push("Notification email must be valid.");
+    }
+
+    const invalidClosure = closures.find(
+      (closure) => closure.endDate && closure.endDate < closure.startDate,
+    );
+    if (invalidClosure) {
+      validationErrors.push("Closure end date must be after start date.");
+    }
+
+    if (validationErrors.length > 0) {
+      setSubmitError(validationErrors.join(" "));
+      return;
+    }
+
     const slotMinutes = clinic.hours?.slotMinutes;
     const normalizedSlotMinutes =
       typeof slotMinutes === "number" && Number.isFinite(slotMinutes) && slotMinutes >= 10
@@ -302,6 +345,7 @@ export default function AdminClinicOnboarding() {
     const payload: AdminCreateClinicRequest = {
       clinic: {
         ...clinic,
+        location: resolvedLocation,
         id: clinic.id.trim(),
         rating: Number(clinic.rating),
         specializations: [],
@@ -332,6 +376,11 @@ export default function AdminClinicOnboarding() {
             startDate: closure.startDate,
             endDate: closure.endDate || undefined,
             reason: closure.reason || undefined,
+            id:
+              typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+                ? crypto.randomUUID()
+                : `closure-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+            createdAt: new Date().toISOString(),
           })),
         pricing:
           pricing.firstVisit || pricing.followUp || pricing.otherServices
@@ -502,48 +551,6 @@ export default function AdminClinicOnboarding() {
                   <option value="Hospital">Hospital</option>
                 </select>
               </div>
-              <div>
-                <label className="text-sm font-medium text-slate-700" htmlFor="clinic-rating">
-                  Rating
-                </label>
-                <input
-                  id="clinic-rating"
-                  type="number"
-                  step="0.1"
-                  min="0"
-                  max="5"
-                  className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                  value={clinic.rating}
-                  onChange={(event) => handleClinicChange("rating", Number(event.target.value))}
-                  required
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium text-slate-700" htmlFor="clinic-patients">
-                  Patients label
-                </label>
-                <input
-                  id="clinic-patients"
-                  className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                  value={clinic.patients}
-                  onChange={(event) => handleClinicChange("patients", event.target.value)}
-                  placeholder="e.g. 4K+ patients"
-                  required
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium text-slate-700" htmlFor="clinic-distance">
-                  Distance label
-                </label>
-                <input
-                  id="clinic-distance"
-                  className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                  value={clinic.distance}
-                  onChange={(event) => handleClinicChange("distance", event.target.value)}
-                  placeholder="e.g. 8 km away"
-                  required
-                />
-              </div>
               <div className="md:col-span-2">
                 <label className="text-sm font-medium text-slate-700" htmlFor="clinic-location">
                   Location
@@ -551,11 +558,41 @@ export default function AdminClinicOnboarding() {
                 <input
                   id="clinic-location"
                   className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                  value={clinic.location}
-                  onChange={(event) => handleClinicChange("location", event.target.value)}
-                  placeholder="Clinic address or neighborhood"
+                  value={locationInput}
+                  onChange={(event) => setLocationInput(event.target.value)}
+                  placeholder="Start typing address"
                   required
                 />
+                {isLocationLoading ? (
+                  <p className="mt-2 text-xs text-slate-400">Searching addresses...</p>
+                ) : locationError ? (
+                  <p className="mt-2 text-xs text-rose-500">{locationError}</p>
+                ) : null}
+                {locationSuggestions.length > 0 ? (
+                  <div className="mt-2 rounded-lg border border-slate-200 bg-white shadow-sm">
+                    {locationSuggestions.map((suggestion) => (
+                      <button
+                        key={suggestion.placeId}
+                        type="button"
+                        onClick={async () => {
+                          try {
+                            const formatted = await fetchPlaceDetails(suggestion.placeId);
+                            handleClinicChange("location", formatted);
+                            handleClinicChange("googlePlaceId", suggestion.placeId);
+                            setLocationInput(formatted);
+                          } catch (error) {
+                            setSubmitError(
+                              error instanceof Error ? error.message : "Unable to fetch place details.",
+                            );
+                          }
+                        }}
+                        className="block w-full px-3 py-2 text-left text-sm hover:bg-slate-50"
+                      >
+                        {suggestion.description}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
               </div>
               <div className="md:col-span-2">
                 <label className="text-sm font-medium text-slate-700" htmlFor="clinic-image">
@@ -567,19 +604,6 @@ export default function AdminClinicOnboarding() {
                   value={clinic.image}
                   onChange={(event) => handleClinicChange("image", event.target.value)}
                   placeholder="https://..."
-                  required
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium text-slate-700" htmlFor="clinic-next">
-                  Next availability
-                </label>
-                <input
-                  id="clinic-next"
-                  className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                  value={clinic.nextAvailability}
-                  onChange={(event) => handleClinicChange("nextAvailability", event.target.value)}
-                  placeholder="e.g. Today, 6:10 PM"
                   required
                 />
               </div>
@@ -604,7 +628,7 @@ export default function AdminClinicOnboarding() {
                   className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
                   value={clinic.googlePlaceId ?? ""}
                   onChange={(event) => handleClinicChange("googlePlaceId", event.target.value)}
-                  placeholder="Optional"
+                  placeholder="Auto-filled from location"
                 />
               </div>
             </div>
@@ -838,6 +862,7 @@ export default function AdminClinicOnboarding() {
                   value={clinic.email ?? ""}
                   onChange={(event) => handleClinicChange("email", event.target.value)}
                   placeholder="clinic@example.com"
+                  required
                 />
               </div>
               <div className="space-y-2 pt-2">
@@ -912,14 +937,6 @@ export default function AdminClinicOnboarding() {
                         placeholder="Rating"
                         value={doctor.rating}
                         onChange={(event) => handleUpdateDoctor(index, { rating: Number(event.target.value) })}
-                      />
-                      <input
-                        className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                        placeholder="Next available"
-                        value={doctor.nextAvailable}
-                        onChange={(event) =>
-                          handleUpdateDoctor(index, { nextAvailable: event.target.value })
-                        }
                       />
                     </div>
                     <div className="mt-4 space-y-3">

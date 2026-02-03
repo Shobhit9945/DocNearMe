@@ -45,6 +45,7 @@ const clinicUpdateSchema = z.object({
   location: z.string().trim().min(2).max(200).optional(),
   phone: z.string().trim().min(3).max(40).optional(),
   email: z.string().trim().email().optional(),
+  googlePlaceId: z.string().trim().min(2).max(120).optional(),
   image: z.string().trim().min(5).optional(),
   nextAvailability: z.string().trim().min(2).max(80).optional(),
   immediateWoundCare: z.boolean().optional(),
@@ -126,7 +127,7 @@ const formatSlotLabel = (time: string) => {
   return date.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true });
 };
 
-const computeDoctorNextAvailability = (availability?: { days: string[]; startTime: string }[]) => {
+export const computeDoctorNextAvailability = (availability?: { days: string[]; startTime: string }[]) => {
   if (!availability || availability.length === 0) return null;
   const now = new Date();
   const todayMinutes = now.getHours() * 60 + now.getMinutes();
@@ -166,7 +167,7 @@ const doctorsUpdateSchema = z.object({
       specialization: z.string().trim().min(2).max(120),
       languages: z.array(z.string().trim().min(2).max(60)),
       rating: z.number().min(0).max(5),
-      nextAvailable: z.string().trim().min(2).max(80),
+      nextAvailable: z.string().trim().min(2).max(80).optional(),
       availability: z.array(availabilitySlotSchema).optional(),
     }),
   ),
@@ -244,7 +245,11 @@ const buildDoctor = (doctor: any) => ({
   specialization: doctor.specialization,
   languages: doctor.languages ?? [],
   rating: doctor.rating ?? 0,
-  nextAvailable: doctor.nextAvailable ?? doctor.next_available ?? "Schedule TBD",
+  nextAvailable:
+    computeDoctorNextAvailability(doctor.availability) ??
+    doctor.nextAvailable ??
+    doctor.next_available ??
+    "Schedule TBD",
   availability: doctor.availability,
 });
 

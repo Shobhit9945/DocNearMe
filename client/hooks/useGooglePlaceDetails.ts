@@ -18,6 +18,12 @@ export interface GooglePlaceDetails {
   user_ratings_total: number;
   reviews: GoogleReview[];
   formatted_address: string;
+  geometry?: {
+    location?: {
+      lat: number;
+      lng: number;
+    };
+  };
 }
 
 export function useGooglePlaceDetails(placeId: string | undefined) {

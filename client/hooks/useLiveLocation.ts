@@ -115,6 +115,7 @@ type LiveLocationState = {
   currentLocation: string;
   locationError: string;
   isFetchingLocation: boolean;
+  coordinates: { lat: number; lng: number } | null;
   manualLocation: string | null;
   setManualLocation: (location: string) => void;
   clearManualLocation: () => void;
@@ -124,6 +125,7 @@ export const useLiveLocation = (): LiveLocationState => {
   const [currentLocation, setCurrentLocation] = useState("Fetching real-time location...");
   const [locationError, setLocationError] = useState("");
   const [isFetchingLocation, setIsFetchingLocation] = useState(true);
+  const [coordinates, setCoordinates] = useState<{ lat: number; lng: number } | null>(null);
   const [manualLocation, setManualLocationState] = useState<string | null>(() => {
     if (typeof window === "undefined") return null;
     return localStorage.getItem(MANUAL_LOCATION_KEY);
@@ -147,6 +149,7 @@ export const useLiveLocation = (): LiveLocationState => {
     navigator.geolocation.getCurrentPosition(
       async (position) => {
         const { latitude, longitude } = position.coords;
+        setCoordinates({ lat: latitude, lng: longitude });
 
         try {
           const address = await getGoogleMapsAddress(latitude, longitude);
@@ -172,6 +175,7 @@ export const useLiveLocation = (): LiveLocationState => {
         }
         setLocationError(errorMessage);
         setCurrentLocation(DEFAULT_ADDRESS);
+        setCoordinates(null);
         setIsFetchingLocation(false);
       },
       { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
@@ -186,6 +190,7 @@ export const useLiveLocation = (): LiveLocationState => {
     setCurrentLocation(trimmed);
     setLocationError("");
     setIsFetchingLocation(false);
+    setCoordinates(null);
   };
 
   const clearManualLocation = () => {
@@ -198,6 +203,7 @@ export const useLiveLocation = (): LiveLocationState => {
     currentLocation,
     locationError,
     isFetchingLocation,
+    coordinates,
     manualLocation,
     setManualLocation,
     clearManualLocation,

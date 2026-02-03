@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "@/components/ui/use-toast";
 import { getClinicAuthHeader } from "@/lib/clinic-auth";
 import { useTranslation } from "@/lib/i18n";
+import { useAddressSearch } from "@/hooks/useAddressSearch";
 import { normalizeClinicHours } from "@/lib/scheduling";
 import type { ClinicBookingClosure, ClinicProfile, ClinicProfileUpdateRequest } from "@shared/api";
 
@@ -26,6 +27,7 @@ export default function ClinicInfo() {
   const [isLoading, setIsLoading] = useState(true);
   const [name, setName] = useState("");
   const [location, setLocation] = useState("");
+  const [locationInput, setLocationInput] = useState("");
   const [phone, setPhone] = useState("");
   const [notificationEmail, setNotificationEmail] = useState("");
   const [image, setImage] = useState("");
@@ -45,6 +47,13 @@ export default function ClinicInfo() {
   const [isEditingClosures, setIsEditingClosures] = useState(false);
   const [isEditingPhotos, setIsEditingPhotos] = useState(false);
 
+  const {
+    suggestions: locationSuggestions,
+    isLoading: isLocationLoading,
+    error: locationError,
+    fetchPlaceDetails,
+  } = useAddressSearch(locationInput);
+
   const sortedClosures = useMemo(
     () =>
       [...bookingClosures].sort((a, b) =>
@@ -57,6 +66,7 @@ export default function ClinicInfo() {
     setClinic(nextClinic);
     setName(nextClinic.name ?? "");
     setLocation(nextClinic.location ?? "");
+    setLocationInput(nextClinic.location ?? "");
     setPhone(nextClinic.phone ?? "");
     setNotificationEmail(nextClinic.email ?? "");
     setImage(nextClinic.image ?? "");
@@ -103,7 +113,7 @@ export default function ClinicInfo() {
 
   const handleBasicSave = async () => {
     const trimmedName = name.trim();
-    const trimmedLocation = location.trim();
+    const trimmedLocation = location.trim() || locationInput.trim();
     const trimmedPhone = phone.trim();
     const trimmedNotificationEmail = notificationEmail.trim();
 
@@ -114,6 +124,7 @@ export default function ClinicInfo() {
         location: trimmedLocation || undefined,
         phone: trimmedPhone || undefined,
         email: trimmedNotificationEmail || undefined,
+        googlePlaceId: clinic?.googlePlaceId,
         notificationEmailEnabled: true,
         notificationPhoneEnabled: false,
         notificationLineEnabled: false,
@@ -317,8 +328,52 @@ export default function ClinicInfo() {
           </div>
         </div>
         <div>
-          <label className="text-sm font-medium text-gray-700 block mb-2">{t("Address")}</label>
-          <Input value={location} onChange={(event) => setLocation(event.target.value)} disabled={!isEditingBasic} />
+                <label className="text-sm font-medium text-gray-700 block mb-2">{t("Address")}</label>
+                <Input
+                  value={locationInput}
+                  onChange={(event) => setLocationInput(event.target.value)}
+                  disabled={!isEditingBasic}
+                  placeholder={t("Start typing address")}
+                />
+                {isEditingBasic ? (
+                  <>
+                    {isLocationLoading ? (
+                      <p className="mt-2 text-xs text-slate-400">{t("Searching addresses...")}</p>
+                    ) : locationError ? (
+                      <p className="mt-2 text-xs text-rose-500">{locationError}</p>
+                    ) : null}
+                    {locationSuggestions.length > 0 ? (
+                      <div className="mt-2 rounded-lg border border-slate-200 bg-white shadow-sm">
+                        {locationSuggestions.map((suggestion) => (
+                          <button
+                            key={suggestion.placeId}
+                            type="button"
+                            onClick={async () => {
+                              try {
+                                const formatted = await fetchPlaceDetails(suggestion.placeId);
+                                setLocation(formatted);
+                                setLocationInput(formatted);
+                                if (clinic) {
+                                  setClinic({ ...clinic, googlePlaceId: suggestion.placeId, location: formatted });
+                                }
+                              } catch (error) {
+                                toast({
+                                  title: t("Save failed"),
+                                  description:
+                                    error instanceof Error ? error.message : t("Please try again."),
+                                  variant: "destructive",
+                                });
+                              }
+                            }}
+                            className="block w-full px-3 py-2 text-left text-sm hover:bg-slate-50"
+                          >
+                            {suggestion.description}
+                          </button>
+                        ))}
+                      </div>
+                    ) : null}
+                  </>
+                ) : null}
         </div>
         <div>
           <label className="text-sm font-medium text-gray-700 block mb-2">{t("Notification email")}</label>
