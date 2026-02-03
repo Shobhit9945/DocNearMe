@@ -41,6 +41,8 @@ const getVoiceWebhookSecret = () => {
   return secret;
 };
 
+const getDefaultDialCode = () => process.env.CLINIC_DEFAULT_DIAL_CODE ?? "";
+
 const buildVoiceToken = (appointmentId: string) =>
   crypto.createHmac("sha256", getVoiceWebhookSecret()).update(appointmentId).digest("hex");
 
@@ -110,6 +112,14 @@ const createTwilioCall = async (to: string, url: string) => {
 export const shouldSendClinicBookingNotificationCall = (clinic: ClinicInfo | null) =>
   Boolean(clinic?.notificationPhoneEnabled && clinic?.phone);
 
+const normalizeE164 = (value: string) => {
+  const compact = value.replace(/[\s\-()]/g, "");
+  if (compact.startsWith("+")) return compact;
+  return compact;
+};
+
+const ensureE164 = (value: string) => /^\+\d{7,15}$/.test(value);
+
 export const sendClinicBookingNotificationCall = async (
   clinicId: string,
   appointmentId: string,
@@ -139,11 +149,22 @@ export const sendClinicBookingNotificationCall = async (
     return false;
   }
 
-  const to = String(clinic.phone).trim();
+  let to = String(clinic.phone).trim();
   if (!to) {
     logger.warn("[clinic-call] missing phone", { clinicId, appointmentId });
     return false;
   }
+
+  let normalized = normalizeE164(to);
+  if (!normalized.startsWith("+") && getDefaultDialCode()) {
+    const digits = normalized.replace(/\D/g, "").replace(/^0+/, "");
+    normalized = `${getDefaultDialCode()}${digits}`;
+  }
+  if (!ensureE164(normalized)) {
+    logger.warn("[clinic-call] invalid phone format", { clinicId, appointmentId, phone: to });
+    return false;
+  }
+  to = normalized;
 
   const url = buildCallUrl(String(appointmentId));
   try {
