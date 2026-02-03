@@ -5,8 +5,6 @@ type DoctorDraft = ClinicDoctor & { languagesText: string };
 type ClosureDraft = {
   startDate: string;
   endDate: string;
-  startTime: string;
-  endTime: string;
   reason: string;
 };
 type PhotoDraft = { label: string; url: string };
@@ -66,6 +64,10 @@ export default function AdminClinicOnboarding() {
     nextAvailability: "",
     googlePlaceId: "",
     phone: "",
+    email: "",
+    notificationEmailEnabled: true,
+    notificationPhoneEnabled: false,
+    notificationLineEnabled: false,
     hours: {
       weekdays: { start: defaultHours.weekdays.start, end: defaultHours.weekdays.end },
       weekend: { start: defaultHours.weekend.start, end: defaultHours.weekend.end },
@@ -102,6 +104,20 @@ export default function AdminClinicOnboarding() {
       window.localStorage.removeItem("dnm-admin-credentials");
     }
   }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (formCredentials.username || formCredentials.password) return;
+    const envUsername =
+      ((import.meta as any).env?.VITE_ADMIN_USERNAME as string | undefined) ??
+      ((import.meta as any).env?.VITE_ADMIN_EMAIL as string | undefined);
+    const envPassword = (import.meta as any).env?.VITE_ADMIN_PASSWORD as string | undefined;
+    if (envUsername || envPassword) {
+      const next = { username: envUsername ?? "", password: envPassword ?? "" };
+      setCredentials(next);
+      setFormCredentials(next);
+    }
+  }, [formCredentials.username, formCredentials.password]);
 
   useEffect(() => {
     if (!credentials.username || !credentials.password) return;
@@ -260,7 +276,7 @@ export default function AdminClinicOnboarding() {
   const handleAddClosure = () => {
     setClosures((prev) => [
       ...prev,
-      { startDate: "", endDate: "", startTime: "", endTime: "", reason: "" },
+      { startDate: "", endDate: "", reason: "" },
     ]);
   };
 
@@ -283,6 +299,9 @@ export default function AdminClinicOnboarding() {
         id: clinic.id.trim(),
         rating: Number(clinic.rating),
         specializations: [],
+        notificationEmailEnabled: true,
+        notificationPhoneEnabled: false,
+        notificationLineEnabled: false,
         hours: clinic.hours
           ? {
               ...clinic.hours,
@@ -291,12 +310,10 @@ export default function AdminClinicOnboarding() {
             }
           : undefined,
         bookingClosures: closures
-          .filter((closure) => closure.startDate && closure.endDate)
+          .filter((closure) => closure.startDate)
           .map((closure) => ({
             startDate: closure.startDate,
-            endDate: closure.endDate,
-            startTime: closure.startTime || undefined,
-            endTime: closure.endTime || undefined,
+            endDate: closure.endDate || undefined,
             reason: closure.reason || undefined,
           })),
         pricing:
@@ -757,20 +774,6 @@ export default function AdminClinicOnboarding() {
                         onChange={(event) => handleUpdateClosure(index, { endDate: event.target.value })}
                       />
                       <input
-                        type="time"
-                        className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                        value={closure.startTime}
-                        onChange={(event) => handleUpdateClosure(index, { startTime: event.target.value })}
-                        placeholder="Start time"
-                      />
-                      <input
-                        type="time"
-                        className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                        value={closure.endTime}
-                        onChange={(event) => handleUpdateClosure(index, { endTime: event.target.value })}
-                        placeholder="End time"
-                      />
-                      <input
                         className="md:col-span-2 rounded-lg border border-slate-200 px-3 py-2 text-sm"
                         value={closure.reason}
                         onChange={(event) => handleUpdateClosure(index, { reason: event.target.value })}
@@ -789,6 +792,42 @@ export default function AdminClinicOnboarding() {
                   </div>
                 ))
               )}
+            </div>
+          </section>
+
+          <section className="rounded-2xl bg-white p-6 shadow">
+            <h2 className="text-lg font-semibold text-slate-900">Notifications</h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Email is required for clinic booking notifications.
+            </p>
+            <div className="mt-4 grid gap-4 md:grid-cols-2">
+              <div>
+                <label className="text-sm font-medium text-slate-700" htmlFor="clinic-email">
+                  Notification email
+                </label>
+                <input
+                  id="clinic-email"
+                  type="email"
+                  className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                  value={clinic.email ?? ""}
+                  onChange={(event) => handleClinicChange("email", event.target.value)}
+                  placeholder="clinic@example.com"
+                />
+              </div>
+              <div className="space-y-2 pt-2">
+                <label className="flex items-center gap-2 text-sm text-slate-700">
+                  <input type="checkbox" checked disabled />
+                  <span>Email (required)</span>
+                </label>
+                <label className="flex items-center gap-2 text-sm text-slate-400">
+                  <input type="checkbox" disabled />
+                  <span>Phone (coming soon)</span>
+                </label>
+                <label className="flex items-center gap-2 text-sm text-slate-400">
+                  <input type="checkbox" disabled />
+                  <span>LINE Bot (coming soon)</span>
+                </label>
+              </div>
             </div>
           </section>
 

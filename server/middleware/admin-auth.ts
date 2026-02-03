@@ -1,7 +1,8 @@
 import { RequestHandler } from "express";
 
-const adminUsername = process.env.ADMIN_USERNAME ?? "shobhit_oman";
-const adminPassword = process.env.ADMIN_PASSWORD ?? "96269840";
+const adminUsername =
+  process.env.ADMIN_USERNAME ?? process.env.ADMIN_EMAIL ?? "somebody";
+const adminPassword = process.env.ADMIN_PASSWORD ?? "password";
 
 const parseBasicAuth = (header?: string) => {
   if (!header) return null;
