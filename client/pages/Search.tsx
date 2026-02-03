@@ -6,13 +6,13 @@ import { formatAvailabilityForLanguage } from "@/lib/time-format";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAllDoctors, useClinics } from "@/lib/clinic-data";
+import { formatShortAddress } from "@/lib/address";
 import { getSpecializationLabel, matchSpecialization } from "@/lib/specializations";
 import { TranslatedText } from "@/components/TranslatedText";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { useLiveLocation } from "@/hooks/useLiveLocation";
 import { useAddressSearch } from "@/hooks/useAddressSearch";
-import { ClinicDistance } from "@/components/ClinicDistance";
-import { getDistanceKm } from "@/lib/distance";
+import { formatDistanceLabel, getDistanceKm } from "@/lib/distance";
 
 export default function Search() {
   const { t, language } = useTranslation();
@@ -522,7 +522,7 @@ export default function Search() {
                               <TranslatedText text={clinic.name} />
                             </p>
                             <p className="text-sm text-slate-500">
-                              <TranslatedText text={clinic.location} inline />
+                              <TranslatedText text={formatShortAddress(clinic.location)} inline />
                             </p>
                           </div>
                           <span className="flex items-center gap-1 rounded-full bg-[#FFF3C8] px-3 py-1 text-xs font-semibold text-[#B06B00]">
@@ -536,13 +536,23 @@ export default function Search() {
                             </span>
                           ))}
                         </div>
-                        <p className="mt-2 flex items-center gap-2 text-xs text-slate-500">
-                          <ClinicDistance
-                            placeId={clinic.googlePlaceId}
-                            userCoordinates={baseCoordinates}
-                            fallback={clinic.distance}
-                          />
-                        </p>
+                        {(() => {
+                          const distanceKm = distanceMap[clinic.id];
+                          const distanceLabel =
+                            typeof distanceKm === "number"
+                              ? formatDistanceLabel(distanceKm)
+                              : clinic.distance;
+                          const normalizedDistanceLabel = distanceLabel
+                            ? /away$/i.test(distanceLabel)
+                              ? distanceLabel
+                              : `${distanceLabel} ${t("away")}`
+                            : "";
+                          return normalizedDistanceLabel ? (
+                            <p className="mt-2 flex items-center gap-2 text-xs text-slate-500">
+                              {normalizedDistanceLabel}
+                            </p>
+                          ) : null;
+                        })()}
                         <p className="mt-3 text-sm text-slate-500">
                           {t("Next availability")}: {formatAvailabilityForLanguage(clinic.nextAvailability, language, t)}
                         </p>

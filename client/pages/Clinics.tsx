@@ -18,6 +18,7 @@ import { useAddressSearch } from "@/hooks/useAddressSearch";
 import { useTranslation } from "@/lib/i18n";
 import { formatAvailabilityForLanguage } from "@/lib/time-format";
 import { useClinics } from "@/lib/clinic-data";
+import { formatShortAddress } from "@/lib/address";
 import { getSpecializationLabel, matchSpecialization } from "@/lib/specializations";
 import { TranslatedText } from "@/components/TranslatedText";
 import { LoadingScreen } from "@/components/LoadingScreen";
@@ -371,17 +372,30 @@ export default function Clinics() {
                 return (
                   <article
                     key={clinic.id}
-                    className="flex h-full flex-col overflow-hidden rounded-[28px] border border-slate-100 bg-white shadow-[0_10px_35px_rgba(21,47,81,0.05)]"
+                    className="flex h-full min-h-[560px] flex-col overflow-hidden rounded-[28px] border border-slate-100 bg-white shadow-[0_10px_35px_rgba(21,47,81,0.05)]"
                   >
                     <div className="h-40 w-full overflow-hidden">
                       <img src={clinic.image} alt={clinic.name} className="h-full w-full object-cover" />
                     </div>
-                    <div className="flex flex-1 flex-col gap-4 p-5">
+                    <div className="flex flex-1 min-h-0 flex-col gap-4 p-5">
                       <div className="flex flex-wrap items-start justify-between gap-3">
-                        <div>
-                          <h3 className="text-xl font-semibold text-[#002D55]">
-                            <TranslatedText text={clinic.name} />
-                          </h3>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-start justify-between gap-3">
+                            <h3
+                              className="text-xl font-semibold text-[#002D55]"
+                              style={{
+                                display: "-webkit-box",
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: "vertical",
+                                overflow: "hidden",
+                              }}
+                            >
+                              <TranslatedText text={clinic.name} />
+                            </h3>
+                            <span className="flex items-center gap-1 rounded-full bg-[#FFF3C8] px-3 py-1 text-xs font-semibold text-[#B06B00]">
+                              <Star className="h-4 w-4" fill="#B06B00" /> {clinic.rating.toFixed(1)}
+                            </span>
+                          </div>
                           {clinic.immediateWoundCare && (
                             <div className="mt-2 flex items-center gap-2">
                               <Badge variant="outline" className="border-slate-200 text-slate-700">
@@ -412,9 +426,19 @@ export default function Clinics() {
                             <Users className="w-4 h-4 text-[#0089FF]" /> {clinic.patients}
                           </div>
                         ) : null}
-                        <div className="flex items-center gap-1">
-                          <MapPin className="w-4 h-4 text-[#0089FF]" />
-                          <TranslatedText text={clinic.location} inline />
+                        <div className="flex items-start gap-1 min-w-0">
+                          <MapPin className="w-4 h-4 text-[#0089FF] mt-0.5" />
+                          <span
+                            className="break-words"
+                            style={{
+                              display: "-webkit-box",
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: "vertical",
+                              overflow: "hidden",
+                            }}
+                          >
+                            <TranslatedText text={formatShortAddress(clinic.location)} inline />
+                          </span>
                           {(clinic.googlePlaceId || clinic.distance) ? (
                             <>
                               <span className="text-slate-300">·</span>
@@ -439,7 +463,7 @@ export default function Clinics() {
                         )}
                       </div>
 
-                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="mt-auto flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <div className="flex items-center gap-2 text-sm text-slate-500">
                           <CalendarClock className="w-4 h-4 text-[#0089FF]" /> {t("Next availability")}:{" "}
                           {formatAvailabilityForLanguage(clinic.nextAvailability, language, t)}

@@ -87,6 +87,11 @@ export default function ClinicDetail() {
 
   const reviews = reviewsData?.reviews ?? [];
   const averageRating = reviewsData?.averageRating ?? clinic.rating;
+  const mapsUrl = clinic.googlePlaceId
+    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+        clinic.location,
+      )}&query_place_id=${encodeURIComponent(clinic.googlePlaceId)}`
+    : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(clinic.location)}`;
 
   return (
     <PageScaffold contentClassName="pb-28 lg:pb-12">
@@ -103,8 +108,18 @@ export default function ClinicDetail() {
             <h1 className="text-3xl font-bold text-[#002D55]">
               <TranslatedText text={clinic.name} />
             </h1>
-            <p className="flex items-center gap-2 text-sm text-slate-600">
-              <MapPin className="h-4 w-4 text-[#0089FF]" /> <TranslatedText text={clinic.location} inline />
+            <p className="flex flex-wrap items-center gap-2 text-sm text-slate-600">
+              <span className="flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-[#0089FF]" /> <TranslatedText text={clinic.location} inline />
+              </span>
+              <a
+                href={mapsUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="text-xs font-semibold text-[#1648CE] hover:text-[#0F3499]"
+              >
+                {t("Get directions")}
+              </a>
             </p>
             {clinic.immediateWoundCare && (
               <div className="mt-2 flex items-center gap-2">

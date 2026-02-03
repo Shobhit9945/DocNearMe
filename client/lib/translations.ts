@@ -2814,6 +2814,8 @@ const baseTranslations: Record<string, TranslationEntry> = {
   },
   "No languages set": { ja: "対応言語が未設定です" },
   "Remove {language}": { ja: "{language} を削除" },
+  away: { ja: "離れた" },
+  "Get directions": { ja: "経路案内" },
   "Add language": {
     ja: "言語を追加",
     id: "Tambahkan bahasa",

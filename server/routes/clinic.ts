@@ -238,20 +238,23 @@ export const buildClinicProfile = (clinic: any, specializations?: string[], next
   photos: clinic.photos,
 });
 
-const buildDoctor = (doctor: any) => ({
-  id: doctor.doctorId ?? doctor.id,
-  clinicId: doctor.clinicId,
-  name: doctor.name,
-  specialization: doctor.specialization,
-  languages: doctor.languages ?? [],
-  rating: doctor.rating ?? 0,
-  nextAvailable:
-    computeDoctorNextAvailability(doctor.availability) ??
-    doctor.nextAvailable ??
-    doctor.next_available ??
-    "Schedule TBD",
-  availability: doctor.availability,
-});
+const buildDoctor = (doctor: any) => {
+  const availability = Array.isArray(doctor.availability) ? doctor.availability : [];
+  return {
+    id: doctor.doctorId ?? doctor.id,
+    clinicId: doctor.clinicId,
+    name: doctor.name,
+    specialization: doctor.specialization,
+    languages: doctor.languages ?? [],
+    rating: doctor.rating ?? 0,
+    nextAvailable:
+      computeDoctorNextAvailability(availability) ??
+      doctor.nextAvailable ??
+      doctor.next_available ??
+      "Schedule TBD",
+    availability,
+  };
+};
 
 const buildBookedSlotMap = (appointments: any[]) => {
   const bookedByDate = new Map<string, Set<string>>();
