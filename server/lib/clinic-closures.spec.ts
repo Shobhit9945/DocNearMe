@@ -19,4 +19,31 @@ describe("validateClinicClosureDates", () => {
       expect(result.endDate).toBe("2026-02-03");
     }
   });
+
+  it("rejects partial time ranges", () => {
+    const result = validateClinicClosureDates({ startDate: "2026-02-03", startTime: "09:00" });
+    expect(result.ok).toBe(false);
+  });
+
+  it("rejects end time before start time", () => {
+    const result = validateClinicClosureDates({
+      startDate: "2026-02-03",
+      startTime: "14:00",
+      endTime: "09:00",
+    });
+    expect(result.ok).toBe(false);
+  });
+
+  it("accepts valid time ranges", () => {
+    const result = validateClinicClosureDates({
+      startDate: "2026-02-03",
+      startTime: "09:00",
+      endTime: "12:00",
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.startTime).toBe("09:00");
+      expect(result.endTime).toBe("12:00");
+    }
+  });
 });

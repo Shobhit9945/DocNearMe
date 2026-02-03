@@ -10,6 +10,7 @@ import { getSpecializationLabel, matchSpecialization } from "@/lib/specializatio
 import { TranslatedText } from "@/components/TranslatedText";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { useLiveLocation } from "@/hooks/useLiveLocation";
+import { useAddressSearch } from "@/hooks/useAddressSearch";
 import { ClinicDistance } from "@/components/ClinicDistance";
 import { getDistanceKm } from "@/lib/distance";
 
@@ -20,11 +21,20 @@ export default function Search() {
   const [query, setQuery] = useState("");
   const [specializationFilter, setSpecializationFilter] = useState("all");
   const [languageFilter, setLanguageFilter] = useState("all");
+  const [locationInput, setLocationInput] = useState("");
+  const [selectedLocationLabel, setSelectedLocationLabel] = useState("");
+  const [locationCoordinates, setLocationCoordinates] = useState<{ lat: number; lng: number } | null>(null);
+  const [locationError, setLocationError] = useState("");
   const [distanceFilter, setDistanceFilter] = useState("any");
   const [resultType, setResultType] = useState<"all" | "doctor" | "clinic">("all");
   const { data: clinicsData, isLoading: isClinicsLoading } = useClinics();
   const { data: doctorsData, isLoading: isDoctorsLoading } = useAllDoctors();
   const { coordinates } = useLiveLocation();
+  const {
+    suggestions: locationSuggestions,
+    isLoading: isLocationLoading,
+    error: locationSuggestionsError,
+  } = useAddressSearch(locationInput);
   const [distanceMap, setDistanceMap] = useState<Record<string, number>>({});
   const doctorScrollerRef = useRef<HTMLDivElement | null>(null);
   const clinicScrollerRef = useRef<HTMLDivElement | null>(null);
@@ -86,9 +96,47 @@ export default function Search() {
   const normalizedLanguage = languageFilter === "all" ? null : languageFilter.toLowerCase();
 
   const normalizedDistance = distanceFilter === "any" ? null : Number(distanceFilter);
+  const baseCoordinates = locationCoordinates ?? coordinates;
+  const showLocationSuggestions =
+    locationInput.trim().length >= 3 &&
+    locationSuggestions.length > 0 &&
+    locationInput.trim() !== selectedLocationLabel.trim();
+
+  const handleLocationChange = (value: string) => {
+    setLocationInput(value);
+    if (value.trim() !== selectedLocationLabel.trim()) {
+      setSelectedLocationLabel("");
+      setLocationCoordinates(null);
+      setLocationError("");
+    }
+  };
+
+  const handleSelectLocation = async (description: string, placeId: string) => {
+    setLocationInput(description);
+    setSelectedLocationLabel(description);
+    setLocationError("");
+
+    try {
+      const response = await fetch(
+        `/api/google-maps/places/details?placeId=${encodeURIComponent(placeId)}`,
+      );
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error("Unable to load location details.");
+      }
+      const location = data?.result?.geometry?.location;
+      if (!location?.lat || !location?.lng) {
+        throw new Error("Location coordinates were not available.");
+      }
+      setLocationCoordinates({ lat: location.lat, lng: location.lng });
+    } catch (error) {
+      setLocationCoordinates(null);
+      setLocationError(error instanceof Error ? error.message : t("Unable to set location."));
+    }
+  };
 
   useEffect(() => {
-    if (!coordinates || !(clinicsData?.clinics ?? []).length) return;
+    if (!baseCoordinates || !(clinicsData?.clinics ?? []).length) return;
     let cancelled = false;
 
     const loadDistances = async () => {
@@ -103,7 +151,7 @@ export default function Search() {
             const data = await response.json();
             const location = data?.result?.geometry?.location;
             if (!location?.lat || !location?.lng) return null;
-            const km = getDistanceKm(coordinates, { lat: location.lat, lng: location.lng });
+            const km = getDistanceKm(baseCoordinates, { lat: location.lat, lng: location.lng });
             return [clinic.id, km] as const;
           } catch {
             return null;
@@ -124,7 +172,7 @@ export default function Search() {
     return () => {
       cancelled = true;
     };
-  }, [coordinates, clinicsData?.clinics]);
+  }, [baseCoordinates, clinicsData?.clinics]);
 
   const clinicLanguages = useMemo(() => {
     const map = new Map<string, Set<string>>();
@@ -152,7 +200,7 @@ export default function Search() {
         ? (clinicLanguages.get(clinic.id) ?? new Set<string>()).has(normalizedLanguage)
         : true;
       const distanceKm = distanceMap[clinic.id];
-      const matchesDistance = normalizedDistance
+      const matchesDistance = normalizedDistance && baseCoordinates
         ? typeof distanceKm === "number" && distanceKm <= normalizedDistance
         : true;
       return matchesQuery && matchesSpecialization && matchesLanguage && matchesDistance;
@@ -165,6 +213,7 @@ export default function Search() {
     normalizedSpecialization,
     normalizedDistance,
     distanceMap,
+    baseCoordinates,
   ]);
 
   const filteredDoctors = useMemo(() => {
@@ -232,6 +281,40 @@ export default function Search() {
                 </div>
                 </div>
               <div className="mt-5 grid gap-4 lg:grid-cols-2 2xl:grid-cols-[2fr_1fr_1fr_1fr_1fr]">
+                <label className="flex flex-col gap-2 text-sm font-semibold text-slate-700">
+                  {t("Location")}
+                  <div className="relative">
+                    <input
+                      value={locationInput}
+                      onChange={(event) => handleLocationChange(event.target.value)}
+                      placeholder={t("Enter city or address")}
+                      className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-[#0089FF] focus:outline-none"
+                    />
+                    {showLocationSuggestions ? (
+                      <div className="absolute z-10 mt-2 w-full rounded-2xl border border-slate-200 bg-white shadow-lg">
+                        {locationSuggestions.map((suggestion) => (
+                          <button
+                            key={suggestion.placeId}
+                            type="button"
+                            onClick={() => handleSelectLocation(suggestion.description, suggestion.placeId)}
+                            className="block w-full text-left px-4 py-2 text-sm text-slate-600 hover:bg-slate-50"
+                          >
+                            {suggestion.description}
+                          </button>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                  {isLocationLoading ? (
+                    <span className="text-xs text-slate-400">{t("Searching locations...")}</span>
+                  ) : null}
+                  {locationSuggestionsError ? (
+                    <span className="text-xs text-red-500">{locationSuggestionsError}</span>
+                  ) : null}
+                  {locationError ? (
+                    <span className="text-xs text-red-500">{locationError}</span>
+                  ) : null}
+                </label>
                 <label className="flex flex-col gap-2 text-sm font-semibold text-slate-700">
                   {t("Search term")}
                   <div className="relative">
@@ -456,7 +539,7 @@ export default function Search() {
                         <p className="mt-2 flex items-center gap-2 text-xs text-slate-500">
                           <ClinicDistance
                             placeId={clinic.googlePlaceId}
-                            userCoordinates={coordinates}
+                            userCoordinates={baseCoordinates}
                             fallback={clinic.distance}
                           />
                         </p>

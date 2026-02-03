@@ -601,6 +601,8 @@ export const handleAddClinicClosure: RequestHandler = async (req, res, next) => 
       id: crypto.randomUUID(),
       startDate: result.startDate,
       endDate: result.endDate,
+      startTime: result.startTime,
+      endTime: result.endTime,
       reason: reason || undefined,
       createdAt: new Date(),
     };

@@ -38,7 +38,13 @@ export default function ClinicInfo() {
   const [closedDays, setClosedDays] = useState<string[]>([]);
   const [bookingClosures, setBookingClosures] = useState<ClinicBookingClosure[]>([]);
   const [showClosureForm, setShowClosureForm] = useState(false);
-  const [closureDraft, setClosureDraft] = useState({ startDate: "", endDate: "", reason: "" });
+  const [closureDraft, setClosureDraft] = useState({
+    startDate: "",
+    endDate: "",
+    startTime: "",
+    endTime: "",
+    reason: "",
+  });
   const [isSavingBasic, setIsSavingBasic] = useState(false);
   const [isSavingHours, setIsSavingHours] = useState(false);
   const [isSavingPhotos, setIsSavingPhotos] = useState(false);
@@ -204,6 +210,16 @@ export default function ClinicInfo() {
       toast({ title: t("End date must be after start date"), variant: "destructive" });
       return;
     }
+    const hasStartTime = Boolean(closureDraft.startTime);
+    const hasEndTime = Boolean(closureDraft.endTime);
+    if (hasStartTime !== hasEndTime) {
+      toast({ title: t("Select both start and end time for a partial closure."), variant: "destructive" });
+      return;
+    }
+    if (hasStartTime && hasEndTime && closureDraft.endTime <= closureDraft.startTime) {
+      toast({ title: t("End time must be after start time"), variant: "destructive" });
+      return;
+    }
 
     try {
       const response = await fetch("/api/clinic/me/closures", {
@@ -215,6 +231,8 @@ export default function ClinicInfo() {
         body: JSON.stringify({
           startDate: closureDraft.startDate,
           endDate: closureDraft.endDate,
+          startTime: closureDraft.startTime || undefined,
+          endTime: closureDraft.endTime || undefined,
           reason: closureDraft.reason,
         }),
       });
@@ -225,7 +243,7 @@ export default function ClinicInfo() {
       const updated = (await response.json()) as { clinic: ClinicProfile };
       setClinic(updated.clinic);
       setShowClosureForm(false);
-      setClosureDraft({ startDate: "", endDate: "", reason: "" });
+      setClosureDraft({ startDate: "", endDate: "", startTime: "", endTime: "", reason: "" });
       toast({ title: t("Added"), description: t("Closure added.") });
     } catch (error) {
       toast({
@@ -416,7 +434,9 @@ export default function ClinicInfo() {
       <section className="bg-white border border-gray-100 rounded-xl p-6 shadow-sm space-y-4">
         <div>
           <h2 className="text-lg font-semibold text-gray-900">{t("Clinic hours")}</h2>
-          <p className="text-sm text-slate-500 mt-1">{t("Set reception hours by day.")}</p>
+          <p className="text-sm text-slate-500 mt-1">
+            {t("Hours are determined by doctor availability.")}
+          </p>
         </div>
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <div className="space-y-2">
@@ -511,7 +531,7 @@ export default function ClinicInfo() {
       <section className="bg-white border border-gray-100 rounded-xl p-6 shadow-sm space-y-4">
         <div>
           <h2 className="text-lg font-semibold text-gray-900">{t("Closures")}</h2>
-          <p className="text-sm text-slate-500 mt-1">{t("Full-day closures only.")}</p>
+          <p className="text-sm text-slate-500 mt-1">{t("Add full-day or timed closures.")}</p>
         </div>
         <div className="flex gap-2">
           {isEditingClosures ? (
@@ -530,7 +550,7 @@ export default function ClinicInfo() {
           )}
         </div>
         {showClosureForm ? (
-          <div className="grid gap-3 lg:grid-cols-4">
+          <div className="grid gap-3 lg:grid-cols-6">
             <div>
               <label className="text-xs text-slate-500 block mb-1">{t("Start date")}</label>
               <Input
@@ -546,6 +566,24 @@ export default function ClinicInfo() {
                 type="date"
                 value={closureDraft.endDate}
                 onChange={(event) => setClosureDraft((prev) => ({ ...prev, endDate: event.target.value }))}
+                disabled={!isEditingClosures}
+              />
+            </div>
+            <div>
+              <label className="text-xs text-slate-500 block mb-1">{t("Closure start time")}</label>
+              <Input
+                type="time"
+                value={closureDraft.startTime}
+                onChange={(event) => setClosureDraft((prev) => ({ ...prev, startTime: event.target.value }))}
+                disabled={!isEditingClosures}
+              />
+            </div>
+            <div>
+              <label className="text-xs text-slate-500 block mb-1">{t("Closure end time")}</label>
+              <Input
+                type="time"
+                value={closureDraft.endTime}
+                onChange={(event) => setClosureDraft((prev) => ({ ...prev, endTime: event.target.value }))}
                 disabled={!isEditingClosures}
               />
             </div>
@@ -567,7 +605,7 @@ export default function ClinicInfo() {
                 variant="ghost"
                 onClick={() => {
                   setShowClosureForm(false);
-                  setClosureDraft({ startDate: "", endDate: "", reason: "" });
+                  setClosureDraft({ startDate: "", endDate: "", startTime: "", endTime: "", reason: "" });
                 }}
               >
                 {t("Cancel")}
@@ -588,6 +626,9 @@ export default function ClinicInfo() {
                   {formatDateJp(closure.startDate)}
                   {closure.endDate && closure.endDate !== closure.startDate
                     ? ` 〜 ${formatDateJp(closure.endDate)}`
+                    : ""}
+                  {closure.startTime && closure.endTime
+                    ? ` ${closure.startTime}〜${closure.endTime}`
                     : ""}
                   {closure.reason ? `（${closure.reason}）` : ""}
                 </span>
