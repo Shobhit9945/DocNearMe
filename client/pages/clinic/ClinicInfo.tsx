@@ -30,6 +30,7 @@ export default function ClinicInfo() {
   const [locationInput, setLocationInput] = useState("");
   const [phone, setPhone] = useState("");
   const [notificationEmail, setNotificationEmail] = useState("");
+  const [immediateWoundCare, setImmediateWoundCare] = useState(false);
   const [image, setImage] = useState("");
   const [weekdayStart, setWeekdayStart] = useState("09:00");
   const [weekdayEnd, setWeekdayEnd] = useState("18:00");
@@ -75,6 +76,7 @@ export default function ClinicInfo() {
     setLocationInput(nextClinic.location ?? "");
     setPhone(nextClinic.phone ?? "");
     setNotificationEmail(nextClinic.email ?? "");
+    setImmediateWoundCare(Boolean(nextClinic.immediateWoundCare));
     setImage(nextClinic.image ?? "");
     const normalizedHours = normalizeClinicHours(nextClinic.hours);
     setWeekdayStart(normalizedHours.weekdays.start);
@@ -131,6 +133,7 @@ export default function ClinicInfo() {
         phone: trimmedPhone || undefined,
         email: trimmedNotificationEmail || undefined,
         googlePlaceId: clinic?.googlePlaceId,
+        immediateWoundCare,
         notificationEmailEnabled: true,
         notificationPhoneEnabled: false,
         notificationLineEnabled: false,
@@ -405,6 +408,19 @@ export default function ClinicInfo() {
           <p className="text-xs text-slate-500 mt-2">
             {t("Booking requests are emailed to this address.")}
           </p>
+        </div>
+        <div>
+          <label className="text-sm font-medium text-gray-700 block mb-2">{t("Immediate Wound Care")}</label>
+          <label className="flex items-center gap-2 text-sm text-slate-600">
+            <input
+              type="checkbox"
+              checked={immediateWoundCare}
+              onChange={(event) => setImmediateWoundCare(event.target.checked)}
+              disabled={!isEditingBasic}
+              className="h-4 w-4 rounded border-slate-300 text-[#3A12DB]"
+            />
+            <span>{t("Show this label for minor injury care during clinic hours.")}</span>
+          </label>
         </div>
         <div className="flex gap-2">
           {isEditingBasic ? (

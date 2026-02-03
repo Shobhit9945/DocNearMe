@@ -2672,6 +2672,10 @@ const baseTranslations: Record<string, TranslationEntry> = {
   Save: { ja: "保存" },
   "Clinic hours": { ja: "診療時間" },
   "Hours are determined by doctor availability.": { ja: "診療時間は医師の空き状況により決まります。" },
+  "Immediate Wound Care": { ja: "応急処置対応" },
+  "Show this label for minor injury care during clinic hours.": {
+    ja: "診療時間内の軽傷対応（切り傷・やけど・捻挫など）を示すラベルです。",
+  },
   "Update hours": { ja: "診療時間を更新" },
   Pricing: { ja: "料金" },
   "First visit": { ja: "初診" },
