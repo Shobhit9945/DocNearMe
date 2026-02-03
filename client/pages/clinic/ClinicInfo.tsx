@@ -1,5 +1,6 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { LoadingScreen } from "@/components/LoadingScreen";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/components/ui/use-toast";
 import { getClinicAuthHeader } from "@/lib/clinic-auth";
@@ -20,6 +21,7 @@ const formatDateJp = (value?: string) => (value ? value.replace(/-/g, "/") : "")
 
 export default function ClinicInfo() {
   const { t } = useTranslation();
+  const tRef = useRef(t);
   const [clinic, setClinic] = useState<ClinicProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [name, setName] = useState("");
@@ -38,6 +40,10 @@ export default function ClinicInfo() {
   const [isSavingBasic, setIsSavingBasic] = useState(false);
   const [isSavingHours, setIsSavingHours] = useState(false);
   const [isSavingPhotos, setIsSavingPhotos] = useState(false);
+  const [isEditingBasic, setIsEditingBasic] = useState(false);
+  const [isEditingHours, setIsEditingHours] = useState(false);
+  const [isEditingClosures, setIsEditingClosures] = useState(false);
+  const [isEditingPhotos, setIsEditingPhotos] = useState(false);
 
   const sortedClosures = useMemo(
     () =>
@@ -46,6 +52,26 @@ export default function ClinicInfo() {
       ),
     [bookingClosures],
   );
+
+  const hydrateClinicState = (nextClinic: ClinicProfile) => {
+    setClinic(nextClinic);
+    setName(nextClinic.name ?? "");
+    setLocation(nextClinic.location ?? "");
+    setPhone(nextClinic.phone ?? "");
+    setNotificationEmail(nextClinic.email ?? "");
+    setImage(nextClinic.image ?? "");
+    const normalizedHours = normalizeClinicHours(nextClinic.hours);
+    setWeekdayStart(normalizedHours.weekdays.start);
+    setWeekdayEnd(normalizedHours.weekdays.end);
+    setWeekendStart(normalizedHours.weekend.start);
+    setWeekendEnd(normalizedHours.weekend.end);
+    setClosedDays(normalizedHours.closedDays);
+    setBookingClosures(nextClinic.bookingClosures ?? []);
+  };
+
+  useEffect(() => {
+    tRef.current = t;
+  }, [t]);
 
   useEffect(() => {
     const loadClinic = async () => {
@@ -58,14 +84,14 @@ export default function ClinicInfo() {
         });
         if (!response.ok) {
           const error = await response.json().catch(() => ({}));
-          throw new Error(error?.error ?? t("Unable to load clinic info."));
+          throw new Error(error?.error ?? tRef.current("Unable to load clinic info."));
         }
         const payload = (await response.json()) as { clinic: ClinicProfile };
-        setClinic(payload.clinic);
+        hydrateClinicState(payload.clinic);
       } catch (error) {
         toast({
-          title: t("読み込みに失敗しました"),
-          description: error instanceof Error ? error.message : t("Please try again."),
+          title: tRef.current("Failed to load"),
+          description: error instanceof Error ? error.message : tRef.current("Please try again."),
           variant: "destructive",
         });
       } finally {
@@ -73,23 +99,7 @@ export default function ClinicInfo() {
       }
     };
     void loadClinic();
-  }, [t]);
-
-  useEffect(() => {
-    if (!clinic) return;
-    setName(clinic.name ?? "");
-    setLocation(clinic.location ?? "");
-    setPhone(clinic.phone ?? "");
-    setNotificationEmail(clinic.email ?? "");
-    setImage(clinic.image ?? "");
-    const normalizedHours = normalizeClinicHours(clinic.hours);
-    setWeekdayStart(normalizedHours.weekdays.start);
-    setWeekdayEnd(normalizedHours.weekdays.end);
-    setWeekendStart(normalizedHours.weekend.start);
-    setWeekendEnd(normalizedHours.weekend.end);
-    setClosedDays(normalizedHours.closedDays);
-    setBookingClosures(clinic.bookingClosures ?? []);
-  }, [clinic]);
+  }, []);
 
   const handleBasicSave = async () => {
     const trimmedName = name.trim();
@@ -123,10 +133,11 @@ export default function ClinicInfo() {
       }
       const updated = (await response.json()) as { clinic: ClinicProfile };
       setClinic(updated.clinic);
-      toast({ title: t("保存しました"), description: t("基本情報を更新しました。") });
+      toast({ title: t("Saved"), description: t("Basic information updated.") });
+      setIsEditingBasic(false);
     } catch (error) {
       toast({
-        title: t("保存に失敗しました"),
+        title: t("Save failed"),
         description: error instanceof Error ? error.message : t("Please try again."),
         variant: "destructive",
       });
@@ -160,10 +171,11 @@ export default function ClinicInfo() {
       }
       const updated = (await response.json()) as { clinic: ClinicProfile };
       setClinic(updated.clinic);
-      toast({ title: t("保存しました"), description: t("診療時間を更新しました。") });
+      toast({ title: t("Saved"), description: t("Clinic hours updated.") });
+      setIsEditingHours(false);
     } catch (error) {
       toast({
-        title: t("保存に失敗しました"),
+        title: t("Save failed"),
         description: error instanceof Error ? error.message : t("Please try again."),
         variant: "destructive",
       });
@@ -174,11 +186,11 @@ export default function ClinicInfo() {
 
   const handleAddClosure = async () => {
     if (!closureDraft.startDate) {
-      toast({ title: t("開始日を入力してください"), variant: "destructive" });
+      toast({ title: t("Start date is required"), variant: "destructive" });
       return;
     }
     if (closureDraft.endDate && closureDraft.endDate < closureDraft.startDate) {
-      toast({ title: t("終了日は開始日以降にしてください"), variant: "destructive" });
+      toast({ title: t("End date must be after start date"), variant: "destructive" });
       return;
     }
 
@@ -203,10 +215,10 @@ export default function ClinicInfo() {
       setClinic(updated.clinic);
       setShowClosureForm(false);
       setClosureDraft({ startDate: "", endDate: "", reason: "" });
-      toast({ title: t("追加しました"), description: t("休診日を登録しました。") });
+      toast({ title: t("Added"), description: t("Closure added.") });
     } catch (error) {
       toast({
-        title: t("追加に失敗しました"),
+        title: t("Add failed"),
         description: error instanceof Error ? error.message : t("Please try again."),
         variant: "destructive",
       });
@@ -228,10 +240,10 @@ export default function ClinicInfo() {
       }
       const updated = (await response.json()) as { clinic: ClinicProfile };
       setClinic(updated.clinic);
-      toast({ title: t("削除しました"), description: t("休診日を削除しました。") });
+      toast({ title: t("Deleted"), description: t("Closure removed.") });
     } catch (error) {
       toast({
-        title: t("削除に失敗しました"),
+        title: t("Delete failed"),
         description: error instanceof Error ? error.message : t("Please try again."),
         variant: "destructive",
       });
@@ -258,10 +270,11 @@ export default function ClinicInfo() {
       }
       const updated = (await response.json()) as { clinic: ClinicProfile };
       setClinic(updated.clinic);
-      toast({ title: t("保存しました"), description: t("写真を更新しました。") });
+      toast({ title: t("Saved"), description: t("Photo updated.") });
+      setIsEditingPhotos(false);
     } catch (error) {
       toast({
-        title: t("保存に失敗しました"),
+        title: t("Save failed"),
         description: error instanceof Error ? error.message : t("Please try again."),
         variant: "destructive",
       });
@@ -271,79 +284,125 @@ export default function ClinicInfo() {
   };
 
   if (isLoading) {
-    return <div className="text-sm text-slate-500">{t("読み込み中...")}</div>;
+    return (
+      <LoadingScreen
+        title={t("Loading clinic info")}
+        subtitle={t("Preparing your clinic settings.")}
+      />
+    );
   }
 
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="text-2xl font-bold text-gray-900">{t("クリニック情報")}</h1>
+        <h1 className="text-2xl font-bold text-gray-900">{t("Clinic info")}</h1>
         <p className="text-gray-500 mt-1">
-          {t("予約受付に必要な情報をわかりやすくまとめました。")}
+          {t("Everything you need to accept bookings in one place.")}
         </p>
       </header>
 
       <section className="bg-white border border-gray-100 rounded-xl p-6 shadow-sm space-y-4">
         <div>
-          <h2 className="text-lg font-semibold text-gray-900">{t("基本情報")}</h2>
-          <p className="text-sm text-slate-500 mt-1">{t("患者さんに表示される情報です。")}</p>
+          <h2 className="text-lg font-semibold text-gray-900">{t("Basic information")}</h2>
+          <p className="text-sm text-slate-500 mt-1">{t("Shown to patients.")}</p>
         </div>
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <div>
-            <label className="text-sm font-medium text-gray-700 block mb-2">{t("クリニック名")}</label>
-            <Input value={name} onChange={(event) => setName(event.target.value)} />
+            <label className="text-sm font-medium text-gray-700 block mb-2">{t("Clinic name")}</label>
+            <Input value={name} onChange={(event) => setName(event.target.value)} disabled={!isEditingBasic} />
           </div>
           <div>
-            <label className="text-sm font-medium text-gray-700 block mb-2">{t("電話番号")}</label>
-            <Input value={phone} onChange={(event) => setPhone(event.target.value)} />
+            <label className="text-sm font-medium text-gray-700 block mb-2">{t("Phone")}</label>
+            <Input value={phone} onChange={(event) => setPhone(event.target.value)} disabled={!isEditingBasic} />
           </div>
         </div>
         <div>
-          <label className="text-sm font-medium text-gray-700 block mb-2">{t("住所")}</label>
-          <Input value={location} onChange={(event) => setLocation(event.target.value)} />
+          <label className="text-sm font-medium text-gray-700 block mb-2">{t("Address")}</label>
+          <Input value={location} onChange={(event) => setLocation(event.target.value)} disabled={!isEditingBasic} />
         </div>
         <div>
-          <label className="text-sm font-medium text-gray-700 block mb-2">{t("通知先メールアドレス")}</label>
+          <label className="text-sm font-medium text-gray-700 block mb-2">{t("Notification email")}</label>
           <Input
             value={notificationEmail}
             onChange={(event) => setNotificationEmail(event.target.value)}
             placeholder={t("clinic@example.com")}
             type="email"
+            disabled={!isEditingBasic}
           />
           <p className="text-xs text-slate-500 mt-2">
-            {t("予約リクエストが入ると、このメールに通知が届きます。")}
+            {t("Booking requests are emailed to this address.")}
           </p>
         </div>
-        <Button onClick={handleBasicSave} disabled={isSavingBasic}>
-          {isSavingBasic ? t("保存中...") : t("保存")}
-        </Button>
+        <div className="flex gap-2">
+          {isEditingBasic ? (
+            <>
+              <Button onClick={handleBasicSave} disabled={isSavingBasic}>
+                {isSavingBasic ? t("Saving...") : t("Save")}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => {
+                  if (clinic) hydrateClinicState(clinic);
+                  setIsEditingBasic(false);
+                }}
+              >
+                {t("Cancel")}
+              </Button>
+            </>
+          ) : (
+            <Button type="button" variant="outline" onClick={() => setIsEditingBasic(true)}>
+              {t("Edit")}
+            </Button>
+          )}
+        </div>
       </section>
 
       <section className="bg-white border border-gray-100 rounded-xl p-6 shadow-sm space-y-4">
         <div>
-          <h2 className="text-lg font-semibold text-gray-900">{t("診療時間")}</h2>
-          <p className="text-sm text-slate-500 mt-1">{t("曜日ごとの受付時間を設定してください。")}</p>
+          <h2 className="text-lg font-semibold text-gray-900">{t("Clinic hours")}</h2>
+          <p className="text-sm text-slate-500 mt-1">{t("Set reception hours by day.")}</p>
         </div>
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700 block">{t("平日")}</label>
+            <label className="text-sm font-medium text-gray-700 block">{t("Weekdays")}</label>
             <div className="flex items-center gap-3">
-              <Input type="time" value={weekdayStart} onChange={(event) => setWeekdayStart(event.target.value)} />
-              <span className="text-sm text-slate-500">{t("〜")}</span>
-              <Input type="time" value={weekdayEnd} onChange={(event) => setWeekdayEnd(event.target.value)} />
+              <Input
+                type="time"
+                value={weekdayStart}
+                onChange={(event) => setWeekdayStart(event.target.value)}
+                disabled={!isEditingHours}
+              />
+              <span className="text-sm text-slate-500">{t("to")}</span>
+              <Input
+                type="time"
+                value={weekdayEnd}
+                onChange={(event) => setWeekdayEnd(event.target.value)}
+                disabled={!isEditingHours}
+              />
             </div>
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700 block">{t("土日")}</label>
+            <label className="text-sm font-medium text-gray-700 block">{t("Weekend")}</label>
             <div className="flex items-center gap-3">
-              <Input type="time" value={weekendStart} onChange={(event) => setWeekendStart(event.target.value)} />
-              <span className="text-sm text-slate-500">{t("〜")}</span>
-              <Input type="time" value={weekendEnd} onChange={(event) => setWeekendEnd(event.target.value)} />
+              <Input
+                type="time"
+                value={weekendStart}
+                onChange={(event) => setWeekendStart(event.target.value)}
+                disabled={!isEditingHours}
+              />
+              <span className="text-sm text-slate-500">{t("to")}</span>
+              <Input
+                type="time"
+                value={weekendEnd}
+                onChange={(event) => setWeekendEnd(event.target.value)}
+                disabled={!isEditingHours}
+              />
             </div>
           </div>
         </div>
         <div>
-          <label className="text-sm font-medium text-gray-700 block mb-2">{t("定休日")}</label>
+          <label className="text-sm font-medium text-gray-700 block mb-2">{t("Closed days")}</label>
           <div className="flex flex-wrap gap-2">
             {DAYS_OF_WEEK.map((day) => {
               const checked = closedDays.includes(day);
@@ -356,6 +415,7 @@ export default function ClinicInfo() {
                       checked ? prev.filter((item) => item !== day) : [...prev, day],
                     );
                   }}
+                  disabled={!isEditingHours}
                   className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
                     checked
                       ? "bg-[#0089FF] text-white"
@@ -368,47 +428,85 @@ export default function ClinicInfo() {
             })}
           </div>
         </div>
-        <Button onClick={handleHoursSave} disabled={isSavingHours}>
-          {isSavingHours ? t("保存中...") : t("保存")}
-        </Button>
+        <div className="flex gap-2">
+          {isEditingHours ? (
+            <>
+              <Button onClick={handleHoursSave} disabled={isSavingHours}>
+                {isSavingHours ? t("Saving...") : t("Save")}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => {
+                  if (clinic) hydrateClinicState(clinic);
+                  setIsEditingHours(false);
+                }}
+              >
+                {t("Cancel")}
+              </Button>
+            </>
+          ) : (
+            <Button type="button" variant="outline" onClick={() => setIsEditingHours(true)}>
+              {t("Edit")}
+            </Button>
+          )}
+        </div>
       </section>
 
       <section className="bg-white border border-gray-100 rounded-xl p-6 shadow-sm space-y-4">
         <div>
-          <h2 className="text-lg font-semibold text-gray-900">{t("休診・受付停止")}</h2>
-          <p className="text-sm text-slate-500 mt-1">{t("終日休診のみ対応しています。")}</p>
+          <h2 className="text-lg font-semibold text-gray-900">{t("Closures")}</h2>
+          <p className="text-sm text-slate-500 mt-1">{t("Full-day closures only.")}</p>
         </div>
-        <Button type="button" variant="outline" onClick={() => setShowClosureForm((prev) => !prev)}>
-          {t("休診・受付停止を追加")}
-        </Button>
+        <div className="flex gap-2">
+          {isEditingClosures ? (
+            <>
+              <Button type="button" variant="outline" onClick={() => setShowClosureForm((prev) => !prev)}>
+                {t("Add closure")}
+              </Button>
+              <Button type="button" variant="ghost" onClick={() => setIsEditingClosures(false)}>
+                {t("Done")}
+              </Button>
+            </>
+          ) : (
+            <Button type="button" variant="outline" onClick={() => setIsEditingClosures(true)}>
+              {t("Edit")}
+            </Button>
+          )}
+        </div>
         {showClosureForm ? (
           <div className="grid gap-3 lg:grid-cols-4">
             <div>
-              <label className="text-xs text-slate-500 block mb-1">{t("開始日")}</label>
+              <label className="text-xs text-slate-500 block mb-1">{t("Start date")}</label>
               <Input
                 type="date"
                 value={closureDraft.startDate}
                 onChange={(event) => setClosureDraft((prev) => ({ ...prev, startDate: event.target.value }))}
+                disabled={!isEditingClosures}
               />
             </div>
             <div>
-              <label className="text-xs text-slate-500 block mb-1">{t("終了日（任意）")}</label>
+              <label className="text-xs text-slate-500 block mb-1">{t("End date (optional)")}</label>
               <Input
                 type="date"
                 value={closureDraft.endDate}
                 onChange={(event) => setClosureDraft((prev) => ({ ...prev, endDate: event.target.value }))}
+                disabled={!isEditingClosures}
               />
             </div>
             <div className="lg:col-span-2">
-              <label className="text-xs text-slate-500 block mb-1">{t("理由（任意）")}</label>
+              <label className="text-xs text-slate-500 block mb-1">{t("Reason (optional)")}</label>
               <Input
                 value={closureDraft.reason}
                 onChange={(event) => setClosureDraft((prev) => ({ ...prev, reason: event.target.value }))}
-                placeholder={t("例：院内研修")}
+                placeholder={t("e.g. staff training")}
+                disabled={!isEditingClosures}
               />
             </div>
             <div className="lg:col-span-4 flex gap-2">
-              <Button type="button" onClick={handleAddClosure}>{t("追加")}</Button>
+              <Button type="button" onClick={handleAddClosure} disabled={!isEditingClosures}>
+                {t("Add")}
+              </Button>
               <Button
                 type="button"
                 variant="ghost"
@@ -417,13 +515,13 @@ export default function ClinicInfo() {
                   setClosureDraft({ startDate: "", endDate: "", reason: "" });
                 }}
               >
-                {t("キャンセル")}
+                {t("Cancel")}
               </Button>
             </div>
           </div>
         ) : null}
         {sortedClosures.length === 0 ? (
-          <p className="text-sm text-slate-500">{t("登録された休診日はありません。")}</p>
+          <p className="text-sm text-slate-500">{t("No closures yet.")}</p>
         ) : (
           <div className="space-y-2">
             {sortedClosures.map((closure) => (
@@ -438,8 +536,13 @@ export default function ClinicInfo() {
                     : ""}
                   {closure.reason ? `（${closure.reason}）` : ""}
                 </span>
-                <Button type="button" variant="ghost" onClick={() => handleDeleteClosure(closure.id)}>
-                  {t("削除")}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => handleDeleteClosure(closure.id)}
+                  disabled={!isEditingClosures}
+                >
+                  {t("Delete")}
                 </Button>
               </div>
             ))}
@@ -449,39 +552,41 @@ export default function ClinicInfo() {
 
       <section className="bg-white border border-gray-100 rounded-xl p-6 shadow-sm space-y-4">
         <div>
-          <h2 className="text-lg font-semibold text-gray-900">{t("通知")}</h2>
+          <h2 className="text-lg font-semibold text-gray-900">{t("Notifications")}</h2>
           <p className="text-sm text-slate-500 mt-1">
-            {t("予約リクエストが届くとメール通知が送られます。必要な場合のみ管理画面で承認してください。")}
+            {t(
+              "When a booking request arrives, you will receive an email. Please log in only if confirmation is needed.",
+            )}
           </p>
         </div>
         <div className="space-y-2">
           <label className="flex items-center gap-2 text-sm text-slate-700">
             <input type="checkbox" checked disabled className="h-4 w-4 rounded border-slate-300 text-[#3A12DB]" />
-            <span>{t("Email（必須）")}</span>
+            <span>{t("Email (required)")}</span>
             <span className="text-xs text-slate-500">{t("ON")}</span>
           </label>
           <label className="flex items-center gap-2 text-sm text-slate-500">
             <input type="checkbox" disabled className="h-4 w-4 rounded border-slate-200" />
-            <span>{t("Phone（自動音声）")}</span>
-            <span className="text-xs text-slate-400">{t("準備中")}</span>
+            <span>{t("Phone (automated call)")}</span>
+            <span className="text-xs text-slate-400">{t("Coming soon")}</span>
           </label>
           <label className="flex items-center gap-2 text-sm text-slate-500">
             <input type="checkbox" disabled className="h-4 w-4 rounded border-slate-200" />
             <span>{t("LINE Bot")}</span>
-            <span className="text-xs text-slate-400">{t("準備中")}</span>
+            <span className="text-xs text-slate-400">{t("Coming soon")}</span>
           </label>
           <label className="flex items-center gap-2 text-sm text-slate-500">
             <input type="checkbox" disabled className="h-4 w-4 rounded border-slate-200" />
-            <span>{t("Dashboardのみ")}</span>
-            <span className="text-xs text-slate-400">{t("準備中")}</span>
+            <span>{t("Dashboard only")}</span>
+            <span className="text-xs text-slate-400">{t("Coming soon")}</span>
           </label>
         </div>
       </section>
 
       <section className="bg-white border border-gray-100 rounded-xl p-6 shadow-sm space-y-4">
         <div>
-          <h2 className="text-lg font-semibold text-gray-900">{t("写真")}</h2>
-          <p className="text-sm text-slate-500 mt-1">{t("クリニックの代表画像を設定します。")}</p>
+          <h2 className="text-lg font-semibold text-gray-900">{t("Photos")}</h2>
+          <p className="text-sm text-slate-500 mt-1">{t("Set the main clinic image.")}</p>
         </div>
         {image ? (
           <img
@@ -491,21 +596,42 @@ export default function ClinicInfo() {
           />
         ) : (
           <div className="w-full max-w-sm rounded-lg border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-sm text-slate-500">
-            {t("画像を設定するとプレビューが表示されます")}
+            {t("Preview appears when an image URL is set.")}
           </div>
         )}
         <div>
-          <label className="text-sm font-medium text-gray-700 block mb-2">{t("画像（URL）")}</label>
+          <label className="text-sm font-medium text-gray-700 block mb-2">{t("Image (URL)")}</label>
           <Input
             value={image}
             onChange={(event) => setImage(event.target.value)}
             placeholder={t("https://example.com/clinic.jpg")}
+            disabled={!isEditingPhotos}
           />
-          <p className="text-xs text-slate-500 mt-2">{t("URLを貼り付けて保存してください。")}</p>
+          <p className="text-xs text-slate-500 mt-2">{t("Paste a URL and save.")}</p>
         </div>
-        <Button onClick={handlePhotosSave} disabled={isSavingPhotos}>
-          {isSavingPhotos ? t("保存中...") : t("保存")}
-        </Button>
+        <div className="flex gap-2">
+          {isEditingPhotos ? (
+            <>
+              <Button onClick={handlePhotosSave} disabled={isSavingPhotos}>
+                {isSavingPhotos ? t("Saving...") : t("Save")}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => {
+                  if (clinic) hydrateClinicState(clinic);
+                  setIsEditingPhotos(false);
+                }}
+              >
+                {t("Cancel")}
+              </Button>
+            </>
+          ) : (
+            <Button type="button" variant="outline" onClick={() => setIsEditingPhotos(true)}>
+              {t("Edit")}
+            </Button>
+          )}
+        </div>
       </section>
     </div>
   );

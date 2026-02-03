@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { TranslatedText } from "@/components/TranslatedText";
+import { LoadingScreen } from "@/components/LoadingScreen";
 
 function formatDate(date: string) {
   return new Date(date).toLocaleString(undefined, {
@@ -47,7 +48,11 @@ export default function AdminBookings() {
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <div className="py-10 text-center text-slate-600">Loading appointments…</div>
+              <LoadingScreen
+                title="Loading appointments"
+                subtitle="Syncing the latest bookings."
+                className="min-h-[30vh]"
+              />
             ) : (data?.appointments.length ?? 0) > 0 ? (
               <div className="overflow-x-auto">
                 <Table>

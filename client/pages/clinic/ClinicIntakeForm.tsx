@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { LoadingScreen } from "@/components/LoadingScreen";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/components/ui/use-toast";
 import { getClinicAuthHeader, getClinicSession } from "@/lib/clinic-auth";
@@ -278,9 +279,10 @@ export default function ClinicIntakeForm() {
 
   if (isLoading) {
     return (
-      <div className="rounded-xl border border-gray-100 bg-white p-6 text-sm text-gray-500">
-        {t("Loading intake form...")}
-      </div>
+      <LoadingScreen
+        title={t("Loading intake form...")}
+        subtitle={t("Fetching your latest questions.")}
+      />
     );
   }
 

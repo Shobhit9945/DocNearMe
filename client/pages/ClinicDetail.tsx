@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { BottomNav } from "@/components/BottomNav";
 import { PageScaffold } from "@/components/PageScaffold";
 import { DocDaisyBanner } from "@/components/DocDaisyBanner";
+import { LoadingScreen } from "@/components/LoadingScreen";
 import { useClinicDoctors, useClinicProfile } from "@/lib/clinic-data";
 import { useTranslation } from "@/lib/i18n";
 import { formatAvailabilityForLanguage } from "@/lib/time-format";
@@ -59,9 +60,10 @@ export default function ClinicDetail() {
   if (!clinic && isLoadingClinic) {
     return (
       <PageScaffold contentClassName="pb-28 lg:pb-12">
-        <div className="flex flex-col items-center justify-center px-6 py-20 text-center">
-          <p className="text-lg font-semibold text-[#002D55]">{t("Loading clinic details...")}</p>
-        </div>
+        <LoadingScreen
+          title={t("Loading clinic details...")}
+          subtitle={t("Fetching clinic profile and reviews.")}
+        />
       </PageScaffold>
     );
   }

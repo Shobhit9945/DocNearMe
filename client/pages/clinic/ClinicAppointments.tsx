@@ -10,6 +10,7 @@ import { useTranslation } from "@/lib/i18n";
 import { getSpecializationLabel } from "@/lib/specializations";
 import { formatSlotForLanguage } from "@/lib/time-format";
 import { TranslatedText } from "@/components/TranslatedText";
+import { LoadingScreen } from "@/components/LoadingScreen";
 import type {
   AppointmentListResponse,
   AppointmentResponseItem,
@@ -335,9 +336,10 @@ export default function ClinicAppointments() {
           {t("Sign in to view your clinic appointments.")}
         </div>
       ) : isLoading ? (
-        <div className="rounded-xl border border-gray-100 bg-white p-6 text-sm text-gray-500">
-          {t("Loading appointments...")}
-        </div>
+        <LoadingScreen
+          title={t("Loading appointments...")}
+          subtitle={t("Fetching the latest requests.")}
+        />
       ) : error ? (
         <div className="rounded-xl border border-red-100 bg-red-50 p-6 text-sm text-red-600">
           {t("Unable to load appointments. Please refresh or try again.")}
