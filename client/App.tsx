@@ -9,13 +9,12 @@ const getApp = () => {
   const hostname = window.location.hostname;
   const pathname = window.location.pathname;
   
-  // PRODUCTION: This will only start the clinic app if the ACTUAL URL starts with 'clinic.'
-  // Example: clinic.docnearme.jp
-  if (hostname.startsWith('clinic.')) {
-     return <ClinicApp />;
+  // PRODUCTION: Start the clinic app if the URL starts with clinic. or www.clinic.
+  if (hostname.startsWith("clinic.") || hostname.startsWith("www.clinic.")) {
+    return <ClinicApp />;
   }
 
-  if (hostname.startsWith("admin.")) {
+  if (hostname.startsWith("admin.") || hostname.startsWith("www.admin.")) {
     return <AdminApp />;
   }
 
