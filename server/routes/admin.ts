@@ -125,6 +125,16 @@ export const handleAdminAuthCheck: RequestHandler = (_req, res) => {
   return res.json(response);
 };
 
+export const handleAdminClinicList: RequestHandler = async (_req, res, next) => {
+  try {
+    const clinics = await getClinicInfoCollection();
+    const list = await clinics.find({}).toArray();
+    return res.json({ clinics: list });
+  } catch (error) {
+    return next(error);
+  }
+};
+
 export const handleAdminCreateClinic: RequestHandler = async (req, res, next) => {
   try {
     const payload = adminCreateClinicSchema.parse(parseRequestBody(req.body)) as AdminCreateClinicRequest;

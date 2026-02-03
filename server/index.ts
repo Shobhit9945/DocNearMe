@@ -81,7 +81,7 @@ import {
 } from "./routes/clinic";
 import { requireClinicAuth } from "./middleware/clinic-auth";
 import { requireAdminAuth } from "./middleware/admin-auth";
-import { handleAdminAuthCheck, handleAdminCreateClinic } from "./routes/admin";
+import { handleAdminAuthCheck, handleAdminClinicList, handleAdminCreateClinic } from "./routes/admin";
 import { handleGetProfile, handleUpdateProfile } from "./routes/profile";
 import { handleTranslate } from "./routes/translate";
 import {
@@ -203,6 +203,7 @@ export async function createServer(): Promise<Express> {
   app.post("/api/clinic-auth/login", handleClinicLogin);
   app.get("/api/clinic-credentials", handleClinicCredentials);
   app.get("/api/admin/auth-check", requireAdminAuth, handleAdminAuthCheck);
+  app.get("/api/admin/clinics", requireAdminAuth, handleAdminClinicList);
   app.post("/api/admin/clinics", requireAdminAuth, handleAdminCreateClinic);
   app.get("/api/clinics", handleClinicList);
   app.get("/api/clinics/doctors", handleClinicDoctorsAll);
