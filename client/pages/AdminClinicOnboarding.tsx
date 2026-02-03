@@ -1,8 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 import type { AdminCreateClinicRequest, AdminCreateClinicResponse, ClinicDoctor, ClinicProfile } from "@shared/api";
 import { useAddressSearch } from "@/hooks/useAddressSearch";
+import { supportedLanguages } from "@/lib/translations";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
-type DoctorDraft = ClinicDoctor & { languagesText: string };
+type DoctorDraft = ClinicDoctor;
 type ClosureDraft = {
   startDate: string;
   endDate: string;
@@ -39,7 +47,6 @@ const makeDoctorDraft = (clinicId: string): DoctorDraft => ({
   name: "",
   specialization: "",
   languages: [],
-  languagesText: "",
   rating: 4.5,
   nextAvailable: "",
   availability: [],
@@ -92,6 +99,7 @@ export default function AdminClinicOnboarding() {
   const [photos, setPhotos] = useState<PhotoDraft[]>([]);
   const [closures, setClosures] = useState<ClosureDraft[]>([]);
   const [doctors, setDoctors] = useState<DoctorDraft[]>([]);
+  const [languageDrafts, setLanguageDrafts] = useState<Record<string, string>>({});
   const [adminUserId, setAdminUserId] = useState("");
   const [adminPassword, setAdminPassword] = useState("");
   const [locationInput, setLocationInput] = useState("");
@@ -198,7 +206,9 @@ export default function AdminClinicOnboarding() {
   };
 
   const handleAddDoctor = () => {
-    setDoctors((prev) => [...prev, makeDoctorDraft(clinic.id)]);
+    const draft = makeDoctorDraft(clinic.id);
+    setDoctors((prev) => [...prev, draft]);
+    setLanguageDrafts((prev) => ({ ...prev, [draft.id]: "" }));
   };
 
   const handleUpdateDoctor = (index: number, updates: Partial<DoctorDraft>) => {
@@ -206,7 +216,61 @@ export default function AdminClinicOnboarding() {
   };
 
   const handleRemoveDoctor = (index: number) => {
-    setDoctors((prev) => prev.filter((_, idx) => idx !== index));
+    setDoctors((prev) => {
+      const removed = prev[index];
+      if (removed?.id) {
+        setLanguageDrafts((drafts) => {
+          if (!drafts[removed.id]) return drafts;
+          const next = { ...drafts };
+          delete next[removed.id];
+          return next;
+        });
+      }
+      return prev.filter((_, idx) => idx !== index);
+    });
+  };
+
+  const getDoctorLanguages = (doctor: DoctorDraft) =>
+    (doctor.languages ?? []).map((language) => language.trim()).filter(Boolean);
+
+  const languageOptions = useMemo(() => {
+    const options = new Set(supportedLanguages.map(({ label }) => label));
+    doctors.forEach((doctor) => {
+      getDoctorLanguages(doctor).forEach((language) => options.add(language));
+    });
+    return Array.from(options).sort((a, b) => a.localeCompare(b));
+  }, [doctors]);
+
+  const handleLanguageDraftChange = (doctorId: string, value: string) => {
+    setLanguageDrafts((prev) => ({ ...prev, [doctorId]: value }));
+  };
+
+  const handleAddDoctorLanguage = (index: number) => {
+    const doctorId = doctors[index]?.id;
+    if (!doctorId) return;
+    setDoctors((prev) => {
+      const next = [...prev];
+      const doctor = next[index];
+      const draft = (languageDrafts[doctorId] ?? "").trim();
+      if (!draft) return prev;
+      const languages = getDoctorLanguages(doctor);
+      if (languages.some((language) => language.toLowerCase() === draft.toLowerCase())) return prev;
+      next[index] = { ...doctor, languages: [...languages, draft] };
+      return next;
+    });
+    setLanguageDrafts((prev) => ({ ...prev, [doctorId]: "" }));
+  };
+
+  const handleRemoveDoctorLanguage = (index: number, language: string) => {
+    setDoctors((prev) => {
+      const next = [...prev];
+      const doctor = next[index];
+      next[index] = {
+        ...doctor,
+        languages: getDoctorLanguages(doctor).filter((item) => item !== language),
+      };
+      return next;
+    });
   };
 
   const handleAddDoctorAvailabilitySlot = (index: number) => {
@@ -395,7 +459,7 @@ export default function AdminClinicOnboarding() {
           clinicId: clinic.id,
           name: doctor.name,
           specialization: doctor.specialization,
-          languages: normalizeList(doctor.languagesText),
+          languages: getDoctorLanguages(doctor),
           rating: Number(doctor.rating),
           nextAvailable: doctor.nextAvailable,
           availability:
@@ -920,14 +984,56 @@ export default function AdminClinicOnboarding() {
                           handleUpdateDoctor(index, { specialization: event.target.value })
                         }
                       />
-                      <input
-                        className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                        placeholder="Languages (comma separated)"
-                        value={doctor.languagesText}
-                        onChange={(event) =>
-                          handleUpdateDoctor(index, { languagesText: event.target.value })
-                        }
-                      />
+                      <div className="md:col-span-2">
+                        <label className="text-xs font-medium text-slate-600">Languages spoken</label>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {getDoctorLanguages(doctor).length > 0 ? (
+                            getDoctorLanguages(doctor).map((languageItem) => (
+                              <span
+                                key={languageItem}
+                                className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs text-slate-600"
+                              >
+                                {languageItem}
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveDoctorLanguage(index, languageItem)}
+                                  className="text-slate-400 hover:text-slate-600"
+                                  aria-label={`Remove ${languageItem}`}
+                                >
+                                  ×
+                                </button>
+                              </span>
+                            ))
+                          ) : (
+                            <span className="text-xs text-slate-400">No languages set.</span>
+                          )}
+                        </div>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          <Select
+                            value={languageDrafts[doctor.id] ?? ""}
+                            onValueChange={(value) => handleLanguageDraftChange(doctor.id, value)}
+                          >
+                            <SelectTrigger className="min-w-[200px]">
+                              <SelectValue placeholder="Select language" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {languageOptions.map((languageOption) => (
+                                <SelectItem key={languageOption} value={languageOption}>
+                                  {languageOption}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <button
+                            type="button"
+                            onClick={() => handleAddDoctorLanguage(index)}
+                            disabled={!languageDrafts[doctor.id]}
+                            className="rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            + Add
+                          </button>
+                        </div>
+                      </div>
                       <input
                         type="number"
                         step="0.1"

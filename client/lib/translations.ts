@@ -2812,6 +2812,7 @@ const baseTranslations: Record<string, TranslationEntry> = {
     "es-MX": "Idiomas hablados",
     vi: "Ngôn ngữ sử dụng",
   },
+  "No languages set": { ja: "対応言語が未設定です" },
   "Remove {language}": { ja: "{language} を削除" },
   "Add language": {
     ja: "言語を追加",

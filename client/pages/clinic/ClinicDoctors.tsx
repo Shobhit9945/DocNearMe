@@ -62,9 +62,15 @@ export default function ClinicDoctors() {
       data.doctors.map((doctor) => ({
         ...doctor,
         availability: Array.isArray(doctor.availability) ? doctor.availability : [],
+        languages: Array.isArray(doctor.languages)
+          ? doctor.languages.map((language) => language.trim()).filter(Boolean)
+          : [],
       })),
     );
   }, [data]);
+
+  const getDoctorLanguages = (doctor: ClinicDoctor) =>
+    (doctor.languages ?? []).map((language) => language.trim()).filter(Boolean);
 
   const handleFieldChange = (index: number, field: keyof ClinicDoctor, value: string) => {
     setDoctors((prev) => {
@@ -284,8 +290,7 @@ export default function ClinicDoctors() {
           {doctors.map((doctor, index) => {
             const specializationFallback = doctor.specialization?.trim() ?? "";
             const isEditing = editingDoctors[doctor.id] ?? false;
-            const visibleLanguages =
-              doctor.languages && doctor.languages.length > 0 ? doctor.languages : [t("English")];
+            const visibleLanguages = getDoctorLanguages(doctor);
             return (
               <div key={doctor.id} className="border border-gray-100 rounded-lg p-4 space-y-3">
                 <div className="flex flex-wrap items-start justify-between gap-4">
@@ -305,11 +310,15 @@ export default function ClinicDoctors() {
                       )}
                     </p>
                     <div className="flex flex-wrap gap-2 text-xs text-gray-500">
-                      {visibleLanguages.map((languageItem) => (
-                        <span key={languageItem} className="rounded-full border border-gray-200 px-2 py-0.5">
-                          {t(languageItem)}
-                        </span>
-                      ))}
+                      {visibleLanguages.length > 0 ? (
+                        visibleLanguages.map((languageItem) => (
+                          <span key={languageItem} className="rounded-full border border-gray-200 px-2 py-0.5">
+                            {t(languageItem)}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="text-gray-400">{t("No languages set")}</span>
+                      )}
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-2">
@@ -422,25 +431,29 @@ export default function ClinicDoctors() {
                     <div className="space-y-2">
                       <label className="text-xs font-medium text-gray-500 block">{t("Languages spoken")}</label>
                       <div className="flex flex-wrap gap-2">
-                        {(doctor.languages ?? [t("English")]).map((languageItem) => {
-                          const label = t(languageItem);
-                          return (
-                            <span
-                              key={languageItem}
-                              className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-xs text-gray-600"
-                            >
-                              {label}
-                              <button
-                                type="button"
-                                onClick={() => handleRemoveLanguage(index, languageItem)}
-                                className="text-gray-400 hover:text-gray-600"
-                                aria-label={t("Remove {language}", `Remove ${label}`).replace("{language}", label)}
+                        {getDoctorLanguages(doctor).length > 0 ? (
+                          getDoctorLanguages(doctor).map((languageItem) => {
+                            const label = t(languageItem);
+                            return (
+                              <span
+                                key={languageItem}
+                                className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-xs text-gray-600"
                               >
-                                ×
-                              </button>
-                            </span>
-                          );
-                        })}
+                                {label}
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveLanguage(index, languageItem)}
+                                  className="text-gray-400 hover:text-gray-600"
+                                  aria-label={t("Remove {language}", `Remove ${label}`).replace("{language}", label)}
+                                >
+                                  ×
+                                </button>
+                              </span>
+                            );
+                          })
+                        ) : (
+                          <span className="text-xs text-gray-400">{t("No languages set")}</span>
+                        )}
                       </div>
                       <div className="flex flex-wrap gap-2">
                         <Select
