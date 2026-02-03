@@ -41,9 +41,13 @@ const clinicUpdateSchema = z.object({
   name: z.string().trim().min(2).max(120).optional(),
   location: z.string().trim().min(2).max(200).optional(),
   phone: z.string().trim().min(3).max(40).optional(),
+  email: z.string().trim().email().optional(),
   image: z.string().trim().min(5).optional(),
   nextAvailability: z.string().trim().min(2).max(80).optional(),
   immediateWoundCare: z.boolean().optional(),
+  notification_email_enabled: z.boolean().optional(),
+  notification_phone_enabled: z.boolean().optional(),
+  notification_line_enabled: z.boolean().optional(),
   hours: z
     .object({
       weekdays: z
@@ -212,6 +216,10 @@ export const buildClinicProfile = (clinic: any, specializations?: string[], next
   immediateWoundCare: Boolean(clinic.immediateWoundCare),
   googlePlaceId: clinic.googlePlaceId,
   phone: clinic.phone,
+  email: clinic.email,
+  notification_email_enabled: clinic.notification_email_enabled ?? true,
+  notification_phone_enabled: Boolean(clinic.notification_phone_enabled),
+  notification_line_enabled: Boolean(clinic.notification_line_enabled),
   hours: clinic.hours,
   bookingClosures: clinic.bookingClosures,
   pricing: clinic.pricing,
@@ -445,6 +453,10 @@ export const handleUpdateClinicProfile: RequestHandler = async (req, res, next) 
     }
 
     const payload = clinicUpdateSchema.parse(parseRequestBody(req.body)) as ClinicProfileUpdateRequest;
+    const enforcedPayload: ClinicProfileUpdateRequest = {
+      ...payload,
+      notification_email_enabled: true,
+    };
     const clinics = await getClinicInfoCollection();
     const existing = await clinics.findOne({ clinicId });
     if (!existing) {
@@ -455,7 +467,7 @@ export const handleUpdateClinicProfile: RequestHandler = async (req, res, next) 
       { clinicId },
       {
         $set: {
-          ...payload,
+          ...enforcedPayload,
           updatedAt: new Date(),
         },
       },

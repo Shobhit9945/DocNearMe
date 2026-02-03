@@ -35,6 +35,7 @@ export interface Appointment {
   patientEmail?: string;
   patientVisaType?: string;
   sharedRecord?: SharedMedicalRecord;
+  clinicNotificationSentAt?: Date;
   createdAt: Date;
   updatedAt?: Date;
 }
@@ -266,6 +267,10 @@ export interface ClinicInfo {
   nextAvailability: string;
   googlePlaceId?: string;
   phone?: string;
+  email?: string;
+  notification_email_enabled?: boolean;
+  notification_phone_enabled?: boolean;
+  notification_line_enabled?: boolean;
   hours?: {
     weekdays: {
       start: string;

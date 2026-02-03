@@ -538,6 +538,10 @@ export interface ClinicProfile {
   immediateWoundCare: boolean;
   googlePlaceId?: string;
   phone?: string;
+  email?: string;
+  notification_email_enabled?: boolean;
+  notification_phone_enabled?: boolean;
+  notification_line_enabled?: boolean;
   hours?: ClinicHours;
   bookingClosures?: ClinicBookingClosure[];
   pricing?: ClinicPricing;
@@ -582,6 +586,7 @@ export interface ClinicProfileUpdateRequest {
   name?: string;
   location?: string;
   phone?: string;
+  email?: string;
   image?: string;
   nextAvailability?: string;
   immediateWoundCare?: boolean;
@@ -589,6 +594,9 @@ export interface ClinicProfileUpdateRequest {
   bookingClosures?: ClinicBookingClosure[];
   pricing?: ClinicPricing;
   photos?: ClinicPhoto[];
+  notification_email_enabled?: boolean;
+  notification_phone_enabled?: boolean;
+  notification_line_enabled?: boolean;
 }
 
 export interface ClinicDoctorsUpdateRequest {

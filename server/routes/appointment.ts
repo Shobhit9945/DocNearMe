@@ -13,6 +13,7 @@ import {
   SharedMedicalRecord,
 } from "../types";
 import { sendEmail } from "../services/mailer";
+import { queueClinicBookingNotificationEmail } from "../services/clinic-booking-notifications";
 import { findConfirmedOverlap } from "./appointment-utils";
 import { getDateKey, isSlotInFutureJst } from "../lib/scheduling";
 
@@ -594,32 +595,7 @@ export const handleRequestAppointment = async (req: Request, res: Response) => {
       }
     }
 
-    const clinicEmail = buildClinicNotificationEmail(clinicKey);
-    const baseUrl = buildAppBaseUrl();
-    const confirmUrl = `${baseUrl}/api/appointments/${appointmentId}/confirm?token=${rawToken}`;
-    const declineUrl = `${baseUrl}/api/appointments/${appointmentId}/decline?token=${rawToken}`;
-    try {
-      await sendEmail({
-        to: clinicEmail,
-        subject: "New appointment request pending confirmation",
-        text: [
-          `Clinic ${clinicKey},`,
-          "",
-          "A new appointment request is awaiting your confirmation.",
-          `Request ID: ${appointmentId}`,
-          `Patient: ${record.patientName ?? "Patient"}`,
-          `Visa type: ${record.patientVisaType ?? "Not provided"}`,
-          `Preferred: ${record.preferredStart} (${record.slot})`,
-          "",
-          `Confirm: ${confirmUrl}`,
-          `Decline: ${declineUrl}`,
-          "",
-          "This confirmation link expires in 48 hours.",
-        ].join("\n"),
-      });
-    } catch (error) {
-      console.error("Failed to send clinic appointment request email", error);
-    }
+    queueClinicBookingNotificationEmail(clinicKey, appointmentId);
 
     const responseAppointment = serializeAppointment({ ...record, _id: appointmentId });
 

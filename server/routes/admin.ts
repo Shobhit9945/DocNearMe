@@ -57,6 +57,10 @@ const clinicSchema = z.object({
   nextAvailability: z.string().trim().min(2).max(80),
   googlePlaceId: z.string().trim().min(2).max(120).optional(),
   phone: z.string().trim().min(3).max(40).optional(),
+  email: z.string().trim().email().optional(),
+  notification_email_enabled: z.boolean().optional(),
+  notification_phone_enabled: z.boolean().optional(),
+  notification_line_enabled: z.boolean().optional(),
   hours: clinicHoursSchema.optional(),
   bookingClosures: z
     .array(
@@ -150,6 +154,9 @@ export const handleAdminCreateClinic: RequestHandler = async (req, res, next) =>
     await clinics.insertOne({
       ...clinic,
       clinicId,
+      notification_email_enabled: clinic.notification_email_enabled ?? true,
+      notification_phone_enabled: clinic.notification_phone_enabled ?? false,
+      notification_line_enabled: clinic.notification_line_enabled ?? false,
       updatedAt: new Date(),
     });
 

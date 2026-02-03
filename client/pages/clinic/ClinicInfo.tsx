@@ -21,6 +21,7 @@ export default function ClinicInfo() {
   const [name, setName] = useState("");
   const [location, setLocation] = useState("");
   const [phone, setPhone] = useState("");
+  const [notificationEmail, setNotificationEmail] = useState("");
   const [image, setImage] = useState("");
   const [weekdayStart, setWeekdayStart] = useState("09:00");
   const [weekdayEnd, setWeekdayEnd] = useState("18:00");
@@ -52,6 +53,7 @@ export default function ClinicInfo() {
     setName(clinic.name ?? "");
     setLocation(clinic.location ?? "");
     setPhone(clinic.phone ?? "");
+    setNotificationEmail(clinic.email ?? "");
     setImage(clinic.image ?? "");
     const normalizedHours = normalizeClinicHours(clinic.hours);
     setWeekdayStart(normalizedHours.weekdays.start);
@@ -88,6 +90,7 @@ export default function ClinicInfo() {
     const trimmedName = name.trim();
     const trimmedLocation = location.trim();
     const trimmedPhone = phone.trim();
+    const trimmedNotificationEmail = notificationEmail.trim();
     const trimmedImage = image.trim();
     const trimmedFirstVisit = firstVisit.trim();
     const trimmedFollowUp = followUp.trim();
@@ -111,6 +114,7 @@ export default function ClinicInfo() {
       name: trimmedName || undefined,
       location: trimmedLocation || undefined,
       phone: trimmedPhone || undefined,
+      email: trimmedNotificationEmail || undefined,
       image: trimmedImage || undefined,
       immediateWoundCare,
       hours: {
@@ -128,6 +132,9 @@ export default function ClinicInfo() {
           }
         : undefined,
       photos: normalizedPhotos,
+      notification_email_enabled: true,
+      notification_phone_enabled: false,
+      notification_line_enabled: false,
     };
 
     setIsSaving(true);
@@ -198,6 +205,50 @@ export default function ClinicInfo() {
               {(clinic?.specializations ?? []).length > 0
                 ? specializationLabels
                 : t("Add doctor profiles to populate specialties.")}
+            </div>
+          </div>
+          <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-4 space-y-3">
+            <h3 className="text-sm font-semibold text-slate-700">{t("通知方法")}</h3>
+            <p className="text-xs text-slate-500">
+              {t("予約リクエストが入るとメールで通知が届きます。必要な場合のみ管理画面で承認してください。")}
+            </p>
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 text-sm text-slate-700">
+                <input
+                  type="checkbox"
+                  checked
+                  disabled
+                  className="h-4 w-4 rounded border-slate-300 text-[#3A12DB]"
+                />
+                <span>{t("Email（必須）")}</span>
+                <span className="text-xs text-slate-500">{t("ON")}</span>
+              </label>
+              <label className="flex items-center gap-2 text-sm text-slate-500">
+                <input type="checkbox" disabled className="h-4 w-4 rounded border-slate-200" />
+                <span>{t("Phone（自動音声）")}</span>
+                <span className="text-xs text-slate-400">{t("準備中")}</span>
+              </label>
+              <label className="flex items-center gap-2 text-sm text-slate-500">
+                <input type="checkbox" disabled className="h-4 w-4 rounded border-slate-200" />
+                <span>{t("LINE Bot")}</span>
+                <span className="text-xs text-slate-400">{t("準備中")}</span>
+              </label>
+              <label className="flex items-center gap-2 text-sm text-slate-500">
+                <input type="checkbox" disabled className="h-4 w-4 rounded border-slate-200" />
+                <span>{t("Dashboard only")}</span>
+                <span className="text-xs text-slate-400">{t("準備中")}</span>
+              </label>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-700 block mb-2">
+                {t("通知先メールアドレス")}
+              </label>
+              <Input
+                value={notificationEmail}
+                onChange={(event) => setNotificationEmail(event.target.value)}
+                placeholder={t("clinic@example.com")}
+                type="email"
+              />
             </div>
           </div>
           <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">

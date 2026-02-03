@@ -1,6 +1,11 @@
 import net from "net";
 import tls from "tls";
 
+// SMTP setup notes:
+// - Local dev: add SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM to your .env file.
+// - Hosting (Netlify): configure the same variables in Site settings → Environment variables.
+// - Optional: set SMTP_LOG_ONLY=true to log email attempts without sending.
+
 type SendEmailInput = {
   to: string;
   subject: string;
