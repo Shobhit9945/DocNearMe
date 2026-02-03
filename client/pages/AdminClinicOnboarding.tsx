@@ -293,20 +293,37 @@ export default function AdminClinicOnboarding() {
     setSubmitError("");
     setSubmitSuccess(null);
 
+    const slotMinutes = clinic.hours?.slotMinutes;
+    const normalizedSlotMinutes =
+      typeof slotMinutes === "number" && Number.isFinite(slotMinutes) && slotMinutes >= 10
+        ? slotMinutes
+        : undefined;
+
     const payload: AdminCreateClinicRequest = {
       clinic: {
         ...clinic,
         id: clinic.id.trim(),
         rating: Number(clinic.rating),
         specializations: [],
+        googlePlaceId: clinic.googlePlaceId?.trim() ? clinic.googlePlaceId.trim() : undefined,
+        phone: clinic.phone?.trim() ? clinic.phone.trim() : undefined,
+        email: clinic.email?.trim() ? clinic.email.trim() : undefined,
         notificationEmailEnabled: true,
         notificationPhoneEnabled: false,
         notificationLineEnabled: false,
         hours: clinic.hours
           ? {
               ...clinic.hours,
+              weekdays: {
+                start: clinic.hours.weekdays.start.trim(),
+                end: clinic.hours.weekdays.end.trim(),
+              },
+              weekend: {
+                start: clinic.hours.weekend.start.trim(),
+                end: clinic.hours.weekend.end.trim(),
+              },
               closedDays: normalizeList(closedDaysText),
-              slotMinutes: clinic.hours.slotMinutes ? Number(clinic.hours.slotMinutes) : undefined,
+              slotMinutes: normalizedSlotMinutes,
             }
           : undefined,
         bookingClosures: closures
@@ -356,7 +373,16 @@ export default function AdminClinicOnboarding() {
       });
       if (!response.ok) {
         const message = await response.json().catch(() => ({}));
-        throw new Error(message?.error ?? "Unable to create clinic.");
+        const issues = Array.isArray(message?.issues)
+          ? message.issues
+              .map((issue: { path?: string; message?: string }) => {
+                const path = issue?.path ? `${issue.path}: ` : "";
+                return `${path}${issue?.message ?? ""}`.trim();
+              })
+              .filter(Boolean)
+              .join(" ")
+          : "";
+        throw new Error(issues || message?.error || "Unable to create clinic.");
       }
       const data = (await response.json()) as AdminCreateClinicResponse;
       setSubmitSuccess(data);

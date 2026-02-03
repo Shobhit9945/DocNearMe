@@ -1,5 +1,5 @@
 import { RequestHandler } from "express";
-import { z } from "zod";
+import { ZodError, z } from "zod";
 import bcryptjs from "bcryptjs";
 import {
   getClinicAccountsCollection,
@@ -214,6 +214,16 @@ export const handleAdminCreateClinic: RequestHandler = async (req, res, next) =>
     };
     return res.status(201).json(response);
   } catch (error) {
+    if (error instanceof ZodError) {
+      return res.status(400).json({
+        error: "Invalid clinic payload.",
+        detail: "validation_error",
+        issues: error.issues.map((issue) => ({
+          path: issue.path.join("."),
+          message: issue.message,
+        })),
+      });
+    }
     return next(error);
   }
 };
