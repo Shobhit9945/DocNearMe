@@ -172,12 +172,13 @@ export const sendClinicBookingNotificationCall = async (
     logger.info("[clinic-call] call initiated", { clinicId, appointmentId });
     return { queued: true } as const;
   } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
     logger.error("[clinic-call] call failed", {
       clinicId,
       appointmentId,
-      error: error instanceof Error ? error.message : String(error),
+      error: message,
     });
-    return { queued: false, reason: "twilio_error" } as const;
+    return { queued: false, reason: `twilio_error:${message}` } as const;
   }
 };
 
