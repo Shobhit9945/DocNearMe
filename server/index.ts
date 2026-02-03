@@ -64,6 +64,7 @@ import {
   handleRenameVaultDoc,
   handleUpdateVaultPassword,
 } from "./routes/vault";
+import { handleVoiceAppointment, handleVoiceAppointmentResponse } from "./routes/voice";
 import { handleGeocode, handlePlaceAutocomplete, handlePlaceDetails } from "./routes/google-maps";
 import {
   handleClinicCredentials,
@@ -84,15 +85,6 @@ import { requireAdminAuth } from "./middleware/admin-auth";
 import { handleAdminAuthCheck, handleAdminClinicList, handleAdminCreateClinic } from "./routes/admin";
 import { handleGetProfile, handleUpdateProfile } from "./routes/profile";
 import { handleTranslate } from "./routes/translate";
-import {
-  handleCreateVaultDoc,
-  handleCreateVaultKeys,
-  handleDeleteVaultDoc,
-  handleGetVaultKeys,
-  handleListVaultDocs,
-  handleRenameVaultDoc,
-  handleUpdateVaultPassword,
-} from "./routes/vault";
 
 export async function createServer(): Promise<Express> {
   const app = express();
@@ -229,13 +221,8 @@ export async function createServer(): Promise<Express> {
   app.post("/api/vault/docs", requireAuth, handleCreateVaultDoc);
   app.patch("/api/vault/docs/:id", requireAuth, handleRenameVaultDoc);
   app.delete("/api/vault/docs/:id", requireAuth, handleDeleteVaultDoc);
-  app.get("/api/vault/keys", requireAuth, handleGetVaultKeys);
-  app.post("/api/vault/keys", requireAuth, handleCreateVaultKeys);
-  app.put("/api/vault/keys/password", requireAuth, handleUpdateVaultPassword);
-  app.get("/api/vault/docs", requireAuth, handleListVaultDocs);
-  app.post("/api/vault/docs", requireAuth, handleCreateVaultDoc);
-  app.delete("/api/vault/docs/:id", requireAuth, handleDeleteVaultDoc);
-  app.patch("/api/vault/docs/:id", requireAuth, handleRenameVaultDoc);
+  app.post("/api/voice/appointment", handleVoiceAppointment);
+  app.post("/api/voice/appointment/response", handleVoiceAppointmentResponse);
   app.get("/api/clinics/:clinicId/reviews", handleListClinicReviews);
   app.post("/api/clinics/:clinicId/reviews", handleCreateClinicReview);
   app.patch("/api/clinics/:clinicId/reviews/:reviewId", handleUpdateClinicReview);

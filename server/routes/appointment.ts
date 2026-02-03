@@ -20,6 +20,7 @@ import {
 } from "../types";
 import { sendEmail } from "../services/mailer";
 import { queueClinicBookingNotificationEmail } from "../services/clinic-booking-notifications";
+import { sendClinicBookingNotificationCall } from "../services/twilio-voice";
 import { findConfirmedOverlap } from "./appointment-utils";
 import { getDateKey, isClinicClosedOnDate, isSlotInFutureJst, normalizeClinicHours } from "../lib/scheduling";
 
@@ -613,6 +614,9 @@ export const handleRequestAppointment = async (req: Request, res: Response) => {
     }
 
     queueClinicBookingNotificationEmail(clinicKey, appointmentId);
+    sendClinicBookingNotificationCall(clinicKey, appointmentId).catch((error) => {
+      console.error("Failed to send clinic phone notification", error);
+    });
 
     const responseAppointment = serializeAppointment({ ...record, _id: appointmentId });
 

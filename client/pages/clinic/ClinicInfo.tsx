@@ -7,6 +7,7 @@ import { getClinicAuthHeader } from "@/lib/clinic-auth";
 import { useTranslation } from "@/lib/i18n";
 import { useAddressSearch } from "@/hooks/useAddressSearch";
 import { normalizeClinicHours } from "@/lib/scheduling";
+import { phoneCountryOptions } from "@/lib/phone-countries";
 import type { ClinicBookingClosure, ClinicProfile, ClinicProfileUpdateRequest } from "@shared/api";
 
 const DAYS_OF_WEEK = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
@@ -29,7 +30,9 @@ export default function ClinicInfo() {
   const [location, setLocation] = useState("");
   const [locationInput, setLocationInput] = useState("");
   const [phone, setPhone] = useState("");
+  const [phoneDialCode, setPhoneDialCode] = useState("+81");
   const [notificationEmail, setNotificationEmail] = useState("");
+  const [notificationPhoneEnabled, setNotificationPhoneEnabled] = useState(false);
   const [immediateWoundCare, setImmediateWoundCare] = useState(false);
   const [image, setImage] = useState("");
   const [weekdayStart, setWeekdayStart] = useState("09:00");
@@ -49,10 +52,12 @@ export default function ClinicInfo() {
   const [isSavingBasic, setIsSavingBasic] = useState(false);
   const [isSavingHours, setIsSavingHours] = useState(false);
   const [isSavingPhotos, setIsSavingPhotos] = useState(false);
+  const [isSavingNotifications, setIsSavingNotifications] = useState(false);
   const [isEditingBasic, setIsEditingBasic] = useState(false);
   const [isEditingHours, setIsEditingHours] = useState(false);
   const [isEditingClosures, setIsEditingClosures] = useState(false);
   const [isEditingPhotos, setIsEditingPhotos] = useState(false);
+  const [isEditingNotifications, setIsEditingNotifications] = useState(false);
 
   const {
     suggestions: locationSuggestions,
@@ -74,8 +79,19 @@ export default function ClinicInfo() {
     setName(nextClinic.name ?? "");
     setLocation(nextClinic.location ?? "");
     setLocationInput(nextClinic.location ?? "");
-    setPhone(nextClinic.phone ?? "");
+    const rawPhone = nextClinic.phone ?? "";
+    setPhone(rawPhone);
+    if (rawPhone.startsWith("+")) {
+      const match = phoneCountryOptions
+        .slice()
+        .sort((a, b) => b.dialCode.length - a.dialCode.length)
+        .find((option) => rawPhone.startsWith(option.dialCode));
+      if (match) {
+        setPhoneDialCode(match.dialCode);
+      }
+    }
     setNotificationEmail(nextClinic.email ?? "");
+    setNotificationPhoneEnabled(Boolean(nextClinic.notificationPhoneEnabled));
     setImmediateWoundCare(Boolean(nextClinic.immediateWoundCare));
     setImage(nextClinic.image ?? "");
     const normalizedHours = normalizeClinicHours(nextClinic.hours);
@@ -125,17 +141,34 @@ export default function ClinicInfo() {
     const trimmedPhone = phone.trim();
     const trimmedNotificationEmail = notificationEmail.trim();
 
+    const normalizePhone = (value: string, dialCode: string) => {
+      if (!value) return "";
+      const compact = value.replace(/[\s\-()]/g, "");
+      if (compact.startsWith("+")) return compact;
+      const digits = compact.replace(/\D/g, "").replace(/^0+/, "");
+      return `${dialCode}${digits}`;
+    };
+
+    const normalizedPhone = normalizePhone(trimmedPhone, phoneDialCode);
+    if (normalizedPhone && !/^\+\d{7,15}$/.test(normalizedPhone)) {
+      toast({
+        title: t("Invalid phone number"),
+        description: t("Phone number must be in E.164 format."),
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsSavingBasic(true);
     try {
       const payload: ClinicProfileUpdateRequest = {
         name: trimmedName || undefined,
         location: trimmedLocation || undefined,
-        phone: trimmedPhone || undefined,
+        phone: normalizedPhone || undefined,
         email: trimmedNotificationEmail || undefined,
         googlePlaceId: clinic?.googlePlaceId,
         immediateWoundCare,
         notificationEmailEnabled: true,
-        notificationPhoneEnabled: false,
         notificationLineEnabled: false,
       };
       const response = await fetch("/api/clinic/me", {
@@ -153,6 +186,9 @@ export default function ClinicInfo() {
       }
       const updated = (await response.json()) as { clinic: ClinicProfile };
       setClinic(updated.clinic);
+      if (normalizedPhone) {
+        setPhone(normalizedPhone);
+      }
       toast({ title: t("Saved"), description: t("Basic information updated.") });
       setIsEditingBasic(false);
     } catch (error) {
@@ -315,6 +351,41 @@ export default function ClinicInfo() {
     }
   };
 
+  const handleNotificationsSave = async () => {
+    setIsSavingNotifications(true);
+    try {
+      const payload: ClinicProfileUpdateRequest = {
+        notificationEmailEnabled: true,
+        notificationPhoneEnabled,
+        notificationLineEnabled: false,
+      };
+      const response = await fetch("/api/clinic/me", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          ...getClinicAuthHeader(),
+        },
+        body: JSON.stringify(payload),
+      });
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error?.error ?? t("Unable to save notification settings."));
+      }
+      const updated = (await response.json()) as { clinic: ClinicProfile };
+      setClinic(updated.clinic);
+      toast({ title: t("Saved"), description: t("Notification settings updated.") });
+      setIsEditingNotifications(false);
+    } catch (error) {
+      toast({
+        title: t("Save failed"),
+        description: error instanceof Error ? error.message : t("Please try again."),
+        variant: "destructive",
+      });
+    } finally {
+      setIsSavingNotifications(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <LoadingScreen
@@ -345,7 +416,27 @@ export default function ClinicInfo() {
           </div>
           <div>
             <label className="text-sm font-medium text-gray-700 block mb-2">{t("Phone")}</label>
-            <Input value={phone} onChange={(event) => setPhone(event.target.value)} disabled={!isEditingBasic} />
+            <div className="flex gap-2">
+              <select
+                value={phoneDialCode}
+                onChange={(event) => setPhoneDialCode(event.target.value)}
+                disabled={!isEditingBasic}
+                className="w-32 rounded-lg border border-slate-200 bg-white px-2 py-2 text-sm text-slate-700"
+              >
+                {phoneCountryOptions.map((option) => (
+                  <option key={option.iso} value={option.dialCode}>
+                    {option.flag} {option.name} ({option.dialCode})
+                  </option>
+                ))}
+              </select>
+              <Input
+                value={phone}
+                onChange={(event) => setPhone(event.target.value)}
+                disabled={!isEditingBasic}
+                placeholder={t("Enter phone without country code")}
+              />
+            </div>
+            <p className="text-xs text-slate-500 mt-2">{t("We will format this as E.164 for calls.")}</p>
           </div>
         </div>
         <div>
@@ -671,16 +762,45 @@ export default function ClinicInfo() {
             )}
           </p>
         </div>
+        <div className="flex gap-2">
+          {isEditingNotifications ? (
+            <>
+              <Button onClick={handleNotificationsSave} disabled={isSavingNotifications}>
+                {isSavingNotifications ? t("Saving...") : t("Save")}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => {
+                  if (clinic) hydrateClinicState(clinic);
+                  setIsEditingNotifications(false);
+                }}
+              >
+                {t("Cancel")}
+              </Button>
+            </>
+          ) : (
+            <Button type="button" variant="outline" onClick={() => setIsEditingNotifications(true)}>
+              {t("Edit")}
+            </Button>
+          )}
+        </div>
         <div className="space-y-2">
           <label className="flex items-center gap-2 text-sm text-slate-700">
             <input type="checkbox" checked disabled className="h-4 w-4 rounded border-slate-300 text-[#3A12DB]" />
             <span>{t("Email (required)")}</span>
             <span className="text-xs text-slate-500">{t("ON")}</span>
           </label>
-          <label className="flex items-center gap-2 text-sm text-slate-500">
-            <input type="checkbox" disabled className="h-4 w-4 rounded border-slate-200" />
+          <label className="flex items-center gap-2 text-sm text-slate-700">
+            <input
+              type="checkbox"
+              checked={notificationPhoneEnabled}
+              onChange={(event) => setNotificationPhoneEnabled(event.target.checked)}
+              disabled={!isEditingNotifications}
+              className="h-4 w-4 rounded border-slate-300 text-[#3A12DB]"
+            />
             <span>{t("Phone (automated call)")}</span>
-            <span className="text-xs text-slate-400">{t("Coming soon")}</span>
+            <span className="text-xs text-slate-500">{notificationPhoneEnabled ? t("ON") : t("OFF")}</span>
           </label>
           <label className="flex items-center gap-2 text-sm text-slate-500">
             <input type="checkbox" disabled className="h-4 w-4 rounded border-slate-200" />
