@@ -1084,6 +1084,12 @@ export default function Appointment() {
       timeLabel: selectedSlot ?? "Time pending",
       notes,
     };
+    const safeDetails = {
+      ...details,
+      clinicName: details.clinicName || t("Clinic"),
+      doctorName: details.doctorName || t("Any available doctor"),
+      specialization: details.specialization || t("General"),
+    };
 
     return (
       <PageScaffold contentClassName="pb-28 lg:pb-12">
@@ -1110,38 +1116,42 @@ export default function Appointment() {
               <div className="grid gap-3 text-sm text-slate-700">
                 <div className="flex items-start justify-between gap-3">
                   <span className="text-slate-500">Clinic</span>
-                  <span className="font-medium text-slate-900">{t(details.clinicName)}</span>
+                  <span className="font-medium text-slate-900">
+                    <TranslatedText text={safeDetails.clinicName} inline />
+                  </span>
                 </div>
                 <div className="flex items-start justify-between gap-3">
                   <span className="text-slate-500">Patient</span>
-                  <span className="font-medium text-slate-900">{details.patientName}</span>
+                  <span className="font-medium text-slate-900">{safeDetails.patientName}</span>
                 </div>
                 <div className="flex items-start justify-between gap-3">
                   <span className="text-slate-500">Doctor</span>
-                  <span className="font-medium text-slate-900">{t(details.doctorName)}</span>
+                  <span className="font-medium text-slate-900">
+                    <TranslatedText text={safeDetails.doctorName} inline />
+                  </span>
                 </div>
                 <div className="flex items-start justify-between gap-3">
                   <span className="text-slate-500">Specialization</span>
-                  <span className="font-medium text-slate-900">{t(details.specialization)}</span>
+                  <span className="font-medium text-slate-900">{t(safeDetails.specialization)}</span>
                 </div>
                 <div className="flex items-start justify-between gap-3">
                   <span className="text-slate-500">Date</span>
-                  <span className="font-medium text-slate-900">{details.dateLabel}</span>
+                  <span className="font-medium text-slate-900">{safeDetails.dateLabel}</span>
                 </div>
                 <div className="flex items-start justify-between gap-3">
                   <span className="text-slate-500">Time</span>
-                  <span className="font-medium text-slate-900">{details.timeLabel}</span>
+                  <span className="font-medium text-slate-900">{safeDetails.timeLabel}</span>
                 </div>
-                {details.patientEmail ? (
+                {safeDetails.patientEmail ? (
                   <div className="flex items-start justify-between gap-3">
                     <span className="text-slate-500">Email</span>
-                    <span className="font-medium text-slate-900">{details.patientEmail}</span>
+                    <span className="font-medium text-slate-900">{safeDetails.patientEmail}</span>
                   </div>
                 ) : null}
-                {details.notes ? (
+                {safeDetails.notes ? (
                   <div className="flex items-start justify-between gap-3">
                     <span className="text-slate-500">Notes</span>
-                    <span className="font-medium text-slate-900">{details.notes}</span>
+                    <span className="font-medium text-slate-900">{safeDetails.notes}</span>
                   </div>
                 ) : null}
               </div>
