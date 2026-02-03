@@ -118,6 +118,7 @@ export interface AppointmentCreateResponse {
   id: string;
   appointment: AppointmentResponseItem;
   message: string;
+  phoneCallQueued?: boolean;
 }
 
 export interface AppointmentConfirmRequest {

@@ -929,6 +929,12 @@ export default function Appointment() {
       }
 
       const bookingId = "id" in data && data.id ? data.id : generateBookingId();
+      if ("phoneCallQueued" in data) {
+        console.info("[clinic-call] queued", {
+          appointmentId: bookingId,
+          queued: Boolean(data.phoneCallQueued),
+        });
+      }
 
       setConfirmationDetails({
         id: bookingId,
