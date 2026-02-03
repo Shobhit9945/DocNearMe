@@ -408,13 +408,16 @@ export default function MedicalRecords() {
         body: JSON.stringify({ name: trimmedName }),
       });
       const data = (await response.json()) as VaultDocRenameResponse;
-      if (!response.ok || !data.success) {
+        if (!response.ok) {
         if (response.status === 401) {
           throw new Error("Please sign in again to rename your records.");
         }
         throw new Error("Unable to rename record.");
       }
-      setRecords((prev) => prev.map((record) => (record.id === recordId ? data.record : record)));
+        if (!data.doc?.id) {
+          throw new Error("Unable to rename record.");
+        }
+        setRecords((prev) => prev.map((record) => (record.id === recordId ? data.doc : record)));
       setEditingRecordId(null);
       setRenameValue("");
       setInfoMessage(t("Record renamed."));
