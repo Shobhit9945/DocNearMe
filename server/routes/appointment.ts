@@ -1,7 +1,13 @@
 import crypto from "crypto";
 import { Request, Response } from "express";
 import { ObjectId } from "mongodb";
-import { getAppointmentsCollection, getClinicIntakeFormsCollection, getIntakeResponsesCollection, getPatientsCollection } from "../db";
+import {
+  getAppointmentsCollection,
+  getClinicInfoCollection,
+  getClinicIntakeFormsCollection,
+  getIntakeResponsesCollection,
+  getPatientsCollection,
+} from "../db";
 import {
   Appointment,
   AppointmentStatus,
@@ -15,7 +21,7 @@ import {
 import { sendEmail } from "../services/mailer";
 import { queueClinicBookingNotificationEmail } from "../services/clinic-booking-notifications";
 import { findConfirmedOverlap } from "./appointment-utils";
-import { getDateKey, isSlotInFutureJst } from "../lib/scheduling";
+import { getDateKey, isClinicClosedOnDate, isSlotInFutureJst, normalizeClinicHours } from "../lib/scheduling";
 
 const parseRequestBody = (body: unknown): Record<string, unknown> => {
   if (body instanceof Buffer) {
@@ -455,6 +461,17 @@ export const handleRequestAppointment = async (req: Request, res: Response) => {
     );
     if (conflict) {
       return res.status(409).json({ error: "Slot already booked" });
+    }
+
+    const clinicInfoCollection = await getClinicInfoCollection();
+    const clinicInfo = await clinicInfoCollection.findOne({ clinicId: clinicKey });
+    if (!clinicInfo) {
+      return res.status(404).json({ error: "Clinic not found." });
+    }
+
+    const closureCheck = isClinicClosedOnDate(preferredTimes.preferredStart, normalizeClinicHours(clinicInfo.hours), clinicInfo.bookingClosures);
+    if (closureCheck.closed) {
+      return res.status(409).json({ error: "Clinic is closed on the selected date." });
     }
 
     const clinicIntakeForm = await clinicIntakeForms.findOne({ clinicId: clinicKey });

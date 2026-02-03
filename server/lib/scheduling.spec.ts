@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getDateKey, isSlotInFutureJst } from "./scheduling";
+import { DEFAULT_CLINIC_HOURS, getDateKey, isClinicClosedOnDate, isSlotInFutureJst } from "./scheduling";
 
 describe("isSlotInFutureJst", () => {
   const now = new Date(Date.UTC(2026, 1, 3, 6, 0, 0)); // 2026-02-03 15:00 JST
@@ -23,5 +23,16 @@ describe("isSlotInFutureJst", () => {
     const past = new Date(Date.UTC(2026, 1, 3, 5, 30, 0)); // 14:30 JST
     expect(isSlotInFutureJst(todayKey, "invalid", now, future)).toBe(true);
     expect(isSlotInFutureJst(todayKey, "invalid", now, past)).toBe(false);
+  });
+});
+
+describe("isClinicClosedOnDate", () => {
+  it("blocks dates in closures", () => {
+    const date = new Date(Date.UTC(2026, 1, 3, 0, 0, 0));
+    const result = isClinicClosedOnDate(date, DEFAULT_CLINIC_HOURS, [
+      { startDate: "2026-02-03", endDate: "2026-02-03", reason: "Holiday" },
+    ]);
+
+    expect(result.closed).toBe(true);
   });
 });

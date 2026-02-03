@@ -71,7 +71,11 @@ import {
   handleClinicDoctorsAll,
   handleClinicList,
   handleClinicLogin,
+  handleClinicMe,
   handleClinicProfile,
+  handleAddClinicClosure,
+  handleDeleteClinicClosure,
+  handlePatchClinicMe,
   handleUpdateClinicDoctors,
   handleUpdateClinicProfile,
 } from "./routes/clinic";
@@ -163,6 +167,10 @@ export async function createServer(): Promise<Express> {
   app.delete("/api/clinic/appointments/:id", requireClinicAuth, handleClinicDeleteAppointment);
   app.get("/api/clinic/intake-form", requireClinicAuth, handleGetClinicIntakeFormForClinic);
   app.put("/api/clinic/intake-form", requireClinicAuth, handleUpdateClinicIntakeForm);
+  app.get("/api/clinic/me", requireClinicAuth, handleClinicMe);
+  app.patch("/api/clinic/me", requireClinicAuth, handlePatchClinicMe);
+  app.post("/api/clinic/me/closures", requireClinicAuth, handleAddClinicClosure);
+  app.delete("/api/clinic/me/closures/:closureId", requireClinicAuth, handleDeleteClinicClosure);
   app.post("/api/auth/signup", handleSignup);
   app.post("/api/auth/login", handleLogin);
   app.post("/api/auth/check-email", handleCheckEmail);

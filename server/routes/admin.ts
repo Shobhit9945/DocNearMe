@@ -58,6 +58,9 @@ const clinicSchema = z.object({
   googlePlaceId: z.string().trim().min(2).max(120).optional(),
   phone: z.string().trim().min(3).max(40).optional(),
   email: z.string().trim().email().optional(),
+  notificationEmailEnabled: z.boolean().optional(),
+  notificationPhoneEnabled: z.boolean().optional(),
+  notificationLineEnabled: z.boolean().optional(),
   notification_email_enabled: z.boolean().optional(),
   notification_phone_enabled: z.boolean().optional(),
   notification_line_enabled: z.boolean().optional(),
@@ -66,10 +69,12 @@ const clinicSchema = z.object({
     .array(
       z.object({
         startDate: z.string().trim().min(10).max(10),
-        endDate: z.string().trim().min(10).max(10),
+        endDate: z.string().trim().min(10).max(10).optional(),
         startTime: z.string().trim().min(4).max(10).optional(),
         endTime: z.string().trim().min(4).max(10).optional(),
         reason: z.string().trim().max(200).optional(),
+        id: z.string().trim().min(8).max(80).optional(),
+        createdAt: z.date().optional().or(z.string().optional()),
       }),
     )
     .optional(),
@@ -154,9 +159,12 @@ export const handleAdminCreateClinic: RequestHandler = async (req, res, next) =>
     await clinics.insertOne({
       ...clinic,
       clinicId,
-      notification_email_enabled: clinic.notification_email_enabled ?? true,
-      notification_phone_enabled: clinic.notification_phone_enabled ?? false,
-      notification_line_enabled: clinic.notification_line_enabled ?? false,
+      notificationEmailEnabled: clinic.notificationEmailEnabled ?? clinic.notification_email_enabled ?? true,
+      notificationPhoneEnabled: clinic.notificationPhoneEnabled ?? clinic.notification_phone_enabled ?? false,
+      notificationLineEnabled: clinic.notificationLineEnabled ?? clinic.notification_line_enabled ?? false,
+      notification_email_enabled: clinic.notificationEmailEnabled ?? clinic.notification_email_enabled ?? true,
+      notification_phone_enabled: clinic.notificationPhoneEnabled ?? clinic.notification_phone_enabled ?? false,
+      notification_line_enabled: clinic.notificationLineEnabled ?? clinic.notification_line_enabled ?? false,
       updatedAt: new Date(),
     });
 

@@ -1,4 +1,5 @@
 import { RequestHandler } from "express";
+import crypto from "crypto";
 import { z } from "zod";
 import bcryptjs from "bcryptjs";
 import jwt from "jsonwebtoken";
@@ -27,6 +28,8 @@ import {
   ClinicProfileResponse,
   ClinicProfileUpdateRequest,
 } from "@shared/api";
+import { validateClinicClosureDates } from "../lib/clinic-closures";
+import { isValidNotificationEmail } from "../lib/clinic-validation";
 
 const jwtSecret =
   process.env.CLINIC_JWT_SECRET ?? process.env.AUTH_JWT_SECRET ?? process.env.JWT_SECRET ?? "dev-secret-change-me";
@@ -45,6 +48,9 @@ const clinicUpdateSchema = z.object({
   image: z.string().trim().min(5).optional(),
   nextAvailability: z.string().trim().min(2).max(80).optional(),
   immediateWoundCare: z.boolean().optional(),
+  notificationEmailEnabled: z.boolean().optional(),
+  notificationPhoneEnabled: z.boolean().optional(),
+  notificationLineEnabled: z.boolean().optional(),
   notification_email_enabled: z.boolean().optional(),
   notification_phone_enabled: z.boolean().optional(),
   notification_line_enabled: z.boolean().optional(),
@@ -70,10 +76,12 @@ const clinicUpdateSchema = z.object({
     .array(
       z.object({
         startDate: z.string().trim().min(10).max(10),
-        endDate: z.string().trim().min(10).max(10),
+        endDate: z.string().trim().min(10).max(10).optional(),
         startTime: z.string().trim().min(4).max(10).optional(),
         endTime: z.string().trim().min(4).max(10).optional(),
         reason: z.string().trim().max(200).optional(),
+        id: z.string().trim().min(8).max(80).optional(),
+        createdAt: z.date().optional().or(z.string().optional()),
       }),
     )
     .optional(),
@@ -217,9 +225,12 @@ export const buildClinicProfile = (clinic: any, specializations?: string[], next
   googlePlaceId: clinic.googlePlaceId,
   phone: clinic.phone,
   email: clinic.email,
-  notification_email_enabled: clinic.notification_email_enabled ?? true,
-  notification_phone_enabled: Boolean(clinic.notification_phone_enabled),
-  notification_line_enabled: Boolean(clinic.notification_line_enabled),
+  notificationEmailEnabled: clinic.notificationEmailEnabled ?? clinic.notification_email_enabled ?? true,
+  notificationPhoneEnabled: Boolean(clinic.notificationPhoneEnabled ?? clinic.notification_phone_enabled),
+  notificationLineEnabled: Boolean(clinic.notificationLineEnabled ?? clinic.notification_line_enabled),
+  notification_email_enabled: clinic.notificationEmailEnabled ?? clinic.notification_email_enabled ?? true,
+  notification_phone_enabled: Boolean(clinic.notificationPhoneEnabled ?? clinic.notification_phone_enabled),
+  notification_line_enabled: Boolean(clinic.notificationLineEnabled ?? clinic.notification_line_enabled),
   hours: clinic.hours,
   bookingClosures: clinic.bookingClosures,
   pricing: clinic.pricing,
@@ -418,6 +429,31 @@ export const handleClinicProfile: RequestHandler = async (req, res, next) => {
   }
 };
 
+export const handleClinicMe: RequestHandler = async (req, res, next) => {
+  try {
+    const clinicId = req.clinicAuth?.clinicId;
+    if (!clinicId) {
+      return res.status(401).json({ error: "Authentication required." });
+    }
+    const clinics = await getClinicInfoCollection();
+    const clinic = await clinics.findOne({ clinicId });
+    if (!clinic) {
+      return res.status(404).json({ error: "Clinic not found." });
+    }
+    const doctors = await getClinicDoctorsCollection();
+    const doctorList = await doctors.find({ clinicId }).toArray();
+    const appointments = await getAppointmentsCollection();
+    const appointmentList = await appointments.find({ clinicId }).toArray();
+    const nextAvailability = computeNextAvailability(clinic, appointmentList);
+    const response: ClinicProfileResponse = {
+      clinic: buildClinicProfile(clinic, collectClinicSpecializations(doctorList), nextAvailability),
+    };
+    return res.json(response);
+  } catch (error) {
+    return next(error);
+  }
+};
+
 export const handleClinicDoctors: RequestHandler = async (req, res, next) => {
   try {
     const clinicId = req.params.clinicId;
@@ -455,6 +491,7 @@ export const handleUpdateClinicProfile: RequestHandler = async (req, res, next) 
     const payload = clinicUpdateSchema.parse(parseRequestBody(req.body)) as ClinicProfileUpdateRequest;
     const enforcedPayload: ClinicProfileUpdateRequest = {
       ...payload,
+      notificationEmailEnabled: true,
       notification_email_enabled: true,
     };
     const clinics = await getClinicInfoCollection();
@@ -485,6 +522,149 @@ export const handleUpdateClinicProfile: RequestHandler = async (req, res, next) 
         collectClinicSpecializations(doctorList),
         nextAvailability,
       ),
+    };
+    return res.json(response);
+  } catch (error) {
+    return next(error);
+  }
+};
+
+export const handlePatchClinicMe: RequestHandler = async (req, res, next) => {
+  try {
+    const clinicId = req.clinicAuth?.clinicId;
+    if (!clinicId) {
+      return res.status(401).json({ error: "Authentication required." });
+    }
+
+    const payload = clinicUpdateSchema.parse(parseRequestBody(req.body)) as ClinicProfileUpdateRequest;
+    if (payload.email && !isValidNotificationEmail(payload.email)) {
+      return res.status(400).json({ error: "Invalid notification email." });
+    }
+
+    const enforcedPayload: ClinicProfileUpdateRequest = {
+      ...payload,
+      notificationEmailEnabled: true,
+      notification_email_enabled: true,
+    };
+
+    const clinics = await getClinicInfoCollection();
+    const existing = await clinics.findOne({ clinicId });
+    if (!existing) {
+      return res.status(404).json({ error: "Clinic not found." });
+    }
+
+    await clinics.updateOne(
+      { clinicId },
+      {
+        $set: {
+          ...enforcedPayload,
+          updatedAt: new Date(),
+        },
+      },
+    );
+
+    const refreshed = await clinics.findOne({ clinicId });
+    const doctors = await getClinicDoctorsCollection();
+    const doctorList = await doctors.find({ clinicId }).toArray();
+    const appointments = await getAppointmentsCollection();
+    const appointmentList = await appointments.find({ clinicId }).toArray();
+    const nextAvailability = computeNextAvailability(refreshed ?? existing, appointmentList);
+    const response: ClinicProfileResponse = {
+      clinic: buildClinicProfile(refreshed ?? existing, collectClinicSpecializations(doctorList), nextAvailability),
+    };
+    return res.json(response);
+  } catch (error) {
+    return next(error);
+  }
+};
+
+export const handleAddClinicClosure: RequestHandler = async (req, res, next) => {
+  try {
+    const clinicId = req.clinicAuth?.clinicId;
+    if (!clinicId) {
+      return res.status(401).json({ error: "Authentication required." });
+    }
+
+    const payload = parseRequestBody(req.body) as any;
+    const result = validateClinicClosureDates(payload);
+    if (!result.ok) {
+      return res.status(400).json({ error: "Invalid closure dates." });
+    }
+
+    const reason = typeof payload?.reason === "string" ? payload.reason.trim() : "";
+    const closure = {
+      id: crypto.randomUUID(),
+      startDate: result.startDate,
+      endDate: result.endDate,
+      reason: reason || undefined,
+      createdAt: new Date(),
+    };
+
+    const clinics = await getClinicInfoCollection();
+    const clinic = await clinics.findOne({ clinicId });
+    if (!clinic) {
+      return res.status(404).json({ error: "Clinic not found." });
+    }
+
+    const nextClosures = [...(clinic.bookingClosures ?? []), closure];
+    await clinics.updateOne(
+      { clinicId },
+      {
+        $set: {
+          bookingClosures: nextClosures,
+          updatedAt: new Date(),
+        },
+      },
+    );
+
+    const refreshed = await clinics.findOne({ clinicId });
+    const doctors = await getClinicDoctorsCollection();
+    const doctorList = await doctors.find({ clinicId }).toArray();
+    const appointments = await getAppointmentsCollection();
+    const appointmentList = await appointments.find({ clinicId }).toArray();
+    const nextAvailability = computeNextAvailability(refreshed ?? clinic, appointmentList);
+    const response: ClinicProfileResponse = {
+      clinic: buildClinicProfile(refreshed ?? clinic, collectClinicSpecializations(doctorList), nextAvailability),
+    };
+    return res.json(response);
+  } catch (error) {
+    return next(error);
+  }
+};
+
+export const handleDeleteClinicClosure: RequestHandler = async (req, res, next) => {
+  try {
+    const clinicId = req.clinicAuth?.clinicId;
+    if (!clinicId) {
+      return res.status(401).json({ error: "Authentication required." });
+    }
+
+    const closureId = req.params.closureId;
+    const clinics = await getClinicInfoCollection();
+    const clinic = await clinics.findOne({ clinicId });
+    if (!clinic) {
+      return res.status(404).json({ error: "Clinic not found." });
+    }
+
+    const nextClosures = (clinic.bookingClosures ?? []).filter((entry) => entry.id !== closureId);
+    await clinics.updateOne(
+      { clinicId },
+      {
+        $set: {
+          bookingClosures: nextClosures,
+          updatedAt: new Date(),
+        },
+      },
+    );
+
+    const refreshed = await clinics.findOne({ clinicId });
+    const doctors = await getClinicDoctorsCollection();
+    const doctorList = await doctors.find({ clinicId }).toArray();
+    const appointments = await getAppointmentsCollection();
+    const appointmentList = await appointments.find({ clinicId }).toArray();
+    const nextAvailability = computeNextAvailability(refreshed ?? clinic, appointmentList);
+    const response: ClinicProfileResponse = {
+      clinic: buildClinicProfile(refreshed ?? clinic, collectClinicSpecializations(doctorList), nextAvailability),
     };
     return res.json(response);
   } catch (error) {

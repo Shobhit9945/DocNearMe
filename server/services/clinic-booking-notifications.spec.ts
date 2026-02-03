@@ -24,7 +24,7 @@ describe("clinic booking notifications", () => {
       specialization: "Dermatology",
       clinicId: "clinic-1",
       createdAt: new Date(),
-      clinicNotificationSentAt: new Date(),
+      notificationSentAt: new Date(),
     });
 
     expect(shouldSend).toBe(false);
@@ -107,6 +107,6 @@ describe("clinic booking notifications", () => {
     expect(result).toBe(true);
 
     const updated = await appointments.findOne({ _id: appointmentInsert.insertedId });
-    expect(updated?.clinicNotificationSentAt).toBeInstanceOf(Date);
+    expect(updated?.notificationSentAt).toBeInstanceOf(Date);
   });
 });

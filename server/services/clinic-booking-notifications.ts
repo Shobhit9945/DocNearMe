@@ -105,7 +105,7 @@ export const resolveClinicNotificationRecipient = (
 };
 
 export const shouldSendClinicBookingNotification = (appointment: Appointment | null) =>
-  Boolean(appointment && !appointment.clinicNotificationSentAt);
+  Boolean(appointment && !appointment.notificationSentAt);
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -195,7 +195,7 @@ export const sendClinicBookingNotificationEmail = async (
   if (sent) {
     await appointments.updateOne(
       { _id: appointmentLookup as unknown as ObjectId },
-      { $set: { clinicNotificationSentAt: new Date(), updatedAt: new Date() } },
+      { $set: { notificationSentAt: new Date(), updatedAt: new Date() } },
     );
   }
 

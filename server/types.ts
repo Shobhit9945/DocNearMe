@@ -35,7 +35,7 @@ export interface Appointment {
   patientEmail?: string;
   patientVisaType?: string;
   sharedRecord?: SharedMedicalRecord;
-  clinicNotificationSentAt?: Date;
+  notificationSentAt?: Date;
   createdAt: Date;
   updatedAt?: Date;
 }
@@ -268,6 +268,9 @@ export interface ClinicInfo {
   googlePlaceId?: string;
   phone?: string;
   email?: string;
+  notificationEmailEnabled?: boolean;
+  notificationPhoneEnabled?: boolean;
+  notificationLineEnabled?: boolean;
   notification_email_enabled?: boolean;
   notification_phone_enabled?: boolean;
   notification_line_enabled?: boolean;
@@ -284,11 +287,13 @@ export interface ClinicInfo {
     slotMinutes?: number;
   };
   bookingClosures?: {
+    id?: string;
     startDate: string;
-    endDate: string;
+    endDate?: string;
     startTime?: string;
     endTime?: string;
     reason?: string;
+    createdAt?: Date;
   }[];
   pricing?: {
     firstVisit: string;

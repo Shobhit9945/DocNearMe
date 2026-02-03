@@ -489,11 +489,13 @@ export interface ClinicHours {
 }
 
 export interface ClinicBookingClosure {
+  id?: string;
   startDate: string;
-  endDate: string;
+  endDate?: string;
   startTime?: string;
   endTime?: string;
   reason?: string;
+  createdAt?: string;
 }
 
 export interface ClinicPricing {
@@ -539,6 +541,9 @@ export interface ClinicProfile {
   googlePlaceId?: string;
   phone?: string;
   email?: string;
+  notificationEmailEnabled?: boolean;
+  notificationPhoneEnabled?: boolean;
+  notificationLineEnabled?: boolean;
   notification_email_enabled?: boolean;
   notification_phone_enabled?: boolean;
   notification_line_enabled?: boolean;
@@ -594,6 +599,9 @@ export interface ClinicProfileUpdateRequest {
   bookingClosures?: ClinicBookingClosure[];
   pricing?: ClinicPricing;
   photos?: ClinicPhoto[];
+  notificationEmailEnabled?: boolean;
+  notificationPhoneEnabled?: boolean;
+  notificationLineEnabled?: boolean;
   notification_email_enabled?: boolean;
   notification_phone_enabled?: boolean;
   notification_line_enabled?: boolean;
