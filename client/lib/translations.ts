@@ -2641,6 +2641,8 @@ const baseTranslations: Record<string, TranslationEntry> = {
   "Missing clinic session": { ja: "クリニックのセッションが見つかりません。" },
   "Unable to save clinic info.": { ja: "クリニック情報を保存できません。" },
   "Clinic info updated": { ja: "クリニック情報を更新しました" },
+  "Loading clinic info": { ja: "クリニック情報を読み込んでいます" },
+  "Preparing your clinic settings.": { ja: "クリニック設定を準備しています。" },
   "Changes are now visible to patients.": { ja: "変更内容は患者に反映されました。" },
   "Save failed": { ja: "保存に失敗しました" },
   "Update hours, pricing, and photos in one place.": { ja: "診療時間、料金、写真を一括で更新できます。" },
@@ -3331,6 +3333,7 @@ const baseTranslations: Record<string, TranslationEntry> = {
   "Sign in to manage your intake form.": { ja: "問診フォームを管理するにはサインインしてください。" },
   "Loading intake form...": { ja: "問診フォームを読み込んでいます..." },
   "Patient intake form": { ja: "患者問診フォーム" },
+  "Intake form": { ja: "問診フォーム" },
   "Build custom questions and decide when patients complete the intake form.": {
     ja: "カスタム質問を作成し、患者が問診フォームを回答するタイミングを決めます。",
   },
