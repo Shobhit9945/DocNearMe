@@ -131,14 +131,14 @@ export const sendClinicBookingNotificationCall = async (
 
   if (!appointment) {
     logger.warn("[clinic-call] appointment not found", { clinicId, appointmentId });
-    return false;
+    return { queued: false, reason: "appointment_not_found" } as const;
   }
 
   const clinics = await getClinicInfoCollection();
   const clinic = await clinics.findOne({ clinicId });
   if (!clinic) {
     logger.warn("[clinic-call] clinic not found", { clinicId, appointmentId });
-    return false;
+    return { queued: false, reason: "clinic_not_found" } as const;
   }
 
   if (!shouldSendClinicBookingNotificationCall(clinic)) {
@@ -146,13 +146,13 @@ export const sendClinicBookingNotificationCall = async (
       clinicId,
       appointmentId,
     });
-    return false;
+    return { queued: false, reason: "phone_notifications_disabled_or_missing" } as const;
   }
 
   let to = String(clinic.phone).trim();
   if (!to) {
     logger.warn("[clinic-call] missing phone", { clinicId, appointmentId });
-    return false;
+    return { queued: false, reason: "missing_phone" } as const;
   }
 
   let normalized = normalizeE164(to);
@@ -162,7 +162,7 @@ export const sendClinicBookingNotificationCall = async (
   }
   if (!ensureE164(normalized)) {
     logger.warn("[clinic-call] invalid phone format", { clinicId, appointmentId, phone: to });
-    return false;
+    return { queued: false, reason: "invalid_phone_format" } as const;
   }
   to = normalized;
 
@@ -170,14 +170,14 @@ export const sendClinicBookingNotificationCall = async (
   try {
     await createTwilioCall(to, url);
     logger.info("[clinic-call] call initiated", { clinicId, appointmentId });
-    return true;
+    return { queued: true } as const;
   } catch (error) {
     logger.error("[clinic-call] call failed", {
       clinicId,
       appointmentId,
       error: error instanceof Error ? error.message : String(error),
     });
-    return false;
+    return { queued: false, reason: "twilio_error" } as const;
   }
 };
 

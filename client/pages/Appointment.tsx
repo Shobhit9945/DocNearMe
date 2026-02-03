@@ -933,6 +933,7 @@ export default function Appointment() {
         console.info("[clinic-call] queued", {
           appointmentId: bookingId,
           queued: Boolean(data.phoneCallQueued),
+          reason: "phoneCallReason" in data ? data.phoneCallReason : undefined,
         });
       }
 

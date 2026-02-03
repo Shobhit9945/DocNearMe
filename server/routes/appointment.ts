@@ -615,10 +615,14 @@ export const handleRequestAppointment = async (req: Request, res: Response) => {
 
     queueClinicBookingNotificationEmail(clinicKey, appointmentId);
     let phoneCallQueued = false;
+    let phoneCallReason: string | undefined;
     try {
-      phoneCallQueued = await sendClinicBookingNotificationCall(clinicKey, appointmentId);
+      const callResult = await sendClinicBookingNotificationCall(clinicKey, appointmentId);
+      phoneCallQueued = callResult.queued;
+      phoneCallReason = callResult.queued ? undefined : callResult.reason;
     } catch (error) {
       console.error("Failed to send clinic phone notification", error);
+      phoneCallReason = "call_failed";
     }
 
     const responseAppointment = serializeAppointment({ ...record, _id: appointmentId });
@@ -629,6 +633,7 @@ export const handleRequestAppointment = async (req: Request, res: Response) => {
       appointment: responseAppointment,
       message: "Request received. Awaiting clinic confirmation.",
       phoneCallQueued,
+      phoneCallReason,
     });
   } catch (error) {
     console.error("Appointment request error", error);
