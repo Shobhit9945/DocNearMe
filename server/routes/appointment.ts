@@ -636,8 +636,9 @@ export const handleRequestAppointment = async (req: Request, res: Response) => {
       phoneCallReason,
     });
   } catch (error) {
-    console.error("Appointment request error", error);
-    res.status(500).json({ error: "Failed to submit appointment request" });
+    const message = error instanceof Error ? error.message : String(error);
+    console.error("Appointment request error", message);
+    res.status(500).json({ error: "Failed to submit appointment request", detail: message });
   }
 };
 
