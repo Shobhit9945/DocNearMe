@@ -130,6 +130,18 @@ const extraDisposableDomains = (process.env.DISPOSABLE_EMAIL_DOMAINS ?? "")
   .filter(Boolean);
 extraDisposableDomains.forEach((domain) => disposableEmailDomains.add(domain));
 
+// LOAD_TEST_BYPASS_START
+const loadTestBypassEnabled = process.env.LOAD_TEST_BYPASS === "true";
+const loadTestBypassKey = process.env.LOAD_TEST_BYPASS_KEY ?? "";
+
+const isLoadTestBypass = (req: Parameters<RequestHandler>[0], email: string) => {
+  if (!loadTestBypassEnabled || !loadTestBypassKey) return false;
+  const headerKey = req.get("x-load-test-key") ?? "";
+  if (headerKey !== loadTestBypassKey) return false;
+  return email.endsWith("@example.com");
+};
+// LOAD_TEST_BYPASS_END
+
 const getUserId = (user: PatientUser) => {
   if (user._id instanceof ObjectId) return user._id.toString();
   return String(user._id ?? "");
@@ -589,13 +601,20 @@ export const handleSignup: RequestHandler = async (req, res, next) => {
     const payload = signupSchema.parse(parseRequestBody(req.body)) as SignupRequest;
     const patients = await getPatientsCollection();
     const normalizedEmail = payload.email.toLowerCase();
-    const phoneProofValid = verifyPhoneProof(payload.phoneProofToken, payload.phone);
-    if (!phoneProofValid) {
-      return res.status(400).json({
-        error: "Phone verification required before signup.",
-        detail: "phone_verification_required",
-      });
+    // LOAD_TEST_BYPASS_START
+    const bypassOtpChecks = isLoadTestBypass(req, normalizedEmail);
+    // LOAD_TEST_BYPASS_END
+    // LOAD_TEST_BYPASS_START
+    if (!bypassOtpChecks) {
+      const phoneProofValid = verifyPhoneProof(payload.phoneProofToken, payload.phone);
+      if (!phoneProofValid) {
+        return res.status(400).json({
+          error: "Phone verification required before signup.",
+          detail: "phone_verification_required",
+        });
+      }
     }
+    // LOAD_TEST_BYPASS_END
 
     const existing = await patients.findOne({ email: normalizedEmail });
     if (existing) {
@@ -606,12 +625,16 @@ export const handleSignup: RequestHandler = async (req, res, next) => {
     }
 
     const otpRecord = await getLatestOtp(normalizedEmail, "signup");
-    if (!otpRecord || !otpRecord.verifiedAt || otpRecord.usedAt || otpRecord.expiresAt.getTime() < Date.now()) {
-      return res.status(400).json({
-        error: "Email verification required before signup.",
-        detail: "otp_required",
-      });
+    // LOAD_TEST_BYPASS_START
+    if (!bypassOtpChecks) {
+      if (!otpRecord || !otpRecord.verifiedAt || otpRecord.usedAt || otpRecord.expiresAt.getTime() < Date.now()) {
+        return res.status(400).json({
+          error: "Email verification required before signup.",
+          detail: "otp_required",
+        });
+      }
     }
+    // LOAD_TEST_BYPASS_END
 
     const passwordHash = await bcryptjs.hash(payload.password, 12);
     const user: PatientUser = {
@@ -649,15 +672,19 @@ export const handleSignup: RequestHandler = async (req, res, next) => {
       user: toAuthResponse(userWithId),
     };
 
-    const otps = await getEmailOtpsCollection();
-    await otps.updateOne(
-      { _id: otpRecord._id },
-      {
-        $set: {
-          usedAt: new Date(),
+    // LOAD_TEST_BYPASS_START
+    if (!bypassOtpChecks && otpRecord) {
+      const otps = await getEmailOtpsCollection();
+      await otps.updateOne(
+        { _id: otpRecord._id },
+        {
+          $set: {
+            usedAt: new Date(),
+          },
         },
-      },
-    );
+      );
+    }
+    // LOAD_TEST_BYPASS_END
 
     return res.status(201).json(response);
   } catch (error) {
