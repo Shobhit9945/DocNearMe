@@ -23,6 +23,13 @@ export function PageScaffold({ children, contentClassName }: PageScaffoldProps) 
             <LanguageSwitcher />
           </div>
           {children}
+          <footer className="mt-auto border-t border-slate-200 bg-white px-6 py-6 text-xs text-slate-500">
+            <p>
+              By continuing past this page, you agree to our Terms of Service, Cookie Policy, Privacy Policy and
+              Content Policies. All trademarks are properties of their respective owners.
+            </p>
+            <p className="mt-2">2025-2026 © DocNearMe™ Ltd. All rights reserved.</p>
+          </footer>
         </div>
       </div>
     </div>
