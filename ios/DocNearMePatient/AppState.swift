@@ -195,7 +195,11 @@ final class AppState: ObservableObject {
     func fetchAvailability(dateKey: String, clinicId: String) async -> AvailabilityResponse? {
         do {
             let response: AvailabilityResponse = try await APIClient.shared.request(
-                "/api/availability?date=\(dateKey)&clinicId=\(clinicId)"
+                "/api/availability",
+                queryItems: [
+                    URLQueryItem(name: "date", value: dateKey),
+                    URLQueryItem(name: "clinicId", value: clinicId),
+                ]
             )
             return response
         } catch {

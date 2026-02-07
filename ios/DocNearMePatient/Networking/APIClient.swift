@@ -14,9 +14,10 @@ final class APIClient {
         _ path: String,
         method: String = "GET",
         token: String? = nil,
-        body: Encodable? = nil
+        body: Encodable? = nil,
+        queryItems: [URLQueryItem]? = nil
     ) async throws -> T {
-        let url = AppConfig.baseURL.appendingPathComponent(path)
+        let url = try buildURL(path: path, queryItems: queryItems)
         var request = URLRequest(url: url)
         request.httpMethod = method
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -42,9 +43,10 @@ final class APIClient {
         _ path: String,
         method: String = "POST",
         token: String? = nil,
-        body: Encodable? = nil
+        body: Encodable? = nil,
+        queryItems: [URLQueryItem]? = nil
     ) async throws {
-        let url = AppConfig.baseURL.appendingPathComponent(path)
+        let url = try buildURL(path: path, queryItems: queryItems)
         var request = URLRequest(url: url)
         request.httpMethod = method
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -71,6 +73,19 @@ final class APIClient {
         if let error = payload["error"] as? String { return error }
         if let message = payload["message"] as? String { return message }
         return nil
+    }
+
+    private func buildURL(path: String, queryItems: [URLQueryItem]?) throws -> URL {
+        let base = AppConfig.baseURL.appendingPathComponent(path)
+        guard let queryItems, !queryItems.isEmpty else { return base }
+        guard var components = URLComponents(url: base, resolvingAgainstBaseURL: false) else {
+            throw APIError(message: "Invalid URL components.")
+        }
+        components.queryItems = queryItems
+        guard let url = components.url else {
+            throw APIError(message: "Unable to build request URL.")
+        }
+        return url
     }
 }
 
