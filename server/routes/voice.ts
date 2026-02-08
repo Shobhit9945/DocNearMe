@@ -30,14 +30,14 @@ const escapeTwiml = (value: string) =>
 const buildGatherTwiml = (message: string, actionUrl: string) => `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   <Gather numDigits="1" action="${escapeTwiml(actionUrl)}" method="POST" timeout="8">
-    <Say voice="alice" language="ja-JP">${escapeTwiml(message)}</Say>
+    <Say voice="alice" language="en-US">${escapeTwiml(message)}</Say>
   </Gather>
-  <Say voice="alice" language="ja-JP">入力が確認できませんでした。詳細はメールとダッシュボードをご確認ください。</Say>
+  <Say voice="alice" language="en-US">We did not receive your response. Please check your email and dashboard for details.</Say>
 </Response>`;
 
 const buildCompletionTwiml = (message: string) => `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <Say voice="alice" language="ja-JP">${escapeTwiml(message)}</Say>
+  <Say voice="alice" language="en-US">${escapeTwiml(message)}</Say>
   <Hangup />
 </Response>`;
 
@@ -171,13 +171,13 @@ export const handleVoiceAppointment: RequestHandler = async (req: Request, res: 
     });
 
     if (!appointmentId || !verifyVoiceToken(appointmentId, token)) {
-      return renderXml(res, buildCompletionTwiml("無効なリクエストです。"));
+      return renderXml(res, buildCompletionTwiml("Invalid request."));
     }
 
     const appointments = await getAppointmentsCollection();
     const appointment = await appointments.findOne({ _id: resolveAppointmentLookup(appointmentId) });
     if (!appointment) {
-      return renderXml(res, buildCompletionTwiml("予約が見つかりません。"));
+      return renderXml(res, buildCompletionTwiml("Appointment not found."));
     }
 
     const preferredStart = appointment.preferredStart ?? appointment.date;
@@ -204,7 +204,7 @@ export const handleVoiceAppointment: RequestHandler = async (req: Request, res: 
     console.error("[clinic-call] voice appointment error", {
       error: error instanceof Error ? error.message : String(error),
     });
-    return renderXml(res, buildCompletionTwiml("処理できませんでした。"));
+    return renderXml(res, buildCompletionTwiml("Unable to process the request."));
   }
 };
 
@@ -224,30 +224,30 @@ export const handleVoiceAppointmentResponse: RequestHandler = async (req: Reques
     });
 
     if (!appointmentId || !verifyVoiceToken(appointmentId, token)) {
-      return renderXml(res, buildCompletionTwiml("無効なリクエストです。"));
+      return renderXml(res, buildCompletionTwiml("Invalid request."));
     }
 
     const appointments = await getAppointmentsCollection();
     const appointment = await appointments.findOne({ _id: resolveAppointmentLookup(appointmentId) });
     if (!appointment) {
-      return renderXml(res, buildCompletionTwiml("予約が見つかりません。"));
+      return renderXml(res, buildCompletionTwiml("Appointment not found."));
     }
 
     if (appointment.status !== "PENDING_CLINIC") {
-      return renderXml(res, buildCompletionTwiml("このリクエストは保留中ではありません。"));
+      return renderXml(res, buildCompletionTwiml("This request is no longer pending."));
     }
 
     const result = await applyDecision(appointmentId, appointment, digit);
     if (!result.ok) {
-      return renderXml(res, buildCompletionTwiml("入力が無効です。ダッシュボードをご確認ください。"));
+      return renderXml(res, buildCompletionTwiml("Invalid input. Please check your dashboard."));
     }
 
-    return renderXml(res, buildCompletionTwiml("ありがとうございます。回答を受け付けました。"));
+    return renderXml(res, buildCompletionTwiml("Thank you. Your response has been recorded."));
   } catch (error) {
     console.error("[clinic-call] voice response error", {
       error: error instanceof Error ? error.message : String(error),
     });
-    return renderXml(res, buildCompletionTwiml("処理できませんでした。"));
+    return renderXml(res, buildCompletionTwiml("Unable to process the request."));
   }
 };
 
