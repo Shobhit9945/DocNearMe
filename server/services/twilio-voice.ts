@@ -186,11 +186,11 @@ export const sendClinicBookingNotificationCall = async (
 
 export const buildVoicePrompt = (details: VoiceNotificationDetails) => {
   return (
-    `Hello ${details.clinicName}. ` +
-    `You have a new appointment request for ${details.patientName}. ` +
-    `Requested time: ${details.requestedDateTime}. ` +
-    "Press 1 to accept, 2 to decline, 3 to request reschedule. " +
-    "Please view your email and dashboard for further information."
+    `${details.clinicName}の皆様。` +
+    `${details.patientName}様より新しい予約リクエストがあります。` +
+    `希望日時は${details.requestedDateTime}です。` +
+    "承諾は1、辞退は2、日程調整は3を押してください。" +
+    "詳細はメールとダッシュボードをご確認ください。"
   );
 };
 

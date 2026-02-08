@@ -30,16 +30,32 @@ const escapeTwiml = (value: string) =>
 const buildGatherTwiml = (message: string, actionUrl: string) => `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   <Gather numDigits="1" action="${escapeTwiml(actionUrl)}" method="POST" timeout="8">
-    <Say voice="alice">${escapeTwiml(message)}</Say>
+    <Say voice="alice" language="ja-JP">${escapeTwiml(message)}</Say>
   </Gather>
-  <Say voice="alice">We did not receive your response. Please check your email and dashboard for details.</Say>
+  <Say voice="alice" language="ja-JP">入力が確認できませんでした。詳細はメールとダッシュボードをご確認ください。</Say>
 </Response>`;
 
 const buildCompletionTwiml = (message: string) => `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <Say voice="alice">${escapeTwiml(message)}</Say>
+  <Say voice="alice" language="ja-JP">${escapeTwiml(message)}</Say>
   <Hangup />
 </Response>`;
+
+const extractDigits = (body: unknown, queryDigits?: string) => {
+  if (queryDigits) return queryDigits;
+  if (body && typeof body === "object" && "Digits" in (body as any)) {
+    return String((body as any).Digits ?? "");
+  }
+  if (body && typeof body === "object" && "digits" in (body as any)) {
+    return String((body as any).digits ?? "");
+  }
+  if (typeof body === "string") {
+    const params = new URLSearchParams(body);
+    const value = params.get("Digits") ?? params.get("digits") ?? "";
+    return value;
+  }
+  return "";
+};
 
 const resolveAppointmentLookup = (appointmentId: string) =>
   (ObjectId.isValid(appointmentId) ? new ObjectId(appointmentId) : appointmentId) as any;
@@ -153,13 +169,13 @@ export const handleVoiceAppointment: RequestHandler = async (req: Request, res: 
     });
 
     if (!appointmentId || !verifyVoiceToken(appointmentId, token)) {
-      return renderXml(res, buildCompletionTwiml("Invalid request."));
+      return renderXml(res, buildCompletionTwiml("無効なリクエストです。"));
     }
 
     const appointments = await getAppointmentsCollection();
     const appointment = await appointments.findOne({ _id: resolveAppointmentLookup(appointmentId) });
     if (!appointment) {
-      return renderXml(res, buildCompletionTwiml("Appointment not found."));
+      return renderXml(res, buildCompletionTwiml("予約が見つかりません。"));
     }
 
     const preferredStart = appointment.preferredStart ?? appointment.date;
@@ -186,7 +202,7 @@ export const handleVoiceAppointment: RequestHandler = async (req: Request, res: 
     console.error("[clinic-call] voice appointment error", {
       error: error instanceof Error ? error.message : String(error),
     });
-    return renderXml(res, buildCompletionTwiml("Unable to process the request."));
+    return renderXml(res, buildCompletionTwiml("処理できませんでした。"));
   }
 };
 
@@ -194,7 +210,7 @@ export const handleVoiceAppointmentResponse: RequestHandler = async (req: Reques
   try {
     const appointmentId = String(req.query.appointmentId ?? req.body?.appointmentId ?? "");
     const token = String(req.query.token ?? req.body?.token ?? "");
-    const digit = String(req.body?.Digits ?? req.query?.Digits ?? "");
+    const digit = extractDigits(req.body, String(req.query?.Digits ?? ""));
 
     console.info("[clinic-call] voice response", {
       appointmentId,
@@ -203,30 +219,30 @@ export const handleVoiceAppointmentResponse: RequestHandler = async (req: Reques
     });
 
     if (!appointmentId || !verifyVoiceToken(appointmentId, token)) {
-      return renderXml(res, buildCompletionTwiml("Invalid request."));
+      return renderXml(res, buildCompletionTwiml("無効なリクエストです。"));
     }
 
     const appointments = await getAppointmentsCollection();
     const appointment = await appointments.findOne({ _id: resolveAppointmentLookup(appointmentId) });
     if (!appointment) {
-      return renderXml(res, buildCompletionTwiml("Appointment not found."));
+      return renderXml(res, buildCompletionTwiml("予約が見つかりません。"));
     }
 
     if (appointment.status !== "PENDING_CLINIC") {
-      return renderXml(res, buildCompletionTwiml("This request is no longer pending."));
+      return renderXml(res, buildCompletionTwiml("このリクエストは保留中ではありません。"));
     }
 
     const result = await applyDecision(appointmentId, appointment, digit);
     if (!result.ok) {
-      return renderXml(res, buildCompletionTwiml("Invalid input. Please check your dashboard."));
+      return renderXml(res, buildCompletionTwiml("入力が無効です。ダッシュボードをご確認ください。"));
     }
 
-    return renderXml(res, buildCompletionTwiml("Thank you. Your response has been recorded."));
+    return renderXml(res, buildCompletionTwiml("ありがとうございます。回答を受け付けました。"));
   } catch (error) {
     console.error("[clinic-call] voice response error", {
       error: error instanceof Error ? error.message : String(error),
     });
-    return renderXml(res, buildCompletionTwiml("Unable to process the request."));
+    return renderXml(res, buildCompletionTwiml("処理できませんでした。"));
   }
 };
 

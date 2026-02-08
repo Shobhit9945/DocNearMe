@@ -637,6 +637,9 @@ export const handleRequestAppointment = async (req: Request, res: Response) => {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
+    if (message.includes("E11000") && message.includes("dateKey_1_slot_1_clinicId_1")) {
+      return res.status(409).json({ error: "Slot already booked" });
+    }
     console.error("Appointment request error", message);
     res.status(500).json({ error: "Failed to submit appointment request", detail: message });
   }
