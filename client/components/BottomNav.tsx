@@ -16,7 +16,7 @@ export function BottomNav() {
   ];
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-50 border-t border-gray-100 bg-white/95 shadow-[2px_0_20px_0_rgba(24,57,107,0.05)] backdrop-blur">
+    <div className="fixed bottom-2 left-3 right-3 z-50 rounded-2xl border border-gray-100 bg-white/95 shadow-[2px_0_20px_0_rgba(24,57,107,0.05)] backdrop-blur sm:left-4 sm:right-4">
       <div className="mx-auto w-full max-w-md px-3 pb-[max(env(safe-area-inset-bottom),12px)] pt-2 sm:px-4">
         <nav className="flex items-start justify-between gap-1">
           {navItems.map((item) => {

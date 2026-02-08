@@ -11,15 +11,15 @@ interface PageScaffoldProps {
 export function PageScaffold({ children, contentClassName }: PageScaffoldProps) {
   return (
     <div className="min-h-[100dvh] bg-[#FAFAFE]">
-      <div className="w-full">
+      <div className="w-full px-3 sm:px-4 lg:px-0">
         <DesktopNav />
         <div
           className={cn(
-            "relative flex flex-col bg-[#FAFAFE] min-h-[100dvh] w-full lg:pl-[260px]",
+            "relative flex flex-col bg-[#FAFAFE] min-h-[100dvh] w-full max-w-[520px] mx-auto lg:max-w-none lg:mx-0 lg:pl-[260px]",
             contentClassName
           )}
         >
-          <div className="absolute right-4 top-4 z-20 lg:right-6 lg:top-5">
+          <div className="absolute right-4 top-5 z-20 lg:right-6 lg:top-5">
             <LanguageSwitcher />
           </div>
           {children}
