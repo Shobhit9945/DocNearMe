@@ -127,9 +127,12 @@ export const handler = async (event: NetlifyEvent, context: any) => {
     const headers = { ...(event.headers ?? {}) };
     const bodyString =
       typeof decodedBody === "string" ? decodedBody : decodedBody == null ? "" : JSON.stringify(decodedBody);
-    // Ensure JSON bodies are parsed even if Netlify omits the content-type header on rewrites
+    // Ensure bodies are parsed even if Netlify omits the content-type header on rewrites
     if (!headers["content-type"] && !headers["Content-Type"] && bodyString) {
-      headers["content-type"] = "application/json";
+      const looksUrlEncoded = bodyString.includes("=") && !/^[\[{]/.test(bodyString.trim());
+      headers["content-type"] = looksUrlEncoded
+        ? "application/x-www-form-urlencoded"
+        : "application/json";
     }
     if (bodyString) {
       headers["content-length"] = Buffer.byteLength(bodyString).toString();

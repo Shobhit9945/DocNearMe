@@ -43,18 +43,27 @@ const buildCompletionTwiml = (message: string) => `<?xml version="1.0" encoding=
 
 const normalizeDigit = (value: string) => value.trim().replace(/\D/g, "");
 
-const extractDigits = (body: unknown, queryDigits?: string) => {
-  if (queryDigits) return normalizeDigit(queryDigits);
-  if (body && typeof body === "object" && "Digits" in (body as any)) {
-    return normalizeDigit(String((body as any).Digits ?? ""));
+const extractDigits = (value: unknown) => {
+  if (!value) return "";
+  if (Array.isArray(value)) {
+    return normalizeDigit(String(value[0] ?? ""));
   }
-  if (body && typeof body === "object" && "digits" in (body as any)) {
-    return normalizeDigit(String((body as any).digits ?? ""));
+  if (typeof value === "number") {
+    return normalizeDigit(String(value));
   }
-  if (typeof body === "string") {
-    const params = new URLSearchParams(body);
-    const value = params.get("Digits") ?? params.get("digits") ?? "";
-    return normalizeDigit(value);
+  if (typeof value === "string") {
+    const params = new URLSearchParams(value);
+    const parsed = params.get("Digits") ?? params.get("digits");
+    return normalizeDigit(parsed ?? value);
+  }
+  if (Buffer.isBuffer(value)) {
+    return extractDigits(value.toString("utf8"));
+  }
+  if (typeof value === "object") {
+    const typed = value as any;
+    if (typed.Digits || typed.digits) {
+      return normalizeDigit(String(typed.Digits ?? typed.digits ?? ""));
+    }
   }
   return "";
 };
@@ -211,11 +220,12 @@ export const handleVoiceAppointment: RequestHandler = async (req: Request, res: 
 
 export const handleVoiceAppointmentResponse: RequestHandler = async (req: Request, res: Response) => {
   try {
-    const rawBody = typeof req.body === "string" ? req.body : (req.body as any)?._rawBody;
-    const bodyDigits = rawBody ? extractDigits(rawBody) : "";
+    const rawBody = (req as any)._rawBody ?? (req.body as any)?._rawBody ?? req.body;
+    const bodyDigits = extractDigits(rawBody);
     const appointmentId = String(req.query.appointmentId ?? req.body?.appointmentId ?? "");
     const token = String(req.query.token ?? req.body?.token ?? "");
-    const digit = bodyDigits || extractDigits(req.body, String(req.query?.Digits ?? ""));
+    const queryDigits = extractDigits(req.query?.Digits ?? req.query?.digits ?? "");
+    const digit = bodyDigits || extractDigits(req.body) || queryDigits;
     const normalizedDigit = normalizeDigit(digit).charAt(0);
 
     console.info("[clinic-call] voice response", {
@@ -223,6 +233,7 @@ export const handleVoiceAppointmentResponse: RequestHandler = async (req: Reques
       hasToken: Boolean(token),
       digit,
       normalizedDigit,
+      contentType: req.headers["content-type"],
       hasBody: Boolean(req.body),
     });
 
@@ -242,6 +253,11 @@ export const handleVoiceAppointmentResponse: RequestHandler = async (req: Reques
 
     const result = await applyDecision(appointmentId, appointment, normalizedDigit || digit);
     if (!result.ok) {
+      console.warn("[clinic-call] invalid digit", {
+        appointmentId,
+        digit,
+        normalizedDigit,
+      });
       return renderXml(res, buildCompletionTwiml("Invalid input. Please check your dashboard."));
     }
 
