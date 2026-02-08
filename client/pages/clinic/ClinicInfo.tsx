@@ -103,6 +103,25 @@ export default function ClinicInfo() {
     setBookingClosures(nextClinic.bookingClosures ?? []);
   };
 
+  const normalizePhoneInput = (value: string) => {
+    const compact = value.replace(/[\s\-()]/g, "");
+    if (!compact) return { dialCode: phoneDialCode, number: "" };
+    if (compact.startsWith("+")) {
+      const match = phoneCountryOptions
+        .slice()
+        .sort((a, b) => b.dialCode.length - a.dialCode.length)
+        .find((option) => compact.startsWith(option.dialCode));
+      if (match) {
+        const remainder = compact.slice(match.dialCode.length).replace(/\D/g, "").replace(/^0+/, "");
+        return { dialCode: match.dialCode, number: remainder };
+      }
+      const remainder = compact.replace(/^\+/, "").replace(/\D/g, "").replace(/^0+/, "");
+      return { dialCode: phoneDialCode, number: remainder };
+    }
+    const digits = compact.replace(/\D/g, "").replace(/^0+/, "");
+    return { dialCode: phoneDialCode, number: digits };
+  };
+
   useEffect(() => {
     tRef.current = t;
   }, [t]);
@@ -431,7 +450,16 @@ export default function ClinicInfo() {
               </select>
               <Input
                 value={phone}
-                onChange={(event) => setPhone(event.target.value)}
+                onChange={(event) => {
+                  const nextValue = event.target.value;
+                  const normalized = normalizePhoneInput(nextValue);
+                  setPhone(normalized.number);
+                  setPhoneDialCode(normalized.dialCode);
+                }}
+                onBlur={() => {
+                  const normalized = normalizePhoneInput(phone);
+                  setPhone(normalized.number);
+                }}
                 disabled={!isEditingBasic}
                 placeholder={t("Enter phone without country code")}
               />

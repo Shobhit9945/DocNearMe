@@ -19,34 +19,42 @@ const renderXml = (res: Response, xml: string) => {
   return res.status(200).send(xml);
 };
 
+const escapeTwiml = (value: string) =>
+  value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+
 const buildGatherTwiml = (message: string, actionUrl: string) => `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <Gather numDigits="1" action="${actionUrl}" method="POST" timeout="8">
-    <Say voice="alice">${message}</Say>
+  <Gather numDigits="1" action="${escapeTwiml(actionUrl)}" method="POST" timeout="8">
+    <Say voice="alice">${escapeTwiml(message)}</Say>
   </Gather>
   <Say voice="alice">We did not receive your response. Please check your email and dashboard for details.</Say>
 </Response>`;
 
 const buildCompletionTwiml = (message: string) => `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <Say voice="alice">${message}</Say>
+  <Say voice="alice">${escapeTwiml(message)}</Say>
   <Hangup />
 </Response>`;
 
 const resolveAppointmentLookup = (appointmentId: string) =>
-  ObjectId.isValid(appointmentId) ? new ObjectId(appointmentId) : appointmentId;
+  (ObjectId.isValid(appointmentId) ? new ObjectId(appointmentId) : appointmentId) as any;
 
 const updatePatientSummary = async (appointmentId: string, patientId: string | undefined, updates: any) => {
   if (!patientId) return;
   const patients = await getPatientsCollection();
   const patientLookupId = ObjectId.isValid(patientId) ? new ObjectId(patientId) : patientId;
-  const patient = await patients.findOne({ _id: patientLookupId });
+  const patient = await patients.findOne({ _id: patientLookupId as any });
   if (!patient?.appointments) return;
   const updatedAppointments = patient.appointments.map((summary: any) =>
     summary.appointmentId === appointmentId ? { ...summary, ...updates } : summary,
   );
   await patients.updateOne(
-    { _id: patientLookupId },
+    { _id: patientLookupId as any } as any,
     {
       $set: {
         appointments: updatedAppointments,
@@ -125,71 +133,100 @@ const applyDecision = async (appointmentId: string, appointment: any, digit: str
     return { ok: false, message: "Invalid input." };
   }
 
-  await appointments.updateOne({ _id: resolveAppointmentLookup(appointmentId) }, { $set: update });
+  await appointments.updateOne(
+    { _id: resolveAppointmentLookup(appointmentId) } as any,
+    { $set: update },
+  );
   await updatePatientSummary(appointmentId, appointment.patientId, patientUpdate);
 
   return { ok: true, status: update.status as AppointmentStatus };
 };
 
 export const handleVoiceAppointment: RequestHandler = async (req: Request, res: Response) => {
-  const appointmentId = String(req.query.appointmentId ?? "");
-  const token = String(req.query.token ?? "");
+  try {
+    const appointmentId = String(req.query.appointmentId ?? req.body?.appointmentId ?? "");
+    const token = String(req.query.token ?? req.body?.token ?? "");
 
-  if (!appointmentId || !verifyVoiceToken(appointmentId, token)) {
-    return renderXml(res, buildCompletionTwiml("Invalid request."));
+    console.info("[clinic-call] voice appointment", {
+      appointmentId,
+      hasToken: Boolean(token),
+    });
+
+    if (!appointmentId || !verifyVoiceToken(appointmentId, token)) {
+      return renderXml(res, buildCompletionTwiml("Invalid request."));
+    }
+
+    const appointments = await getAppointmentsCollection();
+    const appointment = await appointments.findOne({ _id: resolveAppointmentLookup(appointmentId) });
+    if (!appointment) {
+      return renderXml(res, buildCompletionTwiml("Appointment not found."));
+    }
+
+    const preferredStart = appointment.preferredStart ?? appointment.date;
+    const dateValue = new Date(preferredStart);
+    const formattedDate = Number.isNaN(dateValue.getTime())
+      ? preferredStart
+      : dateValue.toLocaleString("en-US", { timeZone: "Asia/Tokyo" });
+    const requestedDateTime = appointment.slot ? `${formattedDate} (${appointment.slot})` : formattedDate;
+
+    const message = buildVoicePrompt({
+      clinicName: appointment.clinicId,
+      patientName: appointment.patientName ?? "patient",
+      requestedDateTime,
+      appointmentId: String(appointmentId),
+    });
+
+    const baseUrl = getVoiceBaseUrl(req);
+    const actionUrl = `${baseUrl}/api/voice/appointment/response?appointmentId=${encodeURIComponent(
+      appointmentId,
+    )}&token=${encodeURIComponent(token)}`;
+
+    return renderXml(res, buildGatherTwiml(message, actionUrl));
+  } catch (error) {
+    console.error("[clinic-call] voice appointment error", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return renderXml(res, buildCompletionTwiml("Unable to process the request."));
   }
-
-  const appointments = await getAppointmentsCollection();
-  const appointment = await appointments.findOne({ _id: resolveAppointmentLookup(appointmentId) });
-  if (!appointment) {
-    return renderXml(res, buildCompletionTwiml("Appointment not found."));
-  }
-
-  const preferredStart = appointment.preferredStart ?? appointment.date;
-  const dateValue = new Date(preferredStart);
-  const formattedDate = Number.isNaN(dateValue.getTime())
-    ? preferredStart
-    : dateValue.toLocaleString("en-US", { timeZone: "Asia/Tokyo" });
-  const requestedDateTime = appointment.slot ? `${formattedDate} (${appointment.slot})` : formattedDate;
-
-  const message = buildVoicePrompt({
-    clinicName: appointment.clinicId,
-    patientName: appointment.patientName ?? "patient",
-    requestedDateTime,
-    appointmentId: String(appointmentId),
-  });
-
-  const baseUrl = getVoiceBaseUrl(req);
-  const actionUrl = `${baseUrl}/api/voice/appointment/response?appointmentId=${encodeURIComponent(
-    appointmentId,
-  )}&token=${encodeURIComponent(token)}`;
-
-  return renderXml(res, buildGatherTwiml(message, actionUrl));
 };
 
 export const handleVoiceAppointmentResponse: RequestHandler = async (req: Request, res: Response) => {
-  const appointmentId = String(req.query.appointmentId ?? "");
-  const token = String(req.query.token ?? "");
-  const digit = String(req.body?.Digits ?? req.query?.Digits ?? "");
+  try {
+    const appointmentId = String(req.query.appointmentId ?? req.body?.appointmentId ?? "");
+    const token = String(req.query.token ?? req.body?.token ?? "");
+    const digit = String(req.body?.Digits ?? req.query?.Digits ?? "");
 
-  if (!appointmentId || !verifyVoiceToken(appointmentId, token)) {
-    return renderXml(res, buildCompletionTwiml("Invalid request."));
+    console.info("[clinic-call] voice response", {
+      appointmentId,
+      hasToken: Boolean(token),
+      digit,
+    });
+
+    if (!appointmentId || !verifyVoiceToken(appointmentId, token)) {
+      return renderXml(res, buildCompletionTwiml("Invalid request."));
+    }
+
+    const appointments = await getAppointmentsCollection();
+    const appointment = await appointments.findOne({ _id: resolveAppointmentLookup(appointmentId) });
+    if (!appointment) {
+      return renderXml(res, buildCompletionTwiml("Appointment not found."));
+    }
+
+    if (appointment.status !== "PENDING_CLINIC") {
+      return renderXml(res, buildCompletionTwiml("This request is no longer pending."));
+    }
+
+    const result = await applyDecision(appointmentId, appointment, digit);
+    if (!result.ok) {
+      return renderXml(res, buildCompletionTwiml("Invalid input. Please check your dashboard."));
+    }
+
+    return renderXml(res, buildCompletionTwiml("Thank you. Your response has been recorded."));
+  } catch (error) {
+    console.error("[clinic-call] voice response error", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return renderXml(res, buildCompletionTwiml("Unable to process the request."));
   }
-
-  const appointments = await getAppointmentsCollection();
-  const appointment = await appointments.findOne({ _id: resolveAppointmentLookup(appointmentId) });
-  if (!appointment) {
-    return renderXml(res, buildCompletionTwiml("Appointment not found."));
-  }
-
-  if (appointment.status !== "PENDING_CLINIC") {
-    return renderXml(res, buildCompletionTwiml("This request is no longer pending."));
-  }
-
-  const result = await applyDecision(appointmentId, appointment, digit);
-  if (!result.ok) {
-    return renderXml(res, buildCompletionTwiml("Invalid input. Please check your dashboard."));
-  }
-
-  return renderXml(res, buildCompletionTwiml("Thank you. Your response has been recorded."));
 };
+

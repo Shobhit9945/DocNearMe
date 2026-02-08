@@ -46,6 +46,7 @@ const getDefaultDialCode = () => process.env.CLINIC_DEFAULT_DIAL_CODE ?? "";
 const buildVoiceToken = (appointmentId: string) =>
   crypto.createHmac("sha256", getVoiceWebhookSecret()).update(appointmentId).digest("hex");
 
+
 const resolveAppointmentLookup = (appointmentId: string) =>
   ObjectId.isValid(appointmentId) ? new ObjectId(appointmentId) : appointmentId;
 
@@ -58,7 +59,7 @@ const formatAppointmentDateTime = (preferredStart?: string, slot?: string) => {
   return slot ? `${localized} (${slot})` : localized;
 };
 
-const buildVoiceDetails = (clinic: ClinicInfo, appointment: Appointment): VoiceNotificationDetails => {
+const buildVoiceDetails = (clinic: ClinicInfo, appointment: any): VoiceNotificationDetails => {
   const requestedDateTime = formatAppointmentDateTime(
     appointment.preferredStart ?? appointment.date,
     appointment.slot,
@@ -67,7 +68,7 @@ const buildVoiceDetails = (clinic: ClinicInfo, appointment: Appointment): VoiceN
     clinicName: clinic.name ?? clinic.clinicId,
     patientName: appointment.patientName ?? "patient",
     requestedDateTime,
-    appointmentId: String(appointment._id ?? appointment.id ?? ""),
+    appointmentId: String(appointment._id ?? ""),
   };
 };
 
@@ -78,6 +79,7 @@ const buildCallUrl = (appointmentId: string) => {
     appointmentId,
   )}&token=${encodeURIComponent(token)}`;
 };
+
 
 const createTwilioCall = async (to: string, url: string) => {
   const accountSid = getTwilioAccountSid();
@@ -200,3 +202,4 @@ export const verifyVoiceToken = (appointmentId: string, token: string) => {
   if (expectedBuffer.length !== tokenBuffer.length) return false;
   return crypto.timingSafeEqual(expectedBuffer, tokenBuffer);
 };
+

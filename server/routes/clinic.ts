@@ -113,6 +113,19 @@ const weekdayOrder = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 const normalizeDay = (day: string) => day.trim().slice(0, 3).toLowerCase();
 
+const normalizeClinicPhone = (value?: string) => {
+  if (!value) return value;
+  const compact = value.replace(/[\s\-()]/g, "");
+  if (!compact) return "";
+  if (compact.startsWith("+")) {
+    return `+${compact.slice(1).replace(/\D/g, "")}`;
+  }
+  const digits = compact.replace(/\D/g, "").replace(/^0+/, "");
+  return digits ? `+81${digits}` : "";
+};
+
+const isValidE164 = (value?: string) => (!value ? true : /^\+\d{7,15}$/.test(value));
+
 const parseTimeMinutes = (time: string) => {
   const [hours, minutes] = time.split(":").map(Number);
   if (Number.isNaN(hours) || Number.isNaN(minutes)) return null;
@@ -497,8 +510,13 @@ export const handleUpdateClinicProfile: RequestHandler = async (req, res, next) 
     }
 
     const payload = clinicUpdateSchema.parse(parseRequestBody(req.body)) as ClinicProfileUpdateRequest;
+    const normalizedPhone = normalizeClinicPhone(payload.phone);
+    if (!isValidE164(normalizedPhone)) {
+      return res.status(400).json({ error: "Phone number must be in E.164 format." });
+    }
     const enforcedPayload: ClinicProfileUpdateRequest = {
       ...payload,
+      phone: normalizedPhone,
       notificationEmailEnabled: true,
       notification_email_enabled: true,
     };
@@ -545,12 +563,17 @@ export const handlePatchClinicMe: RequestHandler = async (req, res, next) => {
     }
 
     const payload = clinicUpdateSchema.parse(parseRequestBody(req.body)) as ClinicProfileUpdateRequest;
+    const normalizedPhone = normalizeClinicPhone(payload.phone);
+    if (!isValidE164(normalizedPhone)) {
+      return res.status(400).json({ error: "Phone number must be in E.164 format." });
+    }
     if (payload.email && !isValidNotificationEmail(payload.email)) {
       return res.status(400).json({ error: "Invalid notification email." });
     }
 
     const enforcedPayload: ClinicProfileUpdateRequest = {
       ...payload,
+      phone: normalizedPhone,
       notificationEmailEnabled: true,
       notification_email_enabled: true,
     };
