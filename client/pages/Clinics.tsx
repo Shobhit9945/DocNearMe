@@ -372,7 +372,7 @@ export default function Clinics() {
                 return (
                   <article
                     key={clinic.id}
-                    className="flex h-full min-h-[560px] flex-col overflow-hidden rounded-[28px] border border-slate-100 bg-white shadow-[0_10px_35px_rgba(21,47,81,0.05)]"
+                    className="flex flex-col overflow-hidden rounded-[28px] border border-slate-100 bg-white shadow-[0_10px_35px_rgba(21,47,81,0.05)]"
                   >
                     <div className="h-40 w-full overflow-hidden">
                       <img src={clinic.image} alt={clinic.name} className="h-full w-full object-cover" />
@@ -471,7 +471,7 @@ export default function Clinics() {
                         <div className="flex flex-wrap gap-2">
                           <button
                             onClick={() => navigate(`/clinics/${clinic.id}`)}
-                            className="inline-flex items-center justify-center rounded-2xl border border-[#1648CE] px-4 py-2 text-sm font-semibold text-[#1648CE] transition-colors hover:bg-[#E8F0FF]"
+                            className="inline-flex w-full items-center justify-center rounded-2xl border border-[#1648CE] px-4 py-2 text-sm font-semibold text-[#1648CE] transition-colors hover:bg-[#E8F0FF] sm:w-36"
                           >
                             {t("View clinic")}
                           </button>
@@ -483,7 +483,7 @@ export default function Clinics() {
                                 )}`
                               )
                             }
-                            className="inline-flex items-center justify-center rounded-2xl bg-[#1648CE] px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-[#1648CE]/30 transition-colors hover:bg-[#0F3499]"
+                            className="inline-flex w-full items-center justify-center rounded-2xl bg-[#1648CE] px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-[#1648CE]/30 transition-colors hover:bg-[#0F3499] sm:w-36"
                           >
                             {t("Book appointment")}
                           </button>

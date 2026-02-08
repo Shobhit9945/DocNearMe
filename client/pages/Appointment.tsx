@@ -177,7 +177,7 @@ export default function Appointment() {
   const [step, setStep] = useState<"booking" | "confirmation">("booking");
 
   const fallbackSpecializationId = "";
-  const normalizedParam = specializationParam
+  const normalizedParam = specializationParam && specializationParam !== "all"
     ? resolveSpecializationId(specializationParam, fallbackSpecializationId)
     : "";
   const [selectedSpecialization, setSelectedSpecialization] = useState(
@@ -228,6 +228,40 @@ export default function Appointment() {
   const [showHowVisits, setShowHowVisits] = useState(false);
   const [howVisitStep, setHowVisitStep] = useState(0);
   const touchStartYRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    const nextClinicId = clinicId ?? "";
+    const nextSpecialization = specializationParam && specializationParam !== "all"
+      ? resolveSpecializationId(specializationParam, fallbackSpecializationId)
+      : fallbackSpecializationId;
+    const nextView =
+      searchParams.get("view") === "booking" || nextClinicId || nextSpecialization
+        ? "booking"
+        : "upcoming";
+
+    setView(nextView);
+    setSelectedClinicId(nextClinicId);
+    setSelectedSpecialization(nextSpecialization);
+    setStep("booking");
+  }, [clinicId, specializationParam, fallbackSpecializationId, searchParams]);
+
+  useEffect(() => {
+    if (!clinicId || clinics.length === 0) return;
+    const clinicFromParam = clinics.find((clinic) => clinic.id === clinicId);
+    if (!clinicFromParam) return;
+
+    if (selectedClinicId !== clinicId) {
+      setSelectedClinicId(clinicId);
+    }
+
+    const shouldAutoSpecialization = !specializationParam || specializationParam === "all";
+    if (shouldAutoSpecialization) {
+      const clinicSpecialization = clinicFromParam.specializations[0] ?? "";
+      if (clinicSpecialization && clinicSpecialization !== selectedSpecialization) {
+        setSelectedSpecialization(resolveSpecializationId(clinicSpecialization, fallbackSpecializationId));
+      }
+    }
+  }, [clinicId, clinics, fallbackSpecializationId, selectedClinicId, selectedSpecialization, specializationParam]);
 
   const howVisitSteps = useMemo<HowVisitStep[]>(
     () => [
@@ -561,10 +595,16 @@ export default function Appointment() {
   }, [clinicId]);
 
   useEffect(() => {
+    if (clinicId && clinicsForSpecialization.some((clinic) => clinic.id === clinicId)) {
+      if (selectedClinicId !== clinicId) {
+        setSelectedClinicId(clinicId);
+      }
+      return;
+    }
     if (!clinicsForSpecialization.some((clinic) => clinic.id === selectedClinicId)) {
       setSelectedClinicId(clinicsForSpecialization[0]?.id ?? "");
     }
-  }, [clinicsForSpecialization, selectedClinicId]);
+  }, [clinicId, clinicsForSpecialization, selectedClinicId]);
 
   useEffect(() => {
     if (!specializationOptions.find((spec) => spec.id === selectedSpecializationId)) {
