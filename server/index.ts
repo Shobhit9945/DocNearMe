@@ -129,8 +129,19 @@ export async function createServer(): Promise<Express> {
   );
 
   // Parse JSON even if Netlify drops/changes Content-Type
-  app.use(express.json({ type: "*/*", limit: "10mb" }));
-  app.use(express.urlencoded({ extended: true }));
+  app.use(express.json({
+    type: "*/*",
+    limit: "10mb",
+    verify: (req, _res, buf) => {
+      (req as any)._rawBody = buf.toString("utf8");
+    },
+  }));
+  app.use(express.urlencoded({
+    extended: true,
+    verify: (req, _res, buf) => {
+      (req as any)._rawBody = buf.toString("utf8");
+    },
+  }));
 
 
   // Example API routes

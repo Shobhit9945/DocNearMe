@@ -41,18 +41,20 @@ const buildCompletionTwiml = (message: string) => `<?xml version="1.0" encoding=
   <Hangup />
 </Response>`;
 
+const normalizeDigit = (value: string) => value.trim().replace(/\D/g, "");
+
 const extractDigits = (body: unknown, queryDigits?: string) => {
-  if (queryDigits) return queryDigits;
+  if (queryDigits) return normalizeDigit(queryDigits);
   if (body && typeof body === "object" && "Digits" in (body as any)) {
-    return String((body as any).Digits ?? "");
+    return normalizeDigit(String((body as any).Digits ?? ""));
   }
   if (body && typeof body === "object" && "digits" in (body as any)) {
-    return String((body as any).digits ?? "");
+    return normalizeDigit(String((body as any).digits ?? ""));
   }
   if (typeof body === "string") {
     const params = new URLSearchParams(body);
     const value = params.get("Digits") ?? params.get("digits") ?? "";
-    return value;
+    return normalizeDigit(value);
   }
   return "";
 };
@@ -208,14 +210,17 @@ export const handleVoiceAppointment: RequestHandler = async (req: Request, res: 
 
 export const handleVoiceAppointmentResponse: RequestHandler = async (req: Request, res: Response) => {
   try {
+    const rawBody = typeof req.body === "string" ? req.body : (req.body as any)?._rawBody;
+    const bodyDigits = rawBody ? extractDigits(rawBody) : "";
     const appointmentId = String(req.query.appointmentId ?? req.body?.appointmentId ?? "");
     const token = String(req.query.token ?? req.body?.token ?? "");
-    const digit = extractDigits(req.body, String(req.query?.Digits ?? ""));
+    const digit = bodyDigits || extractDigits(req.body, String(req.query?.Digits ?? ""));
 
     console.info("[clinic-call] voice response", {
       appointmentId,
       hasToken: Boolean(token),
       digit,
+      hasBody: Boolean(req.body),
     });
 
     if (!appointmentId || !verifyVoiceToken(appointmentId, token)) {
