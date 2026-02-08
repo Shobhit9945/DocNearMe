@@ -4,8 +4,26 @@
     <meta charset="UTF-8" />
     <meta
       name="viewport"
-      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
     />
+    <script>
+      (function () {
+        var isStandalone =
+          window.navigator.standalone === true ||
+          window.matchMedia("(display-mode: standalone)").matches;
+        if (!isStandalone) {
+          return;
+        }
+        var meta = document.querySelector('meta[name="viewport"]');
+        if (!meta) {
+          return;
+        }
+        meta.setAttribute(
+          "content",
+          "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover",
+        );
+      })();
+    </script>
     <title>DocNearMe | Find Doctors in Oita & Beppu</title>
     <meta
       name="description"
