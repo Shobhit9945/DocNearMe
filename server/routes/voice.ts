@@ -96,8 +96,9 @@ const applyDecision = async (appointmentId: string, appointment: any, digit: str
   const now = new Date();
   let update: Record<string, unknown> = { updatedAt: now };
   let patientUpdate: Record<string, unknown> = { updatedAt: now };
+  const normalizedDigit = normalizeDigit(digit).charAt(0);
 
-  if (digit === "1") {
+  if (normalizedDigit === "1") {
     const confirmFields = resolveConfirmFields(appointment);
     update = {
       ...update,
@@ -120,7 +121,7 @@ const applyDecision = async (appointmentId: string, appointment: any, digit: str
       date: confirmFields.confirmedStart,
       slot: confirmFields.slot,
     };
-  } else if (digit === "2") {
+  } else if (normalizedDigit === "2") {
     update = {
       ...update,
       status: "DECLINED",
@@ -134,7 +135,7 @@ const applyDecision = async (appointmentId: string, appointment: any, digit: str
       status: "DECLINED" as AppointmentStatus,
       declineReason: "Declined by clinic (phone)",
     };
-  } else if (digit === "3") {
+  } else if (normalizedDigit === "3") {
     update = {
       ...update,
       status: "RESCHEDULE_REQUESTED",
@@ -215,11 +216,13 @@ export const handleVoiceAppointmentResponse: RequestHandler = async (req: Reques
     const appointmentId = String(req.query.appointmentId ?? req.body?.appointmentId ?? "");
     const token = String(req.query.token ?? req.body?.token ?? "");
     const digit = bodyDigits || extractDigits(req.body, String(req.query?.Digits ?? ""));
+    const normalizedDigit = normalizeDigit(digit).charAt(0);
 
     console.info("[clinic-call] voice response", {
       appointmentId,
       hasToken: Boolean(token),
       digit,
+      normalizedDigit,
       hasBody: Boolean(req.body),
     });
 
@@ -237,7 +240,7 @@ export const handleVoiceAppointmentResponse: RequestHandler = async (req: Reques
       return renderXml(res, buildCompletionTwiml("This request is no longer pending."));
     }
 
-    const result = await applyDecision(appointmentId, appointment, digit);
+    const result = await applyDecision(appointmentId, appointment, normalizedDigit || digit);
     if (!result.ok) {
       return renderXml(res, buildCompletionTwiml("Invalid input. Please check your dashboard."));
     }
