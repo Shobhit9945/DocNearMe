@@ -29,8 +29,13 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("fetch", (event) => {
   const { request } = event;
+  const url = new URL(request.url);
 
   if (request.method !== "GET") {
+    return;
+  }
+
+  if (url.pathname.startsWith("/api")) {
     return;
   }
 
@@ -44,6 +49,10 @@ self.addEventListener("fetch", (event) => {
         })
         .catch(() => caches.match("/"))
     );
+    return;
+  }
+
+  if (url.origin !== self.location.origin) {
     return;
   }
 
