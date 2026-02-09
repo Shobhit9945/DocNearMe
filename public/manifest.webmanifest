@@ -1,0 +1,23 @@
+{
+  "name": "DocNearMe",
+  "short_name": "DocNearMe",
+  "description": "Find trusted doctors and clinics in Oita and Beppu, Japan.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "icons": [
+    {
+      "src": "/dnm.png",
+      "sizes": "1024x1024",
+      "type": "image/png"
+    },
+    {
+      "src": "/dnm.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
