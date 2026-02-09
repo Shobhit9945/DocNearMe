@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import { ObjectId } from "mongodb";
 import { getAppointmentsCollection, getClinicInfoCollection } from "../db";
 import type { Appointment, ClinicInfo } from "../types";
@@ -8,10 +9,13 @@ type Logger = Pick<Console, "info" | "warn" | "error">;
 type ClinicBookingNotificationDetails = {
   clinicName: string;
   patientName: string;
+  doctorName: string;
   requestedDateTime: string;
   specialization: string;
   statusLabel: string;
   portalUrl: string;
+  confirmUrl: string;
+  declineUrl: string;
 };
 
 type ClinicBookingNotificationEmail = {
@@ -24,7 +28,12 @@ type ClinicBookingNotificationEmail = {
 const DEFAULT_PORTAL_URL = "https://clinic.docnearme.app/appointments";
 const CLINIC_PORTAL_APPOINTMENTS_URL =
   process.env.CLINIC_PORTAL_APPOINTMENTS_URL ?? DEFAULT_PORTAL_URL;
+const APP_BASE_URL = process.env.APP_BASE_URL ?? "http://localhost:8080";
 const NOTIFICATION_RETRY_DELAYS_MS = [1000, 3000];
+const CONFIRMATION_TOKEN_BYTES = 32;
+const CONFIRMATION_TOKEN_TTL_MS = 48 * 60 * 60 * 1000;
+
+const hashToken = (token: string) => crypto.createHash("sha256").update(token).digest("hex");
 
 const resolveAppointmentLookup = (appointmentId: string) =>
   ObjectId.isValid(appointmentId) ? new ObjectId(appointmentId) : appointmentId;
@@ -49,9 +58,13 @@ export const buildClinicBookingNotificationEmail = (
     "新しい予約リクエストがあります。",
     "",
     `患者名: ${details.patientName}`,
+    `担当医: ${details.doctorName}`,
     `希望日時: ${details.requestedDateTime}`,
     `診療科: ${details.specialization}`,
     `ステータス: ${details.statusLabel}`,
+    "",
+    `承認: ${details.confirmUrl}`,
+    `却下: ${details.declineUrl}`,
     "",
     `予約管理: ${details.portalUrl}`,
     "",
@@ -69,6 +82,10 @@ export const buildClinicBookingNotificationEmail = (
             <td style="padding: 6px 0; font-weight: 600;">${details.patientName}</td>
           </tr>
           <tr>
+            <td style="padding: 6px 0; color: #64748b;">担当医</td>
+            <td style="padding: 6px 0; font-weight: 600;">${details.doctorName}</td>
+          </tr>
+          <tr>
             <td style="padding: 6px 0; color: #64748b;">希望日時</td>
             <td style="padding: 6px 0; font-weight: 600;">${details.requestedDateTime}</td>
           </tr>
@@ -82,6 +99,20 @@ export const buildClinicBookingNotificationEmail = (
           </tr>
         </tbody>
       </table>
+      <div style="margin: 16px 0; display: flex; gap: 12px; flex-wrap: wrap;">
+        <a
+          href="${details.confirmUrl}"
+          style="background: #16a34a; color: #ffffff; text-decoration: none; padding: 10px 16px; border-radius: 999px; font-weight: 600;"
+        >
+          承認する
+        </a>
+        <a
+          href="${details.declineUrl}"
+          style="background: #ef4444; color: #ffffff; text-decoration: none; padding: 10px 16px; border-radius: 999px; font-weight: 600;"
+        >
+          却下する
+        </a>
+      </div>
       <p style="margin: 12px 0;">予約管理: <a href="${details.portalUrl}">${details.portalUrl}</a></p>
       <p style="margin: 12px 0; color: #475569;">A new booking request has arrived. Please review it in the clinic portal.</p>
     </div>
@@ -183,11 +214,31 @@ export const sendClinicBookingNotificationEmail = async (
   const details: ClinicBookingNotificationDetails = {
     clinicName: clinic.name ?? clinicId,
     patientName: appointment.patientName ?? "患者様",
+    doctorName: appointment.doctorName ?? "指定なし",
     requestedDateTime,
     specialization: appointment.specialization ?? "一般診療",
     statusLabel: "承認待ち",
     portalUrl: CLINIC_PORTAL_APPOINTMENTS_URL,
+    confirmUrl: "",
+    declineUrl: "",
   };
+
+  const rawToken = crypto.randomBytes(CONFIRMATION_TOKEN_BYTES).toString("hex");
+  const tokenExpiresAt = new Date(Date.now() + CONFIRMATION_TOKEN_TTL_MS);
+  const baseUrl = APP_BASE_URL.replace(/\/$/, "");
+  details.confirmUrl = `${baseUrl}/api/appointments/${appointmentId}/confirm?token=${rawToken}`;
+  details.declineUrl = `${baseUrl}/api/appointments/${appointmentId}/decline?token=${rawToken}`;
+
+  await appointments.updateOne(
+    { _id: appointmentLookup as unknown as ObjectId },
+    {
+      $set: {
+        clinicConfirmationTokenHash: hashToken(rawToken),
+        tokenExpiresAt,
+        updatedAt: new Date(),
+      },
+    },
+  );
 
   const payload = buildClinicBookingNotificationEmail(recipient, details);
   const sent = await sendWithRetry(payload, logger, clinicId, appointmentId);

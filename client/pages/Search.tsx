@@ -1,6 +1,6 @@
 import { BottomNav } from "@/components/BottomNav";
 import { PageScaffold } from "@/components/PageScaffold";
-import { Search as SearchIcon, Stethoscope, Building2, Star } from "lucide-react";
+import { Search as SearchIcon, Stethoscope, Building2, Star, ChevronDown, ChevronUp } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { formatAvailabilityForLanguage } from "@/lib/time-format";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -27,6 +27,7 @@ export default function Search() {
   const [locationError, setLocationError] = useState("");
   const [distanceFilter, setDistanceFilter] = useState("any");
   const [resultType, setResultType] = useState<"all" | "doctor" | "clinic">("all");
+  const [isFiltersOpen, setIsFiltersOpen] = useState(true);
   const { data: clinicsData, isLoading: isClinicsLoading } = useClinics();
   const { data: doctorsData, isLoading: isDoctorsLoading } = useAllDoctors();
   const { coordinates } = useLiveLocation();
@@ -280,7 +281,10 @@ export default function Search() {
                   {visibleDoctors.length + visibleClinics.length} {t("matches")}
                 </div>
                 </div>
-              <div className="mt-5 grid gap-4 lg:grid-cols-2 2xl:grid-cols-[2fr_1fr_1fr_1fr_1fr]">
+              <div
+                id="search-filters"
+                className={`${isFiltersOpen ? "grid" : "hidden"} mt-5 gap-4 lg:grid lg:grid-cols-2 2xl:grid-cols-[2fr_1fr_1fr_1fr_1fr]`}
+              >
                 <label className="flex flex-col gap-2 text-sm font-semibold text-slate-700">
                   {t("Location")}
                   <div className="relative">
@@ -395,6 +399,16 @@ export default function Search() {
                 </label>
               </div>
             </div>
+            <button
+              type="button"
+              onClick={() => setIsFiltersOpen((current) => !current)}
+              className="mt-3 flex w-full items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600 shadow-sm hover:border-[#1648CE] hover:text-[#1648CE] lg:hidden"
+              aria-expanded={isFiltersOpen}
+              aria-controls="search-filters"
+            >
+              {isFiltersOpen ? t("Hide filters") : t("Show filters")}
+              {isFiltersOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            </button>
 
             <div className="space-y-4">
               {visibleDoctors.length > 0 && (

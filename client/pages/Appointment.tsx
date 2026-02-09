@@ -1243,6 +1243,17 @@ export default function Appointment() {
     );
   }
 
+  if (view === "booking" && isBooking) {
+    return (
+      <PageScaffold contentClassName="pb-28 lg:pb-12">
+        <LoadingScreen
+          title={t("Sending your request")}
+          subtitle={t("We are confirming the details with the clinic.")}
+        />
+      </PageScaffold>
+    );
+  }
+
   if (view === "upcoming") {
     return (
       <PageScaffold contentClassName="pb-28 lg:pb-12">

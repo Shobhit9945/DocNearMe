@@ -563,26 +563,33 @@ export const handleRequestAppointment = async (req: Request, res: Response) => {
       const formattedDate = Number.isNaN(appointmentDate.getTime())
         ? record.preferredStart
         : appointmentDate.toLocaleString();
+      const clinicName = clinicInfo.name ?? record.clinicId;
+      const patientLabel = record.patientName ?? "there";
+      const doctorLabel = record.doctorName ?? "Any available doctor";
+      const specializationLabel = record.specialization ?? "General";
+      const dateTimeLabel = record.slot ? `${formattedDate} (${record.slot})` : formattedDate;
 
       try {
         await sendEmail({
           to: emailAddress,
           subject: "DocNearMe appointment request received",
           text: [
-            `Hi ${record.patientName ?? "there"},`,
+            `Hi ${patientLabel},`,
             "",
             "We received your appointment request and sent it to the clinic for confirmation.",
             `Request ID: ${appointmentId}`,
-            `Clinic: ${record.clinicId}`,
-            `Preferred date: ${formattedDate}`,
-            `Preferred time: ${record.slot}`,
+            `Clinic: ${clinicName}`,
+            `Patient: ${patientLabel}`,
+            `Doctor: ${doctorLabel}`,
+            `Specialization: ${specializationLabel}`,
+            `Date/time: ${dateTimeLabel}`,
             "",
             "You'll receive a confirmation email once the clinic approves the time.",
           ].join("\n"),
           html: `
             <div style="font-family: Arial, sans-serif; line-height: 1.5;">
               <h2 style="margin-bottom: 12px;">Request received</h2>
-              <p>Hi ${record.patientName ?? "there"},</p>
+              <p>Hi ${patientLabel},</p>
               <p>We received your appointment request and sent it to the clinic for confirmation.</p>
               <table style="border-collapse: collapse; width: 100%; margin: 16px 0;">
                 <tbody>
@@ -592,15 +599,23 @@ export const handleRequestAppointment = async (req: Request, res: Response) => {
                   </tr>
                   <tr>
                     <td style="padding: 6px 0; color: #64748b;">Clinic</td>
-                    <td style="padding: 6px 0; font-weight: 600;">${record.clinicId}</td>
+                    <td style="padding: 6px 0; font-weight: 600;">${clinicName}</td>
                   </tr>
                   <tr>
-                    <td style="padding: 6px 0; color: #64748b;">Preferred date</td>
-                    <td style="padding: 6px 0; font-weight: 600;">${formattedDate}</td>
+                    <td style="padding: 6px 0; color: #64748b;">Patient</td>
+                    <td style="padding: 6px 0; font-weight: 600;">${patientLabel}</td>
                   </tr>
                   <tr>
-                    <td style="padding: 6px 0; color: #64748b;">Preferred time</td>
-                    <td style="padding: 6px 0; font-weight: 600;">${record.slot}</td>
+                    <td style="padding: 6px 0; color: #64748b;">Doctor</td>
+                    <td style="padding: 6px 0; font-weight: 600;">${doctorLabel}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 6px 0; color: #64748b;">Specialization</td>
+                    <td style="padding: 6px 0; font-weight: 600;">${specializationLabel}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 6px 0; color: #64748b;">Date/time</td>
+                    <td style="padding: 6px 0; font-weight: 600;">${dateTimeLabel}</td>
                   </tr>
                 </tbody>
               </table>
