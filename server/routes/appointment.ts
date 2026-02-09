@@ -68,7 +68,10 @@ const hashToken = (token: string) => crypto.createHash("sha256").update(token).d
 const buildClinicNotificationEmail = (clinicId: string) =>
   process.env.CLINIC_NOTIFICATION_EMAIL ?? `clinic-${clinicId}@docnearme.local`;
 
-const buildAppBaseUrl = () => process.env.APP_BASE_URL ?? "http://localhost:8080";
+const buildAppBaseUrl = () =>
+  process.env.APP_BASE_URL ??
+  process.env.PUBLIC_BASE_URL ??
+  "https://docnearme.jp";
 
 const parseDateOrNull = (value: unknown) => {
   if (typeof value !== "string") return null;

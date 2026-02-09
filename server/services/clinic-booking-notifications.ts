@@ -28,7 +28,10 @@ type ClinicBookingNotificationEmail = {
 const DEFAULT_PORTAL_URL = "https://clinic.docnearme.app/appointments";
 const CLINIC_PORTAL_APPOINTMENTS_URL =
   process.env.CLINIC_PORTAL_APPOINTMENTS_URL ?? DEFAULT_PORTAL_URL;
-const APP_BASE_URL = process.env.APP_BASE_URL ?? "http://localhost:8080";
+const APP_BASE_URL =
+  process.env.APP_BASE_URL ??
+  process.env.PUBLIC_BASE_URL ??
+  "https://docnearme.jp";
 const NOTIFICATION_RETRY_DELAYS_MS = [1000, 3000];
 const CONFIRMATION_TOKEN_BYTES = 32;
 const CONFIRMATION_TOKEN_TTL_MS = 48 * 60 * 60 * 1000;

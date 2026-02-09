@@ -6,7 +6,7 @@ import type { AppointmentStatus } from "@shared/api";
 import { buildVoicePrompt, verifyVoiceToken } from "../services/twilio-voice";
 
 const getVoiceBaseUrl = (req?: Request) => {
-  const configured = (process.env.VOICE_WEBHOOK_BASE_URL ?? process.env.PUBLIC_BASE_URL ?? "").replace(/\/$/, "");
+  const configured = (process.env.VOICE_WEBHOOK_BASE_URL ?? "").replace(/\/$/, "");
   if (configured) return configured;
   if (!req) return "";
   const host = req.get("host") ?? "";
