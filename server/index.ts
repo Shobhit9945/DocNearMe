@@ -95,6 +95,7 @@ export async function createServer(): Promise<Express> {
     "https://docnearme.jp",
     "https://www.docnearme.jp",
     "https://clinic.docnearme.jp",
+    "https://www.clinic.docnearme.jp",
     "https://docnearme.app",
     "https://www.docnearme.app",
     "https://clinic.docnearme.app",
