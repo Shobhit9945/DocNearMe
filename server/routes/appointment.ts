@@ -1771,6 +1771,8 @@ export const handleConfirmAppointment = async (req: Request, res: Response) => {
     const tokenDetails = await buildTokenPatientDetails(appointment, appointmentId);
     const patientNameTranslated = await translateToJapanese(appointment.patientName);
     const notesTranslated = await translateToJapanese(appointment.notes);
+    const doctorNameTranslated = await translateToJapanese(appointment.doctorName);
+    const specializationTranslated = await translateToJapanese(appointment.specialization);
     const responseAppointment = serializeAppointment({
       ...appointment,
       status: "CONFIRMED",
@@ -1792,6 +1794,8 @@ export const handleConfirmAppointment = async (req: Request, res: Response) => {
         ...responseAppointment,
         patientNameTranslated,
         notesTranslated,
+        doctorNameTranslated,
+        specializationTranslated,
       },
       patientDetails: tokenDetails.patient,
       intakeResponse: tokenDetails.intakeResponse,
@@ -1913,6 +1917,8 @@ export const handleDeclineAppointment = async (req: Request, res: Response) => {
     const tokenDetails = await buildTokenPatientDetails(appointment, appointmentId);
     const patientNameTranslated = await translateToJapanese(appointment.patientName);
     const notesTranslated = await translateToJapanese(appointment.notes);
+    const doctorNameTranslated = await translateToJapanese(appointment.doctorName);
+    const specializationTranslated = await translateToJapanese(appointment.specialization);
     const responseAppointment = serializeAppointment({
       ...appointment,
       status: "DECLINED",
@@ -1929,6 +1935,8 @@ export const handleDeclineAppointment = async (req: Request, res: Response) => {
         ...responseAppointment,
         patientNameTranslated,
         notesTranslated,
+        doctorNameTranslated,
+        specializationTranslated,
       },
       patientDetails: tokenDetails.patient,
       intakeResponse: tokenDetails.intakeResponse,

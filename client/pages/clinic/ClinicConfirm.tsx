@@ -208,14 +208,16 @@ export default function ClinicConfirm() {
                   <Stethoscope className="h-4 w-4" /> 希望担当医
                 </span>
                 <span className="font-medium text-slate-900">
-                  {appointment.doctorName ?? "指定なし"}
+                  {appointment.doctorNameTranslated ?? appointment.doctorName ?? "指定なし"}
                 </span>
               </div>
               <div className="flex items-center justify-between gap-3">
                 <span className="flex items-center gap-2 text-slate-500">
                   <Stethoscope className="h-4 w-4" /> 診療科
                 </span>
-                <span className="font-medium text-slate-900">{appointment.specialization}</span>
+                <span className="font-medium text-slate-900">
+                  {appointment.specializationTranslated ?? appointment.specialization}
+                </span>
               </div>
               <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
                 <p className="text-xs uppercase tracking-wide text-slate-500">症状・備考</p>

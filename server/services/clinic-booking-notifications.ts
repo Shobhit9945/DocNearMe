@@ -34,6 +34,8 @@ const APP_BASE_URL =
   "https://docnearme.jp";
 const DEEPL_API_KEY = process.env.DEEPL ?? process.env.DEEPL_API_KEY ?? "";
 const DEEPL_API_URL = process.env.DEEPL_API_URL ?? "https://api-free.deepl.com/v2/translate";
+const GOOGLE_TRANSLATE_ENDPOINT =
+  "https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=ja&dt=t&q=";
 const NOTIFICATION_RETRY_DELAYS_MS = [1000, 3000];
 const CONFIRMATION_TOKEN_BYTES = 32;
 const CONFIRMATION_TOKEN_TTL_MS = 48 * 60 * 60 * 1000;
@@ -65,41 +67,81 @@ const formatAppointmentDateTime = (preferredStart?: string, slot?: string) => {
   return slot ? `${localized} (${slot})` : localized;
 };
 
-const translateToJapanese = async (inputs: string[], logger: Logger) => {
-  if (!DEEPL_API_KEY || inputs.length === 0) return inputs;
-  const sanitizedInputs = inputs.map((value) => value?.trim() ?? "");
-  const params = new URLSearchParams();
-  sanitizedInputs.forEach((value) => {
-    params.append("text", value);
-  });
-  params.append("target_lang", "JA");
+const containsJapanese = (text: string) => /[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9faf]/.test(text);
 
+const translateWithGoogle = async (text: string, logger: Logger) => {
   try {
-    const response = await fetch(DEEPL_API_URL, {
-      method: "POST",
-      headers: {
-        Authorization: `DeepL-Auth-Key ${DEEPL_API_KEY}`,
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: params.toString(),
-    });
-
-    if (!response.ok) {
-      logger.warn("[clinic-notification] deepl_translate_failed", {
-        status: response.status,
-      });
-      return inputs;
-    }
-
-    const data = (await response.json()) as { translations?: Array<{ text: string }> };
-    if (!data.translations || data.translations.length !== inputs.length) return inputs;
-    return data.translations.map((item) => item.text ?? "");
+    const response = await fetch(`${GOOGLE_TRANSLATE_ENDPOINT}${encodeURIComponent(text)}`);
+    if (!response.ok) return undefined;
+    const data = (await response.json()) as unknown;
+    if (!Array.isArray(data) || !Array.isArray(data[0])) return undefined;
+    const translated = data[0]
+      .map((chunk) => (Array.isArray(chunk) && typeof chunk[0] === "string" ? chunk[0] : ""))
+      .join("")
+      .trim();
+    if (!translated || translated === text) return undefined;
+    return translated;
   } catch (error) {
-    logger.warn("[clinic-notification] deepl_translate_error", {
+    logger.warn("[clinic-notification] google_translate_error", {
       error: error instanceof Error ? error.message : String(error),
     });
-    return inputs;
+    return undefined;
   }
+};
+
+const translateToJapanese = async (inputs: string[], logger: Logger) => {
+  if (inputs.length === 0) return inputs;
+  const sanitizedInputs = inputs.map((value) => value?.trim() ?? "");
+  const shouldTranslate = sanitizedInputs.map((value) => value && !containsJapanese(value));
+
+  if (DEEPL_API_KEY && shouldTranslate.some(Boolean)) {
+    const params = new URLSearchParams();
+    sanitizedInputs.forEach((value, index) => {
+      if (shouldTranslate[index]) params.append("text", value);
+    });
+    params.append("target_lang", "JA");
+
+    try {
+      const response = await fetch(DEEPL_API_URL, {
+        method: "POST",
+        headers: {
+          Authorization: `DeepL-Auth-Key ${DEEPL_API_KEY}`,
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: params.toString(),
+      });
+
+      if (response.ok) {
+        const data = (await response.json()) as { translations?: Array<{ text: string }> };
+        if (data.translations) {
+          const translations = data.translations.map((item) => item.text ?? "");
+          let translateIndex = 0;
+          return sanitizedInputs.map((value, index) => {
+            if (!shouldTranslate[index]) return value;
+            const translated = translations[translateIndex] ?? value;
+            translateIndex += 1;
+            return translated || value;
+          });
+        }
+      } else {
+        logger.warn("[clinic-notification] deepl_translate_failed", {
+          status: response.status,
+        });
+      }
+    } catch (error) {
+      logger.warn("[clinic-notification] deepl_translate_error", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  const translatedWithGoogle = await Promise.all(
+    sanitizedInputs.map(async (value, index) => {
+      if (!shouldTranslate[index]) return value;
+      return (await translateWithGoogle(value, logger)) ?? value;
+    }),
+  );
+  return translatedWithGoogle;
 };
 
 export const buildClinicBookingNotificationEmail = (

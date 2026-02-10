@@ -39,6 +39,8 @@ export interface AppointmentResponseItem {
   patientId?: string;
   patientName?: string;
   patientNameTranslated?: string;
+  doctorNameTranslated?: string;
+  specializationTranslated?: string;
   patientPhone?: string;
   patientEmail?: string;
   patientVisaType?: VisaType;
