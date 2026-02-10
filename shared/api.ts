@@ -700,11 +700,23 @@ export interface MedicalRecordKeyUpsertResponse {
 export interface ClinicReview {
   id: string;
   clinicId: string;
+  appointmentId?: string;
+  patientId?: string;
   author: string;
-  rating: number;
-  comment: string;
+  overallRating: number;
+  ratings: ClinicReviewRatings;
+  comment?: string;
+  isPublic?: boolean;
   createdAt: string;
   updatedAt?: string;
+}
+
+export interface ClinicReviewRatings {
+  englishCommunication: number;
+  explainedTreatmentClearly: number;
+  foreignPatientFriendlyStaff: number;
+  cashlessPaymentAvailable: number;
+  waitTimeReasonable: number;
 }
 
 export interface ClinicReviewListResponse {
@@ -714,8 +726,11 @@ export interface ClinicReviewListResponse {
 
 export interface ClinicReviewCreateRequest {
   author: string;
-  rating: number;
-  comment: string;
+  appointmentId: string;
+  overallRating: number;
+  ratings: ClinicReviewRatings;
+  comment?: string;
+  isPublic?: boolean;
 }
 
 export interface ClinicReviewCreateResponse {
@@ -725,8 +740,10 @@ export interface ClinicReviewCreateResponse {
 
 export interface ClinicReviewUpdateRequest {
   author: string;
-  rating: number;
-  comment: string;
+  overallRating: number;
+  ratings: ClinicReviewRatings;
+  comment?: string;
+  isPublic?: boolean;
 }
 
 export interface ClinicReviewUpdateResponse {

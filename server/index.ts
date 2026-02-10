@@ -7,12 +7,15 @@ import {
   handleCancelAppointment,
   handleClinicCancelAppointment,
   handleClinicConfirmAppointment,
+  handleClinicCompleteAppointment,
   handleClinicDeleteAppointment,
   handleClinicDeclineAppointment,
   handleClinicPatientDetails,
   handleClinicRescheduleMessage,
   handleConfirmAppointment,
+  handleCreateAppointmentReview,
   handleDeclineAppointment,
+  handleGetAppointmentReview,
   handleListAppointments,
   handleListAppointmentsForClinic,
   handleListAppointmentsForUser,
@@ -168,8 +171,11 @@ export async function createServer(): Promise<Express> {
   app.post("/api/clinic/appointments/:id/cancel", requireClinicAuth, handleClinicCancelAppointment);
   app.post("/api/clinic/appointments/:id/confirm", requireClinicAuth, handleClinicConfirmAppointment);
   app.post("/api/clinic/appointments/:id/decline", requireClinicAuth, handleClinicDeclineAppointment);
+  app.post("/api/clinic/appointments/:id/complete", requireClinicAuth, handleClinicCompleteAppointment);
   app.post("/api/clinic/appointments/:id/reschedule-message", requireClinicAuth, handleClinicRescheduleMessage);
   app.delete("/api/clinic/appointments/:id", requireClinicAuth, handleClinicDeleteAppointment);
+    app.get("/api/appointments/:id/review", requireAuth, handleGetAppointmentReview);
+    app.post("/api/appointments/:id/review", requireAuth, handleCreateAppointmentReview);
   app.get("/api/clinic/intake-form", requireClinicAuth, handleGetClinicIntakeFormForClinic);
   app.put("/api/clinic/intake-form", requireClinicAuth, handleUpdateClinicIntakeForm);
   app.get("/api/clinic/me", requireClinicAuth, handleClinicMe);

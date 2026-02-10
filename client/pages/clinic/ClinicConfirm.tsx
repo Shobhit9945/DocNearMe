@@ -21,12 +21,12 @@ const formatDateTime = (value?: string) => {
   if (!value) return "-";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString();
+  return date.toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" });
 };
 
 const formatAnswerValue = (value: IntakeAnswerValue) => {
   if (Array.isArray(value)) return value.join(", ");
-  if (typeof value === "boolean") return value ? "Yes" : "No";
+  if (typeof value === "boolean") return value ? "はい" : "いいえ";
   if (value === null || value === undefined || value === "") return "-";
   return String(value);
 };
@@ -54,7 +54,7 @@ export default function ClinicConfirm() {
 
   useEffect(() => {
     if (!appointmentId || !token) {
-      setError("Missing confirmation details. Please use the link from the email.");
+      setError("確認情報が不足しています。メールのリンクをご利用ください。");
       setIsLoading(false);
       return;
     }
@@ -68,13 +68,14 @@ export default function ClinicConfirm() {
         );
         const data = (await response.json()) as ConfirmPayload | { error?: string };
         if (!response.ok) {
-          const message = "error" in data && data.error ? data.error : "Unable to process the request.";
+          const message =
+            "error" in data && data.error ? data.error : "リクエストを処理できませんでした。";
           throw new Error(message);
         }
         setPayload(data as ConfirmPayload);
       } catch (err) {
         if (err instanceof DOMException && err.name === "AbortError") return;
-        setError(err instanceof Error ? err.message : "Unable to process the request.");
+        setError(err instanceof Error ? err.message : "リクエストを処理できませんでした。");
       } finally {
         setIsLoading(false);
       }
@@ -97,8 +98,8 @@ export default function ClinicConfirm() {
   if (isLoading) {
     return (
       <LoadingScreen
-        title={action === "confirm" ? "Confirming appointment" : "Processing decline"}
-        subtitle="Just a moment while we update the request."
+        title={action === "confirm" ? "予約を承認しています" : "却下を処理しています"}
+        subtitle="更新中です。しばらくお待ちください。"
         className="min-h-screen bg-[#F6F8FF]"
       />
     );
@@ -111,23 +112,23 @@ export default function ClinicConfirm() {
           <div className="mx-auto w-full max-w-3xl rounded-3xl border border-slate-100 bg-white p-8 shadow-lg">
             <div className="flex items-center gap-3 text-emerald-600">
               <BadgeCheck className="h-6 w-6" />
-              <h1 className="text-xl font-semibold">This request was already processed</h1>
+              <h1 className="text-xl font-semibold">このリクエストは既に処理済みです</h1>
             </div>
             <p className="mt-3 text-sm text-slate-600">
-              The appointment has already been confirmed or declined. No further action is needed.
+              この予約は既に承認または却下されています。追加の操作は不要です。
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
               <Link
                 to="/appointments"
                 className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:border-slate-300"
               >
-                View appointments
+                予約一覧を見る
               </Link>
               <Link
                 to="/login"
                 className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
               >
-                Clinic login
+                クリニックログイン
               </Link>
             </div>
           </div>
@@ -140,15 +141,17 @@ export default function ClinicConfirm() {
         <div className="mx-auto w-full max-w-3xl rounded-3xl border border-red-100 bg-white p-8 shadow-lg">
           <div className="flex items-center gap-3 text-red-600">
             <XCircle className="h-6 w-6" />
-            <h1 className="text-xl font-semibold">We could not process the request</h1>
+            <h1 className="text-xl font-semibold">リクエストを処理できませんでした</h1>
           </div>
-          <p className="mt-3 text-sm text-slate-600">{error ?? "Please try again from the latest email."}</p>
+          <p className="mt-3 text-sm text-slate-600">
+            {error ?? "最新のメールからもう一度お試しください。"}
+          </p>
           <div className="mt-6 flex flex-wrap gap-3">
             <Link
               to="/login"
               className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:border-slate-300"
             >
-              Go to clinic login
+              クリニックログインへ
             </Link>
           </div>
         </div>
@@ -173,28 +176,28 @@ export default function ClinicConfirm() {
               </div>
               <div>
                 <h1 className="text-2xl font-semibold text-slate-900">
-                  {action === "confirm" ? "Booking confirmed" : "Request declined"}
+                  {action === "confirm" ? "予約を承認しました" : "リクエストを却下しました"}
                 </h1>
                 <p className="text-sm text-slate-500">
                   {action === "confirm"
-                    ? "The appointment has been confirmed and the patient has been notified."
-                    : "The appointment request has been declined."}
+                    ? "予約を承認し、患者へ通知しました。"
+                    : "予約リクエストを却下しました。"}
                 </p>
               </div>
             </div>
             <div className="rounded-full bg-[#EEF4FF] px-4 py-2 text-xs font-semibold text-[#1E4DB7]">
-              Appointment ID: {appointment._id}
+              予約ID: {appointment._id}
             </div>
           </div>
         </div>
 
         <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
           <div className="rounded-[28px] border border-slate-100 bg-white p-6 shadow-lg">
-            <h2 className="text-lg font-semibold text-slate-900">Appointment details</h2>
+            <h2 className="text-lg font-semibold text-slate-900">予約詳細</h2>
             <div className="mt-4 grid gap-4 text-sm text-slate-600">
               <div className="flex items-center justify-between gap-3">
                 <span className="flex items-center gap-2 text-slate-500">
-                  <CalendarClock className="h-4 w-4" /> Date & time
+                  <CalendarClock className="h-4 w-4" /> 日時
                 </span>
                 <span className="font-medium text-slate-900">
                   {formatDateTime(appointment.confirmedStart ?? appointment.preferredStart)}
@@ -202,29 +205,29 @@ export default function ClinicConfirm() {
               </div>
               <div className="flex items-center justify-between gap-3">
                 <span className="flex items-center gap-2 text-slate-500">
-                  <Stethoscope className="h-4 w-4" /> Doctor requested
+                  <Stethoscope className="h-4 w-4" /> 希望担当医
                 </span>
                 <span className="font-medium text-slate-900">
-                  {appointment.doctorName ?? "Any available doctor"}
+                  {appointment.doctorName ?? "指定なし"}
                 </span>
               </div>
               <div className="flex items-center justify-between gap-3">
                 <span className="flex items-center gap-2 text-slate-500">
-                  <Stethoscope className="h-4 w-4" /> Specialization
+                  <Stethoscope className="h-4 w-4" /> 診療科
                 </span>
                 <span className="font-medium text-slate-900">{appointment.specialization}</span>
               </div>
               <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
-                <p className="text-xs uppercase tracking-wide text-slate-500">Symptoms / Notes</p>
+                <p className="text-xs uppercase tracking-wide text-slate-500">症状・備考</p>
                 <p className="mt-2 text-sm text-slate-700">
-                  {appointment.notes?.trim() || "No symptoms or notes were provided."}
+                  {appointment.notesTranslated?.trim() || appointment.notes?.trim() || "症状や備考は記載されていません。"}
                 </p>
               </div>
             </div>
 
             {intakeResponse?.responses?.length ? (
               <div className="mt-6">
-                <h3 className="text-sm font-semibold text-slate-900">Intake responses</h3>
+                <h3 className="text-sm font-semibold text-slate-900">問診回答</h3>
                 <div className="mt-3 space-y-3">
                   {intakeResponse.responses.map((item) => (
                     <div key={item.questionId} className="rounded-xl border border-slate-100 bg-white p-3">
@@ -239,37 +242,42 @@ export default function ClinicConfirm() {
 
           <div className="space-y-6">
             <div className="rounded-[24px] border border-slate-100 bg-white p-6 shadow-lg">
-              <h2 className="text-lg font-semibold text-slate-900">Patient details</h2>
+              <h2 className="text-lg font-semibold text-slate-900">患者情報</h2>
               <div className="mt-4 space-y-3 text-sm text-slate-600">
                 <div className="flex items-center justify-between gap-3">
                   <span className="flex items-center gap-2 text-slate-500">
-                    <User className="h-4 w-4" /> Name
+                    <User className="h-4 w-4" /> 氏名
                   </span>
-                  <span className="font-medium text-slate-900">{patientDetails?.name ?? appointment.patientName}</span>
+                  <span className="font-medium text-slate-900">
+                    {patientDetails?.nameTranslated ??
+                      appointment.patientNameTranslated ??
+                      patientDetails?.name ??
+                      appointment.patientName}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between gap-3">
-                  <span className="text-slate-500">Age</span>
+                  <span className="text-slate-500">年齢</span>
                   <span className="font-medium text-slate-900">
                     {patientDetails?.age !== undefined ? `${patientDetails.age}` : "-"}
                   </span>
                 </div>
                 <div className="flex items-center justify-between gap-3">
-                  <span className="text-slate-500">Visa</span>
+                  <span className="text-slate-500">ビザ</span>
                   <span className="font-medium text-slate-900">{patientDetails?.visaType ?? "-"}</span>
                 </div>
                 <div className="flex items-center justify-between gap-3">
-                  <span className="text-slate-500">Country</span>
+                  <span className="text-slate-500">国籍</span>
                   <span className="font-medium text-slate-900">{patientDetails?.country ?? "-"}</span>
                 </div>
                 <div className="flex items-center justify-between gap-3">
                   <span className="flex items-center gap-2 text-slate-500">
-                    <Mail className="h-4 w-4" /> Email
+                    <Mail className="h-4 w-4" /> メール
                   </span>
                   <span className="font-medium text-slate-900">{appointment.patientEmail ?? "-"}</span>
                 </div>
                 <div className="flex items-center justify-between gap-3">
                   <span className="flex items-center gap-2 text-slate-500">
-                    <Phone className="h-4 w-4" /> Phone
+                    <Phone className="h-4 w-4" /> 電話番号
                   </span>
                   <span className="font-medium text-slate-900">{appointment.patientPhone ?? "-"}</span>
                 </div>
@@ -277,46 +285,52 @@ export default function ClinicConfirm() {
             </div>
 
             <div className="rounded-[24px] border border-slate-100 bg-white p-6 shadow-lg">
-              <h2 className="text-lg font-semibold text-slate-900">Medical record</h2>
+              <h2 className="text-lg font-semibold text-slate-900">医療記録</h2>
               {sharedRecord ? (
                 <div className="mt-4 space-y-3 text-sm text-slate-600">
                   <div className="flex items-center gap-2">
                     <FileText className="h-4 w-4 text-slate-500" />
                     <span className="font-medium text-slate-900">{sharedRecord.name}</span>
                   </div>
-                  <p className="text-xs text-slate-500">Type: {sharedRecord.type} · Size: {sharedRecord.size} bytes</p>
+                  <p className="text-xs text-slate-500">
+                    種別: {sharedRecord.type} ・ サイズ: {sharedRecord.size} バイト
+                  </p>
                   {downloadUrl ? (
                     <a
                       href={downloadUrl}
                       download={sharedRecord.name}
                       className="inline-flex items-center justify-center rounded-full bg-[#1E4DB7] px-4 py-2 text-xs font-semibold text-white hover:bg-[#173C93]"
                     >
-                      Download record
+                      記録をダウンロード
                     </a>
                   ) : (
-                    <p className="text-xs text-slate-500">Record metadata available. File data not included.</p>
+                    <p className="text-xs text-slate-500">
+                      記録のメタデータのみ利用可能です。ファイル本体は含まれていません。
+                    </p>
                   )}
                 </div>
               ) : (
-                <p className="mt-3 text-sm text-slate-500">No medical record was shared.</p>
+                <p className="mt-3 text-sm text-slate-500">医療記録は共有されていません。</p>
               )}
             </div>
 
             <div className="rounded-[22px] border border-slate-100 bg-white p-5 text-sm text-slate-600 shadow-sm">
-              <p className="font-semibold text-slate-700">Next steps</p>
-              <p className="mt-2">Review the appointment in the clinic dashboard or contact the patient if follow-up is needed.</p>
+              <p className="font-semibold text-slate-700">次の対応</p>
+              <p className="mt-2">
+                予約内容を院内ダッシュボードで確認し、必要に応じて患者へ連絡してください。
+              </p>
               <div className="mt-4 flex flex-wrap gap-2">
                 <Link
                   to="/appointments"
                   className="rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-700 hover:border-slate-300"
                 >
-                  View appointments
+                  予約一覧を見る
                 </Link>
                 <Link
                   to="/login"
                   className="rounded-full bg-slate-900 px-4 py-2 text-xs font-semibold text-white"
                 >
-                  Clinic login
+                  クリニックログイン
                 </Link>
               </div>
             </div>

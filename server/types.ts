@@ -235,9 +235,19 @@ export interface VaultDocument {
 export interface ClinicReview {
   _id?: unknown;
   clinicId: string;
+  appointmentId?: string;
+  patientId?: string;
   author: string;
-  rating: number;
-  comment: string;
+  overallRating: number;
+  ratings: {
+    englishCommunication: number;
+    explainedTreatmentClearly: number;
+    foreignPatientFriendlyStaff: number;
+    cashlessPaymentAvailable: number;
+    waitTimeReasonable: number;
+  };
+  comment?: string;
+  isPublic?: boolean;
   createdAt: Date;
   updatedAt?: Date;
 }

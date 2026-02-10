@@ -28,7 +28,19 @@ const parseRequestBody = (body: unknown): Record<string, unknown> => {
   }
 };
 
-const serializeReview = (review: ClinicReview) => ({
+const defaultRatings = (overall: number) => ({
+  englishCommunication: overall,
+  explainedTreatmentClearly: overall,
+  foreignPatientFriendlyStaff: overall,
+  cashlessPaymentAvailable: overall,
+  waitTimeReasonable: overall,
+});
+
+const serializeReview = (review: ClinicReview) => {
+  const legacyRating = (review as any).rating;
+  const overallRating = review.overallRating ?? (typeof legacyRating === "number" ? legacyRating : 0);
+  const ratings = review.ratings ?? defaultRatings(overallRating);
+  return {
   id:
     review._id instanceof ObjectId
       ? review._id.toString()
@@ -36,16 +48,36 @@ const serializeReview = (review: ClinicReview) => ({
         ? String(review._id)
         : "",
   clinicId: review.clinicId,
+    appointmentId: review.appointmentId,
+    patientId: review.patientId,
   author: review.author,
-  rating: review.rating,
-  comment: review.comment,
+    overallRating,
+    ratings,
+    comment: review.comment ?? "",
+    isPublic: review.isPublic ?? true,
   createdAt: review.createdAt instanceof Date ? review.createdAt.toISOString() : review.createdAt,
   updatedAt: review.updatedAt instanceof Date ? review.updatedAt.toISOString() : review.updatedAt,
-});
+  };
+};
 
 const resolveReviewId = (reviewId: string) => (ObjectId.isValid(reviewId) ? new ObjectId(reviewId) : reviewId);
 
 const isValidRating = (rating: number) => rating >= 1 && rating <= 5;
+
+const normalizeRatings = (value: unknown) => {
+  if (!value || typeof value !== "object") return null;
+  const payload = value as Record<string, unknown>;
+  const fields = {
+    englishCommunication: Number(payload.englishCommunication),
+    explainedTreatmentClearly: Number(payload.explainedTreatmentClearly),
+    foreignPatientFriendlyStaff: Number(payload.foreignPatientFriendlyStaff),
+    cashlessPaymentAvailable: Number(payload.cashlessPaymentAvailable),
+    waitTimeReasonable: Number(payload.waitTimeReasonable),
+  };
+  const ratings = Object.values(fields);
+  if (ratings.some((rating) => !Number.isFinite(rating) || !isValidRating(rating))) return null;
+  return fields;
+};
 
 export const handleListClinicReviews = async (req: Request, res: Response) => {
   const { clinicId } = req.params;
@@ -56,7 +88,10 @@ export const handleListClinicReviews = async (req: Request, res: Response) => {
   try {
     const reviewsCollection = await getClinicReviewsCollection();
     const reviews = await reviewsCollection
-      .find({ clinicId })
+      .find({
+        clinicId,
+        $or: [{ isPublic: { $ne: false } }, { isPublic: { $exists: false } }],
+      })
       .sort({ createdAt: -1 })
       .toArray();
 
@@ -65,7 +100,8 @@ export const handleListClinicReviews = async (req: Request, res: Response) => {
       serialized.length > 0
         ? Number(
             (
-              serialized.reduce((sum, review) => sum + (review.rating ?? 0), 0) / serialized.length
+              serialized.reduce((sum, review) => sum + (review.overallRating ?? 0), 0) /
+              serialized.length
             ).toFixed(1),
           )
         : 0;
@@ -80,28 +116,36 @@ export const handleListClinicReviews = async (req: Request, res: Response) => {
 export const handleCreateClinicReview = async (req: Request, res: Response) => {
   const { clinicId } = req.params;
   const payload = parseRequestBody(req.body);
-  const { author, rating, comment } = payload ?? {};
+  const { author, overallRating, ratings, comment, isPublic, appointmentId, patientId } = payload ?? {};
 
   if (!clinicId) {
     return res.status(400).json({ error: "Clinic ID is required." });
   }
 
-  if (!author || !comment || rating === undefined) {
-    return res.status(400).json({ error: "Author, rating, and comment are required." });
+  if (!author || overallRating === undefined || !ratings) {
+    return res.status(400).json({ error: "Author, ratings, and overall rating are required." });
   }
 
-  const numericRating = Number(rating);
+  const numericRating = Number(overallRating);
+  const normalizedRatings = normalizeRatings(ratings);
   if (!Number.isFinite(numericRating) || !isValidRating(numericRating)) {
-    return res.status(400).json({ error: "Rating must be between 1 and 5." });
+    return res.status(400).json({ error: "Overall rating must be between 1 and 5." });
+  }
+  if (!normalizedRatings) {
+    return res.status(400).json({ error: "Invalid category ratings." });
   }
 
   try {
     const reviewsCollection = await getClinicReviewsCollection();
     const review: ClinicReview = {
       clinicId,
+      appointmentId: typeof appointmentId === "string" ? appointmentId : undefined,
+      patientId: typeof patientId === "string" ? patientId : undefined,
       author: String(author).trim(),
-      rating: numericRating,
-      comment: String(comment).trim(),
+      overallRating: numericRating,
+      ratings: normalizedRatings,
+      comment: typeof comment === "string" ? comment.trim() : undefined,
+      isPublic: typeof isPublic === "boolean" ? isPublic : undefined,
       createdAt: new Date(),
     };
 
@@ -121,19 +165,23 @@ export const handleCreateClinicReview = async (req: Request, res: Response) => {
 export const handleUpdateClinicReview = async (req: Request, res: Response) => {
   const { clinicId, reviewId } = req.params;
   const payload = parseRequestBody(req.body);
-  const { author, rating, comment } = payload ?? {};
+  const { author, overallRating, ratings, comment, isPublic } = payload ?? {};
 
   if (!clinicId || !reviewId) {
     return res.status(400).json({ error: "Clinic ID and review ID are required." });
   }
 
-  if (!author || !comment || rating === undefined) {
-    return res.status(400).json({ error: "Author, rating, and comment are required." });
+  if (!author || overallRating === undefined || !ratings) {
+    return res.status(400).json({ error: "Author, ratings, and overall rating are required." });
   }
 
-  const numericRating = Number(rating);
+  const numericRating = Number(overallRating);
+  const normalizedRatings = normalizeRatings(ratings);
   if (!Number.isFinite(numericRating) || !isValidRating(numericRating)) {
-    return res.status(400).json({ error: "Rating must be between 1 and 5." });
+    return res.status(400).json({ error: "Overall rating must be between 1 and 5." });
+  }
+  if (!normalizedRatings) {
+    return res.status(400).json({ error: "Invalid category ratings." });
   }
 
   try {
@@ -145,8 +193,10 @@ export const handleUpdateClinicReview = async (req: Request, res: Response) => {
       {
         $set: {
           author: String(author).trim(),
-          rating: numericRating,
-          comment: String(comment).trim(),
+          overallRating: numericRating,
+          ratings: normalizedRatings,
+          comment: typeof comment === "string" ? comment.trim() : undefined,
+          isPublic: typeof isPublic === "boolean" ? isPublic : undefined,
           updatedAt: new Date(),
         },
       },

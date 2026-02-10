@@ -27,6 +27,8 @@ const statusStyles: Record<string, string> = {
   DECLINED: "bg-red-50 text-red-700",
   CANCELLED_BY_PATIENT: "bg-slate-100 text-slate-600",
   CANCELLED_BY_CLINIC: "bg-slate-100 text-slate-600",
+  COMPLETED: "bg-blue-50 text-blue-700",
+  NO_SHOW: "bg-slate-100 text-slate-600",
 };
 
 const statusLabels: Record<string, string> = {
@@ -36,6 +38,8 @@ const statusLabels: Record<string, string> = {
   DECLINED: "Declined",
   CANCELLED_BY_PATIENT: "Cancelled",
   CANCELLED_BY_CLINIC: "Cancelled by clinic",
+  COMPLETED: "Visit completed",
+  NO_SHOW: "No show",
 };
 
 const fetchClinicAppointments = async (): Promise<AppointmentListResponse> => {
@@ -212,6 +216,35 @@ export default function ClinicAppointments() {
     }
   };
 
+  const handleComplete = async (appointment: AppointmentResponseItem) => {
+    setIsSubmitting(true);
+    try {
+      const response = await fetch(`/api/clinic/appointments/${appointment._id}/complete`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...getClinicAuthHeader(),
+        },
+      });
+
+      if (!response.ok) {
+        const errorPayload = await response.json().catch(() => ({}));
+        throw new Error(errorPayload?.error ?? t("Unable to complete appointment."));
+      }
+
+      toast({ title: t("Visit completed"), description: t("The patient can now leave a review.") });
+      await refetch();
+    } catch (err) {
+      toast({
+        title: t("Completion failed"),
+        description: err instanceof Error ? err.message : t("Please try again."),
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleDeleteAppointment = async () => {
     if (!deleteTarget) return;
     setIsDeleting(true);
@@ -364,6 +397,7 @@ export default function ClinicAppointments() {
               appointment.status !== "CANCELLED_BY_PATIENT" &&
               appointment.status !== "CANCELLED_BY_CLINIC";
             const specializationLabel = t(getSpecializationLabel(appointment.specialization));
+            const canComplete = appointment.status === "CONFIRMED";
 
             const actionButtonClass = "w-full sm:w-auto whitespace-normal text-center h-auto py-2 leading-tight";
 
@@ -423,6 +457,14 @@ export default function ClinicAppointments() {
                       className={actionButtonClass}
                     >
                       {t("Confirm appointment")}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => handleComplete(appointment)}
+                      disabled={!canComplete || isSubmitting}
+                      className={actionButtonClass}
+                    >
+                      {t("Mark visit complete")}
                     </Button>
                   </div>
                 </div>

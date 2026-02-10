@@ -5,6 +5,7 @@ import {
   getAppointmentsCollection,
   getClinicInfoCollection,
   getClinicIntakeFormsCollection,
+  getClinicReviewsCollection,
   getIntakeResponsesCollection,
   getPatientsCollection,
 } from "../db";
@@ -97,6 +98,23 @@ const normalizeString = (value: unknown) => (typeof value === "string" ? value.t
 
 const sanitizeChoice = (options: string[], value: string) =>
   options.length > 0 ? (options.includes(value) ? value : "") : value;
+
+const isValidRating = (rating: number) => rating >= 1 && rating <= 5;
+
+const normalizeReviewRatings = (value: unknown) => {
+  if (!value || typeof value !== "object") return null;
+  const payload = value as Record<string, unknown>;
+  const ratings = {
+    englishCommunication: Number(payload.englishCommunication),
+    explainedTreatmentClearly: Number(payload.explainedTreatmentClearly),
+    foreignPatientFriendlyStaff: Number(payload.foreignPatientFriendlyStaff),
+    cashlessPaymentAvailable: Number(payload.cashlessPaymentAvailable),
+    waitTimeReasonable: Number(payload.waitTimeReasonable),
+  };
+  const values = Object.values(ratings);
+  if (values.some((rating) => !Number.isFinite(rating) || !isValidRating(rating))) return null;
+  return ratings;
+};
 
 const sanitizeIntakeAnswerValue = (question: IntakeQuestion, rawValue: unknown): IntakeAnswerValue => {
   switch (question.questionType) {
@@ -371,6 +389,7 @@ const buildTokenPatientDetails = async (appointment: Appointment, appointmentId:
   const patient = patientLookupId ? await patients.findOne({ _id: patientLookupId }) : null;
 
   const patientName = appointment.patientName ?? patient?.name ?? "";
+  const patientNameTranslated = await translateToJapanese(patientName);
   const patientCountry = patient?.nationality ?? undefined;
   const patientVisaType = appointment.patientVisaType ?? patient?.visaType ?? undefined;
   const patientAge = calculateAge(patient?.dateOfBirth);
@@ -386,6 +405,7 @@ const buildTokenPatientDetails = async (appointment: Appointment, appointmentId:
   return {
     patient: {
       name: patientName,
+      nameTranslated: patientNameTranslated,
       age: patientAge,
       country: patientCountry,
       visaType: patientVisaType,
@@ -999,6 +1019,57 @@ export const handleClinicConfirmAppointment = async (req: Request, res: Response
   } catch (error) {
     console.error("Clinic appointment confirmation error", error);
     res.status(500).json({ error: "Failed to confirm appointment" });
+  }
+};
+
+export const handleClinicCompleteAppointment = async (req: Request, res: Response) => {
+  if (!req.clinicAuth) {
+    return res.status(401).json({ error: "Authentication required." });
+  }
+
+  const appointmentId = req.params.id;
+
+  try {
+    const appointments = await getAppointmentsCollection();
+    const appointmentLookup = resolveAppointmentId(appointmentId);
+    const appointment = await appointments.findOne({ _id: appointmentLookup });
+
+    if (!appointment || appointment.clinicId !== req.clinicAuth.clinicId) {
+      return res.status(404).json({ error: "Appointment not found" });
+    }
+
+    if (appointment.status !== "CONFIRMED") {
+      return res.status(409).json({ error: "Only confirmed appointments can be completed." });
+    }
+
+    const now = new Date();
+    await appointments.updateOne(
+      { _id: appointmentLookup },
+      {
+        $set: {
+          status: "COMPLETED",
+          updatedAt: now,
+        },
+      },
+    );
+
+    await updatePatientAppointmentSummary(appointmentId, appointment.patientId, {
+      status: "COMPLETED",
+      updatedAt: now,
+    });
+
+    return res.json({
+      success: true,
+      appointment: serializeAppointment({
+        ...appointment,
+        status: "COMPLETED",
+        updatedAt: now,
+      }),
+      message: "Appointment marked as completed",
+    });
+  } catch (error) {
+    console.error("Clinic appointment completion error", error);
+    return res.status(500).json({ error: "Failed to complete appointment" });
   }
 };
 
@@ -1697,22 +1768,34 @@ export const handleConfirmAppointment = async (req: Request, res: Response) => {
       }
     }
 
+    const tokenDetails = await buildTokenPatientDetails(appointment, appointmentId);
+    const patientNameTranslated = await translateToJapanese(appointment.patientName);
+    const notesTranslated = await translateToJapanese(appointment.notes);
+    const responseAppointment = serializeAppointment({
+      ...appointment,
+      status: "CONFIRMED",
+      confirmedStart: confirmTimes.confirmedStart.toISOString(),
+      confirmedEnd: confirmTimes.confirmedEnd.toISOString(),
+      date: confirmTimes.confirmedStart.toISOString(),
+      dateKey,
+      slot,
+      clinicMessage: null,
+      declineReason: null,
+      clinicConfirmationTokenHash: null,
+      tokenExpiresAt: null,
+      updatedAt: now,
+    });
+
     res.json({
       success: true,
-      appointment: serializeAppointment({
-        ...appointment,
-        status: "CONFIRMED",
-        confirmedStart: confirmTimes.confirmedStart.toISOString(),
-        confirmedEnd: confirmTimes.confirmedEnd.toISOString(),
-        date: confirmTimes.confirmedStart.toISOString(),
-        dateKey,
-        slot,
-        clinicMessage: null,
-        declineReason: null,
-        clinicConfirmationTokenHash: null,
-        tokenExpiresAt: null,
-        updatedAt: now,
-      }),
+      appointment: {
+        ...responseAppointment,
+        patientNameTranslated,
+        notesTranslated,
+      },
+      patientDetails: tokenDetails.patient,
+      intakeResponse: tokenDetails.intakeResponse,
+      sharedRecord: tokenDetails.sharedRecord,
       message: "Appointment confirmed successfully",
     });
   } catch (error) {
@@ -1827,21 +1910,121 @@ export const handleDeclineAppointment = async (req: Request, res: Response) => {
       }
     }
 
+    const tokenDetails = await buildTokenPatientDetails(appointment, appointmentId);
+    const patientNameTranslated = await translateToJapanese(appointment.patientName);
+    const notesTranslated = await translateToJapanese(appointment.notes);
+    const responseAppointment = serializeAppointment({
+      ...appointment,
+      status: "DECLINED",
+      declineReason,
+      clinicMessage: null,
+      clinicConfirmationTokenHash: null,
+      tokenExpiresAt: null,
+      updatedAt: now,
+    });
+
     res.json({
       success: true,
-      appointment: serializeAppointment({
-        ...appointment,
-        status: "DECLINED",
-        declineReason,
-        clinicMessage: null,
-        clinicConfirmationTokenHash: null,
-        tokenExpiresAt: null,
-        updatedAt: now,
-      }),
+      appointment: {
+        ...responseAppointment,
+        patientNameTranslated,
+        notesTranslated,
+      },
+      patientDetails: tokenDetails.patient,
+      intakeResponse: tokenDetails.intakeResponse,
+      sharedRecord: tokenDetails.sharedRecord,
       message: "Appointment request declined",
     });
   } catch (error) {
     console.error("Appointment decline error", error);
     res.status(500).json({ error: "Failed to decline appointment" });
+  }
+};
+
+export const handleGetAppointmentReview = async (req: Request, res: Response) => {
+  if (!req.auth) {
+    return res.status(401).json({ error: "Authentication required." });
+  }
+
+  const appointmentId = req.params.id;
+  try {
+    const reviews = await getClinicReviewsCollection();
+    const review = await reviews.findOne({ appointmentId, patientId: req.auth.id });
+    if (!review) {
+      return res.json({ review: null });
+    }
+    return res.json({ review });
+  } catch (error) {
+    console.error("Fetch appointment review error", error);
+    return res.status(500).json({ error: "Unable to load review." });
+  }
+};
+
+export const handleCreateAppointmentReview = async (req: Request, res: Response) => {
+  if (!req.auth) {
+    return res.status(401).json({ error: "Authentication required." });
+  }
+
+  const appointmentId = req.params.id;
+  const payload = parseRequestBody(req.body);
+  const normalizedRatings = normalizeReviewRatings(payload?.ratings);
+  const providedOverall = Number(payload?.overallRating);
+
+  if (!normalizedRatings) {
+    return res.status(400).json({ error: "Invalid category ratings." });
+  }
+
+  const overallRating = Number.isFinite(providedOverall)
+    ? providedOverall
+    : Number(
+        (
+          Object.values(normalizedRatings).reduce((sum, rating) => sum + rating, 0) /
+          Object.values(normalizedRatings).length
+        ).toFixed(1),
+      );
+
+  if (!Number.isFinite(overallRating) || !isValidRating(overallRating)) {
+    return res.status(400).json({ error: "Overall rating must be between 1 and 5." });
+  }
+
+  try {
+    const appointments = await getAppointmentsCollection();
+    const appointmentLookup = resolveAppointmentId(appointmentId);
+    const appointment = await appointments.findOne({ _id: appointmentLookup });
+
+    if (!appointment || appointment.patientId !== req.auth.id) {
+      return res.status(404).json({ error: "Appointment not found" });
+    }
+
+    if (appointment.status !== "COMPLETED") {
+      return res.status(409).json({ error: "Review can only be submitted after visit completion." });
+    }
+
+    const reviews = await getClinicReviewsCollection();
+    const existing = await reviews.findOne({ appointmentId, patientId: req.auth.id });
+    if (existing) {
+      return res.status(409).json({ error: "Review already submitted." });
+    }
+
+    const review = {
+      clinicId: appointment.clinicId,
+      appointmentId,
+      patientId: req.auth.id,
+      author: payload?.author ? String(payload.author).trim() : req.auth.name ?? "Patient",
+      overallRating,
+      ratings: normalizedRatings,
+      comment: typeof payload?.comment === "string" ? payload.comment.trim() : undefined,
+      isPublic: typeof payload?.isPublic === "boolean" ? payload.isPublic : false,
+      createdAt: new Date(),
+    };
+
+    const result = await reviews.insertOne(review);
+    return res.status(201).json({
+      success: true,
+      review: { ...review, _id: result.insertedId },
+    });
+  } catch (error) {
+    console.error("Create appointment review error", error);
+    return res.status(500).json({ error: "Unable to save review." });
   }
 };

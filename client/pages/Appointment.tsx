@@ -107,6 +107,7 @@ type UpcomingAppointment = {
   clinic: string;
   type: string;
   clinicId: string;
+  status: string;
   patientName?: string;
   patientEmail?: string;
   notes?: string;
@@ -117,6 +118,17 @@ type HowVisitStep = {
   body: string;
   helper?: string;
   note?: string;
+};
+
+const patientStatusLabels: Record<string, string> = {
+  PENDING_CLINIC: "Request delivered",
+  RESCHEDULE_REQUESTED: "Clinic requested reschedule",
+  CONFIRMED: "Request accepted",
+  DECLINED: "Request declined",
+  CANCELLED_BY_PATIENT: "Cancelled",
+  CANCELLED_BY_CLINIC: "Cancelled by clinic",
+  NO_SHOW: "No show",
+  COMPLETED: "Visit complete",
 };
 
 type StepBodyProps = {
@@ -164,6 +176,46 @@ const InfoCard: React.FC<NoteProps> = ({ text }) => (
   </div>
 );
 
+type StarRatingProps = {
+  value: number;
+  onChange: (next: number) => void;
+};
+
+const StarRating: React.FC<StarRatingProps> = ({ value, onChange }) => {
+  return (
+    <div className="flex items-center gap-1">
+      {Array.from({ length: 5 }, (_, index) => {
+        const rating = index + 1;
+        const isActive = rating <= value;
+        return (
+          <button
+            key={rating}
+            type="button"
+            onClick={() => onChange(rating)}
+            className={`rounded p-1 transition-colors ${isActive ? "text-[#F5A524]" : "text-slate-300 hover:text-slate-400"}`
+            aria-label={`Set rating to ${rating}`}
+          >
+            <Star className="h-4 w-4" fill={isActive ? "currentColor" : "none"} />
+          </button>
+        );
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="text-lg font-semibold text-slate-900">
+                              {t(appointment.doctor)} · {t(appointment.specialization)}
+                            </p>
+                            <span className="rounded-full bg-[#EEF4FF] px-3 py-1 text-xs font-semibold text-[#1E4DB7]">
+                              {t(patientStatusLabels[appointmentsData?.appointments?.find((item) => item._id === appointment.id)?.status ?? ""] ?? "Request delivered")}
+                            </span>
+                          </div>
+};
+
+                        {appointmentsData?.appointments?.find((item) => item._id === appointment.id)?.status === "COMPLETED" ? (
+                          <button
+                            onClick={() => handleOpenReview(appointment)}
+                            className="inline-flex items-center gap-2 rounded-full bg-[#1E4DB7] px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#183E91]"
+                          >
+                            Rate visit
+                          </button>
+                        ) : null}
 export default function Appointment() {
   const navigate = useNavigate();
   const { t, language } = useTranslation();
@@ -212,6 +264,18 @@ export default function Appointment() {
   const [actionSlot, setActionSlot] = useState<string | undefined>();
   const [actionError, setActionError] = useState<string | null>(null);
   const [isActionSubmitting, setIsActionSubmitting] = useState(false);
+  const [reviewAppointment, setReviewAppointment] = useState<UpcomingAppointment | null>(null);
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
+  const [reviewError, setReviewError] = useState<string | null>(null);
+  const [reviewIsPublic, setReviewIsPublic] = useState(false);
+  const [reviewRatings, setReviewRatings] = useState({
+    englishCommunication: 5,
+    explainedTreatmentClearly: 5,
+    foreignPatientFriendlyStaff: 5,
+    cashlessPaymentAvailable: 5,
+    waitTimeReasonable: 5,
+  });
   const { data: clinicsData, isLoading: isClinicsLoading } = useClinics();
   const { data: doctorsData, isLoading: isDoctorsLoading } = useAllDoctors();
   const clinics = clinicsData?.clinics ?? [];
@@ -796,6 +860,7 @@ export default function Appointment() {
           clinic: clinicName,
           type: "In-person",
           clinicId: appointment.clinicId,
+          status: appointment.status,
           patientName: appointment.patientName,
           patientEmail: appointment.patientEmail,
           notes: appointment.notes,
@@ -1065,6 +1130,68 @@ export default function Appointment() {
     setActionDate(undefined);
     setActionSlot(undefined);
     setActionError(null);
+  };
+
+  const handleOpenReview = (appointment: UpcomingAppointment) => {
+    setReviewAppointment(appointment);
+    setReviewError(null);
+    setReviewIsPublic(false);
+    setReviewRatings({
+      englishCommunication: 5,
+      explainedTreatmentClearly: 5,
+      foreignPatientFriendlyStaff: 5,
+      cashlessPaymentAvailable: 5,
+      waitTimeReasonable: 5,
+    });
+    setReviewOpen(true);
+  };
+
+  const handleSubmitReview = async () => {
+    if (!reviewAppointment || !authSession?.token) return;
+    setReviewSubmitting(true);
+    setReviewError(null);
+    const ratings = reviewRatings;
+    const overallRating = Number(
+      (
+        Object.values(ratings).reduce((sum, rating) => sum + rating, 0) /
+        Object.values(ratings).length
+      ).toFixed(1),
+    );
+
+    try {
+      const response = await fetch(`/api/appointments/${reviewAppointment.id}/review`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authSession.token}`,
+        },
+        body: JSON.stringify({
+          author: reviewAppointment.patientName ?? authSession.name ?? "Patient",
+          appointmentId: reviewAppointment.id,
+          ratings,
+          overallRating,
+          isPublic: reviewIsPublic,
+        }),
+      });
+
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data?.error ?? "Unable to submit review.");
+      }
+
+      toast({
+        title: t("Thanks for your feedback"),
+        description: reviewIsPublic
+          ? t("Your review was submitted and will be shown publicly.")
+          : t("Your review was saved privately."),
+      });
+      setReviewOpen(false);
+      setReviewAppointment(null);
+    } catch (error) {
+      setReviewError(error instanceof Error ? error.message : t("Unable to submit review."));
+    } finally {
+      setReviewSubmitting(false);
+    }
   };
 
   const handleSubmitAction = async () => {
@@ -1350,9 +1477,14 @@ export default function Appointment() {
                           <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold">
                             Next appointment
                           </p>
-                          <p className="text-lg font-semibold text-slate-900">
-                            {t(appointment.doctor)} · {t(appointment.specialization)}
-                          </p>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="text-lg font-semibold text-slate-900">
+                              {t(appointment.doctor)} · {t(appointment.specialization)}
+                            </p>
+                            <span className="rounded-full bg-[#EEF4FF] px-3 py-1 text-xs font-semibold text-[#1E4DB7]">
+                              {t(patientStatusLabels[appointment.status] ?? "Request delivered")}
+                            </span>
+                          </div>
                         </div>
 
                         <div className="flex flex-wrap gap-4 text-sm text-slate-600">
@@ -1372,6 +1504,14 @@ export default function Appointment() {
                       </div>
 
                       <div className="flex flex-wrap gap-3">
+                        {appointment.status === "COMPLETED" ? (
+                          <button
+                            onClick={() => handleOpenReview(appointment)}
+                            className="rounded-full bg-[#1E4DB7] px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#183E91]"
+                          >
+                            Rate visit
+                          </button>
+                        ) : null}
                         <button
                           onClick={() => handleOpenDetails(appointment)}
                           className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:border-[#0089FF] hover:text-[#0089FF]"
@@ -1635,6 +1775,91 @@ export default function Appointment() {
                     ? "Cancel appointment"
                     : "Reschedule appointment"}
               </button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog
+          open={reviewOpen}
+          onOpenChange={(open) => {
+            setReviewOpen(open);
+            if (!open) {
+              setReviewAppointment(null);
+              setReviewError(null);
+            }
+          }}
+        >
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Rate your clinic visit</DialogTitle>
+              <DialogDescription>
+                Share structured feedback to help improve care. You can choose whether to make it public.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-sm font-medium text-slate-700">English communication</span>
+                <StarRating
+                  value={reviewRatings.englishCommunication}
+                  onChange={(value) =>
+                    setReviewRatings((prev) => ({ ...prev, englishCommunication: value }))
+                  }
+                />
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-sm font-medium text-slate-700">Explained treatment clearly</span>
+                <StarRating
+                  value={reviewRatings.explainedTreatmentClearly}
+                  onChange={(value) =>
+                    setReviewRatings((prev) => ({ ...prev, explainedTreatmentClearly: value }))
+                  }
+                />
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-sm font-medium text-slate-700">Foreign-patient friendly staff</span>
+                <StarRating
+                  value={reviewRatings.foreignPatientFriendlyStaff}
+                  onChange={(value) =>
+                    setReviewRatings((prev) => ({ ...prev, foreignPatientFriendlyStaff: value }))
+                  }
+                />
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-sm font-medium text-slate-700">Cashless payment available</span>
+                <StarRating
+                  value={reviewRatings.cashlessPaymentAvailable}
+                  onChange={(value) =>
+                    setReviewRatings((prev) => ({ ...prev, cashlessPaymentAvailable: value }))
+                  }
+                />
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-sm font-medium text-slate-700">Wait time was reasonable</span>
+                <StarRating
+                  value={reviewRatings.waitTimeReasonable}
+                  onChange={(value) =>
+                    setReviewRatings((prev) => ({ ...prev, waitTimeReasonable: value }))
+                  }
+                />
+              </div>
+              <label className="flex items-center gap-2 text-sm text-slate-600">
+                <input
+                  type="checkbox"
+                  checked={reviewIsPublic}
+                  onChange={(event) => setReviewIsPublic(event.target.checked)}
+                  className="h-4 w-4 rounded border-slate-300 text-[#0089FF] focus:ring-[#0089FF]"
+                />
+                Share this review publicly on the clinic profile
+              </label>
+              {reviewError ? <p className="text-sm text-rose-500">{reviewError}</p> : null}
+            </div>
+            <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+              <Button type="button" variant="outline" onClick={() => setReviewOpen(false)} disabled={reviewSubmitting}>
+                Cancel
+              </Button>
+              <Button type="button" onClick={handleSubmitReview} disabled={reviewSubmitting}>
+                {reviewSubmitting ? "Submitting..." : "Submit review"}
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

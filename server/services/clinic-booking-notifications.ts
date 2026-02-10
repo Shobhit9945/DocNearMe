@@ -32,6 +32,8 @@ const APP_BASE_URL =
   process.env.APP_BASE_URL ??
   process.env.PUBLIC_BASE_URL ??
   "https://docnearme.jp";
+const DEEPL_API_KEY = process.env.DEEPL ?? process.env.DEEPL_API_KEY ?? "";
+const DEEPL_API_URL = process.env.DEEPL_API_URL ?? "https://api-free.deepl.com/v2/translate";
 const NOTIFICATION_RETRY_DELAYS_MS = [1000, 3000];
 const CONFIRMATION_TOKEN_BYTES = 32;
 const CONFIRMATION_TOKEN_TTL_MS = 48 * 60 * 60 * 1000;
@@ -63,6 +65,43 @@ const formatAppointmentDateTime = (preferredStart?: string, slot?: string) => {
   return slot ? `${localized} (${slot})` : localized;
 };
 
+const translateToJapanese = async (inputs: string[], logger: Logger) => {
+  if (!DEEPL_API_KEY || inputs.length === 0) return inputs;
+  const sanitizedInputs = inputs.map((value) => value?.trim() ?? "");
+  const params = new URLSearchParams();
+  sanitizedInputs.forEach((value) => {
+    params.append("text", value);
+  });
+  params.append("target_lang", "JA");
+
+  try {
+    const response = await fetch(DEEPL_API_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `DeepL-Auth-Key ${DEEPL_API_KEY}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: params.toString(),
+    });
+
+    if (!response.ok) {
+      logger.warn("[clinic-notification] deepl_translate_failed", {
+        status: response.status,
+      });
+      return inputs;
+    }
+
+    const data = (await response.json()) as { translations?: Array<{ text: string }> };
+    if (!data.translations || data.translations.length !== inputs.length) return inputs;
+    return data.translations.map((item) => item.text ?? "");
+  } catch (error) {
+    logger.warn("[clinic-notification] deepl_translate_error", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return inputs;
+  }
+};
+
 export const buildClinicBookingNotificationEmail = (
   recipient: string,
   details: ClinicBookingNotificationDetails,
@@ -84,7 +123,7 @@ export const buildClinicBookingNotificationEmail = (
     "",
     `予約管理: ${details.portalUrl}`,
     "",
-    "A new booking request has arrived. Please review it in the clinic portal.",
+    "院内ポータルで内容をご確認ください。",
   ].join("\n");
 
   const html = `
@@ -130,7 +169,7 @@ export const buildClinicBookingNotificationEmail = (
         </a>
       </div>
       <p style="margin: 12px 0;">予約管理: <a href="${details.portalUrl}">${details.portalUrl}</a></p>
-      <p style="margin: 12px 0; color: #475569;">A new booking request has arrived. Please review it in the clinic portal.</p>
+      <p style="margin: 12px 0; color: #475569;">院内ポータルで内容をご確認ください。</p>
     </div>
   `;
 
@@ -243,6 +282,16 @@ export const sendClinicBookingNotificationEmail = async (
   const tokenExpiresAt = new Date(Date.now() + CONFIRMATION_TOKEN_TTL_MS);
   details.confirmUrl = buildClinicActionUrl(APP_BASE_URL, appointmentId, rawToken, "confirm");
   details.declineUrl = buildClinicActionUrl(APP_BASE_URL, appointmentId, rawToken, "decline");
+
+  const [translatedClinicName, translatedPatientName, translatedDoctorName, translatedSpecialization] =
+    await translateToJapanese(
+      [details.clinicName, details.patientName, details.doctorName, details.specialization],
+      logger,
+    );
+  details.clinicName = translatedClinicName || details.clinicName;
+  details.patientName = translatedPatientName || details.patientName;
+  details.doctorName = translatedDoctorName || details.doctorName;
+  details.specialization = translatedSpecialization || details.specialization;
 
   await appointments.updateOne(
     { _id: appointmentLookup as unknown as ObjectId },

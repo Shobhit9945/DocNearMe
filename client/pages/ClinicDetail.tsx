@@ -87,6 +87,33 @@ export default function ClinicDetail() {
 
   const reviews = reviewsData?.reviews ?? [];
   const averageRating = reviewsData?.averageRating ?? clinic.rating;
+  const ratingAverages = useMemo(() => {
+    if (!reviews.length) return null;
+    const totals = reviews.reduce(
+      (acc, review) => {
+        acc.englishCommunication += review.ratings?.englishCommunication ?? review.overallRating ?? 0;
+        acc.explainedTreatmentClearly += review.ratings?.explainedTreatmentClearly ?? review.overallRating ?? 0;
+        acc.foreignPatientFriendlyStaff += review.ratings?.foreignPatientFriendlyStaff ?? review.overallRating ?? 0;
+        acc.cashlessPaymentAvailable += review.ratings?.cashlessPaymentAvailable ?? review.overallRating ?? 0;
+        acc.waitTimeReasonable += review.ratings?.waitTimeReasonable ?? review.overallRating ?? 0;
+        return acc;
+      },
+      {
+        englishCommunication: 0,
+        explainedTreatmentClearly: 0,
+        foreignPatientFriendlyStaff: 0,
+        cashlessPaymentAvailable: 0,
+        waitTimeReasonable: 0,
+      },
+    );
+    return {
+      englishCommunication: Number((totals.englishCommunication / reviews.length).toFixed(1)),
+      explainedTreatmentClearly: Number((totals.explainedTreatmentClearly / reviews.length).toFixed(1)),
+      foreignPatientFriendlyStaff: Number((totals.foreignPatientFriendlyStaff / reviews.length).toFixed(1)),
+      cashlessPaymentAvailable: Number((totals.cashlessPaymentAvailable / reviews.length).toFixed(1)),
+      waitTimeReasonable: Number((totals.waitTimeReasonable / reviews.length).toFixed(1)),
+    };
+  }, [reviews]);
   const mapsUrl = clinic.googlePlaceId
     ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
         clinic.location,
@@ -143,13 +170,42 @@ export default function ClinicDetail() {
               </div>
             )}
             <div className="flex flex-wrap items-center gap-4 text-sm text-slate-500">
-              <span className="flex items-center gap-1 text-[#B06B00]">
-                {clinic.googlePlaceId ? (
-                   <GoogleReviews placeId={clinic.googlePlaceId} fallbackRating={averageRating} />
-                ) : (
-                   <><Star className="h-4 w-4 text-[#B06B00]" fill="#B06B00" /> {averageRating.toFixed(1)}</>
-                )}
-              </span>
+              {ratingAverages ? (
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <span className="flex items-center gap-2">
+                    <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">English</span>
+                    <span className="font-semibold text-slate-700">{ratingAverages.englishCommunication}/5</span>
+                  </span>
+                  <span className="flex items-center gap-2">
+                    <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">Clear care</span>
+                    <span className="font-semibold text-slate-700">{ratingAverages.explainedTreatmentClearly}/5</span>
+                  </span>
+                  <span className="flex items-center gap-2">
+                    <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">Friendly staff</span>
+                    <span className="font-semibold text-slate-700">{ratingAverages.foreignPatientFriendlyStaff}/5</span>
+                  </span>
+                  <span className="flex items-center gap-2">
+                    <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">Cashless</span>
+                    <span className="font-semibold text-slate-700">{ratingAverages.cashlessPaymentAvailable}/5</span>
+                  </span>
+                  <span className="flex items-center gap-2">
+                    <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">Wait time</span>
+                    <span className="font-semibold text-slate-700">{ratingAverages.waitTimeReasonable}/5</span>
+                  </span>
+                  <span className="flex items-center gap-2">
+                    <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">Overall</span>
+                    <span className="font-semibold text-slate-700">{averageRating.toFixed(1)}/5</span>
+                  </span>
+                </div>
+              ) : (
+                <span className="flex items-center gap-1 text-slate-500">
+                  {clinic.googlePlaceId ? (
+                    <GoogleReviews placeId={clinic.googlePlaceId} fallbackRating={averageRating} />
+                  ) : (
+                    <>{averageRating.toFixed(1)}/5</>
+                  )}
+                </span>
+              )}
               <span className="flex items-center gap-1">
                 <Users className="h-4 w-4 text-[#0089FF]" /> {clinic.patients}
               </span>
@@ -236,22 +292,47 @@ export default function ClinicDetail() {
                 {!isLoadingReviews && reviews.length === 0 && (
                   <p className="text-sm text-slate-500">{t("No reviews yet.")}</p>
                 )}
-                {reviews.map((review) => (
-                  <div key={review.id} className="rounded-2xl border border-slate-100 bg-[#F8FBFF] p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-semibold text-[#002D55]">{review.author}</p>
-                        <p className="text-xs text-slate-500">
-                          {new Date(review.createdAt).toLocaleDateString()}
-                        </p>
+                {reviews.map((review) => {
+                  const overall = review.overallRating ?? review.rating ?? 0;
+                  const indicators = {
+                    englishCommunication: review.ratings?.englishCommunication ?? overall,
+                    explainedTreatmentClearly: review.ratings?.explainedTreatmentClearly ?? overall,
+                    foreignPatientFriendlyStaff: review.ratings?.foreignPatientFriendlyStaff ?? overall,
+                    cashlessPaymentAvailable: review.ratings?.cashlessPaymentAvailable ?? overall,
+                    waitTimeReasonable: review.ratings?.waitTimeReasonable ?? overall,
+                  };
+                  return (
+                    <div key={review.id} className="rounded-2xl border border-slate-100 bg-[#F8FBFF] p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-semibold text-[#002D55]">{review.author}</p>
+                          <p className="text-xs text-slate-500">
+                            {new Date(review.createdAt).toLocaleDateString()}
+                          </p>
+                        </div>
+                        <span className="text-xs font-semibold text-slate-500">Overall {overall.toFixed(1)}/5</span>
                       </div>
-                      <span className="flex items-center gap-1 text-xs font-semibold text-[#B06B00]">
-                        <Star className="h-3 w-3" fill="#B06B00" /> {review.rating.toFixed(1)}
-                      </span>
+                      <div className="mt-3 grid gap-2 text-xs text-slate-600 sm:grid-cols-2">
+                        <span>
+                          <span className="font-semibold text-slate-500">English:</span> {indicators.englishCommunication}/5
+                        </span>
+                        <span>
+                          <span className="font-semibold text-slate-500">Clear care:</span> {indicators.explainedTreatmentClearly}/5
+                        </span>
+                        <span>
+                          <span className="font-semibold text-slate-500">Friendly staff:</span> {indicators.foreignPatientFriendlyStaff}/5
+                        </span>
+                        <span>
+                          <span className="font-semibold text-slate-500">Cashless:</span> {indicators.cashlessPaymentAvailable}/5
+                        </span>
+                        <span>
+                          <span className="font-semibold text-slate-500">Wait time:</span> {indicators.waitTimeReasonable}/5
+                        </span>
+                      </div>
+                      <p className="mt-3 text-sm text-slate-600">{review.comment}</p>
                     </div>
-                    <p className="mt-3 text-sm text-slate-600">{review.comment}</p>
-                  </div>
-                ))}
+                  );
+                })}
 
                 {/* Google Reviews */}
                 {googlePlaceDetails?.reviews && googlePlaceDetails.reviews.length > 0 && (
