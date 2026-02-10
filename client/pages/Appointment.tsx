@@ -52,7 +52,8 @@ import {
 import { useTranslation } from "@/lib/i18n";
 import { formatAvailabilityForLanguage, getLocaleForLanguage } from "@/lib/time-format";
 import { getDateKey, isDateWithinClosure, normalizeClinicHours } from "@/lib/scheduling";
-import { arrayBufferToBase64, decryptDoc, getStoredVaultKey } from "@/lib/medicalVault";
+import { arrayBufferToBase64, decryptDoc, getKeyStorageKey, getStoredVaultKey } from "@/lib/medicalVault";
+import VaultUnlock from "@/pages/vault/VaultUnlock";
 import type {
   AppointmentCancelRequest,
   AppointmentCancelResponse,
@@ -64,6 +65,7 @@ import type {
   ClinicDoctor,
   VaultDocDetail,
   VaultDocListResponse,
+  VaultKeyGetResponse,
   PatientProfileResponse,
   SharedMedicalRecord,
   ClinicIntakeFormResponse,
@@ -197,6 +199,8 @@ export default function Appointment() {
   const [isVaultRecordLoading, setIsVaultRecordLoading] = useState(false);
   const [recordToDelete, setRecordToDelete] = useState<VaultDocDetail | null>(null);
   const [isDeletingRecord, setIsDeletingRecord] = useState(false);
+  const [vaultKeyStatus, setVaultKeyStatus] = useState<VaultKeyGetResponse | null>(null);
+  const [hasLocalVaultKey, setHasLocalVaultKey] = useState(false);
   const [intakeResponses, setIntakeResponses] = useState<Record<string, IntakeAnswerValue>>({});
   const [intakeFieldErrors, setIntakeFieldErrors] = useState<Record<string, string>>({});
   const [confirmationDetails, setConfirmationDetails] = useState<ConfirmationDetails | null>(null);
@@ -374,6 +378,33 @@ export default function Appointment() {
       email: localStorage.getItem(EMAIL_KEY) ?? "",
     });
   }, []);
+
+  useEffect(() => {
+    const vaultEmail = authSession?.email ?? localStorage.getItem(EMAIL_KEY) ?? undefined;
+    setHasLocalVaultKey(Boolean(localStorage.getItem(getKeyStorageKey(vaultEmail))));
+  }, [authSession?.email]);
+
+  useEffect(() => {
+    if (!authSession?.token) {
+      setVaultKeyStatus(null);
+      return;
+    }
+    void fetch("/api/vault/keys", {
+      headers: {
+        Authorization: `Bearer ${authSession.token}`,
+      },
+    })
+      .then(async (response) => {
+        const data = (await response.json()) as VaultKeyGetResponse;
+        if (!response.ok) {
+          throw new Error("Unable to load vault key status.");
+        }
+        setVaultKeyStatus(data);
+      })
+      .catch(() => {
+        setVaultKeyStatus({ hasKey: false });
+      });
+  }, [authSession?.token]);
 
   useEffect(() => {
     if (!authSession?.token) return;
@@ -672,6 +703,14 @@ export default function Appointment() {
 
   const handleDeleteVaultRecord = async () => {
     if (!recordToDelete || !authSession?.token) return;
+    if (!hasLocalVaultKey) {
+      toast({
+        title: t("Unlock required"),
+        description: t("Unlock your vault on this device before managing records."),
+        variant: "destructive",
+      });
+      return;
+    }
     setIsDeletingRecord(true);
     try {
       const response = await fetch(`/api/vault/docs/${recordToDelete.id}`, {
@@ -2044,18 +2083,39 @@ export default function Appointment() {
                         <p className="text-xs text-slate-500">Preparing encrypted record...</p>
                       )}
                       {vaultRecordError && <p className="text-xs text-red-500">{vaultRecordError}</p>}
+                      {!hasLocalVaultKey && vaultKeyStatus?.hasKey ? (
+                        <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
+                          <p className="font-semibold text-slate-700">Unlock your vault to share records</p>
+                          <p className="mt-1">Enter your Vault Password to decrypt records on this device.</p>
+                          {vaultKeyStatus.key ? (
+                            <div className="mt-3">
+                              <VaultUnlock
+                                vaultKey={vaultKeyStatus.key}
+                                email={authSession?.email ?? localStorage.getItem(EMAIL_KEY) ?? undefined}
+                                onUnlocked={() => {
+                                  setHasLocalVaultKey(true);
+                                  setVaultRecordError(null);
+                                }}
+                                onStartRecovery={() => navigate("/medical-records")}
+                              />
+                            </div>
+                          ) : null}
+                        </div>
+                      ) : null}
                       {selectedVaultRecord ? (
                         <div className="flex flex-wrap items-center gap-3">
                           <p className="text-sm text-slate-600">
                             {t("Selected")}: {selectedVaultRecord.name}
                           </p>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => setRecordToDelete(selectedVaultRecord)}
-                          >
-                            {t("Delete record")}
-                          </Button>
+                          {hasLocalVaultKey ? (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => setRecordToDelete(selectedVaultRecord)}
+                            >
+                              {t("Delete record")}
+                            </Button>
+                          ) : null}
                         </div>
                       ) : null}
                       <p className="text-xs text-slate-500">
