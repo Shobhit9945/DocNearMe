@@ -57,6 +57,36 @@ export default function ClinicDetail() {
     enabled: Boolean(clinicId),
   });
 
+  const reviews = reviewsData?.reviews ?? [];
+  const averageRating = reviewsData?.averageRating ?? clinic?.rating ?? 0;
+  const ratingAverages = useMemo(() => {
+    if (!reviews.length) return null;
+    const totals = reviews.reduce(
+      (acc, review) => {
+        acc.englishCommunication += review.ratings?.englishCommunication ?? review.overallRating ?? 0;
+        acc.explainedTreatmentClearly += review.ratings?.explainedTreatmentClearly ?? review.overallRating ?? 0;
+        acc.foreignPatientFriendlyStaff += review.ratings?.foreignPatientFriendlyStaff ?? review.overallRating ?? 0;
+        acc.cashlessPaymentAvailable += review.ratings?.cashlessPaymentAvailable ?? review.overallRating ?? 0;
+        acc.waitTimeReasonable += review.ratings?.waitTimeReasonable ?? review.overallRating ?? 0;
+        return acc;
+      },
+      {
+        englishCommunication: 0,
+        explainedTreatmentClearly: 0,
+        foreignPatientFriendlyStaff: 0,
+        cashlessPaymentAvailable: 0,
+        waitTimeReasonable: 0,
+      },
+    );
+    return {
+      englishCommunication: Number((totals.englishCommunication / reviews.length).toFixed(1)),
+      explainedTreatmentClearly: Number((totals.explainedTreatmentClearly / reviews.length).toFixed(1)),
+      foreignPatientFriendlyStaff: Number((totals.foreignPatientFriendlyStaff / reviews.length).toFixed(1)),
+      cashlessPaymentAvailable: Number((totals.cashlessPaymentAvailable / reviews.length).toFixed(1)),
+      waitTimeReasonable: Number((totals.waitTimeReasonable / reviews.length).toFixed(1)),
+    };
+  }, [reviews]);
+
   if (!clinic && isLoadingClinic) {
     return (
       <PageScaffold contentClassName="pb-28 lg:pb-12">
@@ -85,35 +115,6 @@ export default function ClinicDetail() {
     );
   }
 
-  const reviews = reviewsData?.reviews ?? [];
-  const averageRating = reviewsData?.averageRating ?? clinic.rating;
-  const ratingAverages = useMemo(() => {
-    if (!reviews.length) return null;
-    const totals = reviews.reduce(
-      (acc, review) => {
-        acc.englishCommunication += review.ratings?.englishCommunication ?? review.overallRating ?? 0;
-        acc.explainedTreatmentClearly += review.ratings?.explainedTreatmentClearly ?? review.overallRating ?? 0;
-        acc.foreignPatientFriendlyStaff += review.ratings?.foreignPatientFriendlyStaff ?? review.overallRating ?? 0;
-        acc.cashlessPaymentAvailable += review.ratings?.cashlessPaymentAvailable ?? review.overallRating ?? 0;
-        acc.waitTimeReasonable += review.ratings?.waitTimeReasonable ?? review.overallRating ?? 0;
-        return acc;
-      },
-      {
-        englishCommunication: 0,
-        explainedTreatmentClearly: 0,
-        foreignPatientFriendlyStaff: 0,
-        cashlessPaymentAvailable: 0,
-        waitTimeReasonable: 0,
-      },
-    );
-    return {
-      englishCommunication: Number((totals.englishCommunication / reviews.length).toFixed(1)),
-      explainedTreatmentClearly: Number((totals.explainedTreatmentClearly / reviews.length).toFixed(1)),
-      foreignPatientFriendlyStaff: Number((totals.foreignPatientFriendlyStaff / reviews.length).toFixed(1)),
-      cashlessPaymentAvailable: Number((totals.cashlessPaymentAvailable / reviews.length).toFixed(1)),
-      waitTimeReasonable: Number((totals.waitTimeReasonable / reviews.length).toFixed(1)),
-    };
-  }, [reviews]);
   const mapsUrl = clinic.googlePlaceId
     ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
         clinic.location,
