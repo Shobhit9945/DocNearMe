@@ -73,6 +73,20 @@ const buildAppBaseUrl = () =>
   process.env.PUBLIC_BASE_URL ??
   "https://docnearme.jp";
 
+const buildClinicActionUrl = (
+  baseUrl: string,
+  appointmentId: string,
+  token: string,
+  action: "confirm" | "decline",
+) => {
+  const normalizedBase = baseUrl.replace(/\/$/, "");
+  const useClinicPath = /\.netlify\.app$/i.test(normalizedBase);
+  const pathPrefix = useClinicPath ? "/clinic" : "";
+  return `${normalizedBase}${pathPrefix}/confirm?appointmentId=${encodeURIComponent(
+    appointmentId,
+  )}&token=${encodeURIComponent(token)}&action=${action}`;
+};
+
 const parseDateOrNull = (value: unknown) => {
   if (typeof value !== "string") return null;
   const date = new Date(value);
@@ -345,6 +359,45 @@ const calculateAge = (dateOfBirth?: string) => {
     age -= 1;
   }
   return age;
+};
+
+const buildTokenPatientDetails = async (appointment: Appointment, appointmentId: string) => {
+  const patients = await getPatientsCollection();
+  const patientLookupId = appointment.patientId
+    ? ObjectId.isValid(appointment.patientId)
+      ? new ObjectId(appointment.patientId)
+      : appointment.patientId
+    : null;
+  const patient = patientLookupId ? await patients.findOne({ _id: patientLookupId }) : null;
+
+  const patientName = appointment.patientName ?? patient?.name ?? "";
+  const patientCountry = patient?.nationality ?? undefined;
+  const patientVisaType = appointment.patientVisaType ?? patient?.visaType ?? undefined;
+  const patientAge = calculateAge(patient?.dateOfBirth);
+
+  const sharedRecord = appointment.sharedRecord ? { ...appointment.sharedRecord } : undefined;
+
+  const intakeResponses = await getIntakeResponsesCollection();
+  const intakeResponse = await intakeResponses.findOne({
+    appointmentId,
+    clinicId: appointment.clinicId,
+  });
+
+  return {
+    patient: {
+      name: patientName,
+      age: patientAge,
+      country: patientCountry,
+      visaType: patientVisaType,
+    },
+    sharedRecord,
+    intakeResponse: intakeResponse
+      ? {
+          responses: intakeResponse.responses,
+          submittedAt: intakeResponse.createdAt instanceof Date ? intakeResponse.createdAt.toISOString() : undefined,
+        }
+      : undefined,
+  };
 };
 
 const resolveToken = (req: Request, payload: Record<string, unknown>) => {
@@ -920,6 +973,8 @@ export const handleClinicConfirmAppointment = async (req: Request, res: Response
       }
     }
 
+    const tokenDetails = await buildTokenPatientDetails(appointment, appointmentId);
+
     res.json({
       success: true,
       appointment: serializeAppointment({
@@ -936,6 +991,9 @@ export const handleClinicConfirmAppointment = async (req: Request, res: Response
         tokenExpiresAt: null,
         updatedAt: now,
       }),
+      patientDetails: tokenDetails.patient,
+      intakeResponse: tokenDetails.intakeResponse,
+      sharedRecord: tokenDetails.sharedRecord,
       message: "Appointment confirmed successfully",
     });
   } catch (error) {
@@ -1015,6 +1073,8 @@ export const handleClinicDeclineAppointment = async (req: Request, res: Response
       }
     }
 
+    const tokenDetails = await buildTokenPatientDetails(appointment, appointmentId);
+
     res.json({
       success: true,
       appointment: serializeAppointment({
@@ -1026,6 +1086,9 @@ export const handleClinicDeclineAppointment = async (req: Request, res: Response
         tokenExpiresAt: null,
         updatedAt: now,
       }),
+      patientDetails: tokenDetails.patient,
+      intakeResponse: tokenDetails.intakeResponse,
+      sharedRecord: tokenDetails.sharedRecord,
       message: "Appointment request declined",
     });
   } catch (error) {
@@ -1360,8 +1423,8 @@ export const handleRescheduleAppointment = async (req: Request, res: Response) =
 
     const clinicEmail = buildClinicNotificationEmail(appointment.clinicId);
     const baseUrl = buildAppBaseUrl();
-    const confirmUrl = `${baseUrl}/api/appointments/${appointmentId}/confirm?token=${rawToken}`;
-    const declineUrl = `${baseUrl}/api/appointments/${appointmentId}/decline?token=${rawToken}`;
+    const confirmUrl = buildClinicActionUrl(baseUrl, appointmentId, rawToken, "confirm");
+    const declineUrl = buildClinicActionUrl(baseUrl, appointmentId, rawToken, "decline");
     try {
       await sendEmail({
         to: clinicEmail,

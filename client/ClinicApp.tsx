@@ -12,6 +12,7 @@ const ClinicAppointments = lazy(() => import("./pages/clinic/ClinicAppointments"
 const ClinicInfo = lazy(() => import("./pages/clinic/ClinicInfo"));
 const ClinicDoctors = lazy(() => import("./pages/clinic/ClinicDoctors"));
 const ClinicIntakeForm = lazy(() => import("./pages/clinic/ClinicIntakeForm"));
+const ClinicConfirm = lazy(() => import("./pages/clinic/ClinicConfirm"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -39,6 +40,7 @@ export default function ClinicApp({ basename }: ClinicAppProps) {
             }
           >
             <Routes>
+              <Route path="/confirm" element={<ClinicConfirm />} />
               <Route path="/login" element={<ClinicLogin />} />
               <Route path="/" element={<ClinicLayout />}>
                 <Route index element={<ClinicDashboard />} />

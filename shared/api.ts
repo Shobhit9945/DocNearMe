@@ -131,6 +131,9 @@ export interface AppointmentConfirmRequest {
 export interface AppointmentConfirmResponse {
   success: boolean;
   appointment: AppointmentResponseItem;
+  patientDetails?: ClinicPatientDetailsResponse["patient"];
+  intakeResponse?: IntakeFormResponsePayload;
+  sharedRecord?: SharedMedicalRecord;
   message: string;
 }
 
@@ -142,6 +145,9 @@ export interface AppointmentDeclineRequest {
 export interface AppointmentDeclineResponse {
   success: boolean;
   appointment: AppointmentResponseItem;
+  patientDetails?: ClinicPatientDetailsResponse["patient"];
+  intakeResponse?: IntakeFormResponsePayload;
+  sharedRecord?: SharedMedicalRecord;
   message: string;
 }
 

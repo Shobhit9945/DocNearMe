@@ -37,6 +37,19 @@ const CONFIRMATION_TOKEN_BYTES = 32;
 const CONFIRMATION_TOKEN_TTL_MS = 48 * 60 * 60 * 1000;
 
 const hashToken = (token: string) => crypto.createHash("sha256").update(token).digest("hex");
+const buildClinicActionUrl = (
+  baseUrl: string,
+  appointmentId: string,
+  token: string,
+  action: "confirm" | "decline",
+) => {
+  const normalizedBase = baseUrl.replace(/\/$/, "");
+  const useClinicPath = /\.netlify\.app$/i.test(normalizedBase);
+  const pathPrefix = useClinicPath ? "/clinic" : "";
+  return `${normalizedBase}${pathPrefix}/confirm?appointmentId=${encodeURIComponent(
+    appointmentId,
+  )}&token=${encodeURIComponent(token)}&action=${action}`;
+};
 
 const resolveAppointmentLookup = (appointmentId: string) =>
   ObjectId.isValid(appointmentId) ? new ObjectId(appointmentId) : appointmentId;
@@ -228,9 +241,8 @@ export const sendClinicBookingNotificationEmail = async (
 
   const rawToken = crypto.randomBytes(CONFIRMATION_TOKEN_BYTES).toString("hex");
   const tokenExpiresAt = new Date(Date.now() + CONFIRMATION_TOKEN_TTL_MS);
-  const baseUrl = APP_BASE_URL.replace(/\/$/, "");
-  details.confirmUrl = `${baseUrl}/api/appointments/${appointmentId}/confirm?token=${rawToken}`;
-  details.declineUrl = `${baseUrl}/api/appointments/${appointmentId}/decline?token=${rawToken}`;
+  details.confirmUrl = buildClinicActionUrl(APP_BASE_URL, appointmentId, rawToken, "confirm");
+  details.declineUrl = buildClinicActionUrl(APP_BASE_URL, appointmentId, rawToken, "decline");
 
   await appointments.updateOne(
     { _id: appointmentLookup as unknown as ObjectId },
