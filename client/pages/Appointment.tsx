@@ -192,30 +192,16 @@ const StarRating: React.FC<StarRatingProps> = ({ value, onChange }) => {
             key={rating}
             type="button"
             onClick={() => onChange(rating)}
-            className={`rounded p-1 transition-colors ${isActive ? "text-[#F5A524]" : "text-slate-300 hover:text-slate-400"}`
+            className={`rounded p-1 transition-colors ${isActive ? "text-[#F5A524]" : "text-slate-300 hover:text-slate-400"}`}
             aria-label={`Set rating to ${rating}`}
           >
             <Star className="h-4 w-4" fill={isActive ? "currentColor" : "none"} />
           </button>
         );
-                          <div className="flex flex-wrap items-center gap-2">
-                            <p className="text-lg font-semibold text-slate-900">
-                              {t(appointment.doctor)} · {t(appointment.specialization)}
-                            </p>
-                            <span className="rounded-full bg-[#EEF4FF] px-3 py-1 text-xs font-semibold text-[#1E4DB7]">
-                              {t(patientStatusLabels[appointmentsData?.appointments?.find((item) => item._id === appointment.id)?.status ?? ""] ?? "Request delivered")}
-                            </span>
-                          </div>
+      })}
+    </div>
+  );
 };
-
-                        {appointmentsData?.appointments?.find((item) => item._id === appointment.id)?.status === "COMPLETED" ? (
-                          <button
-                            onClick={() => handleOpenReview(appointment)}
-                            className="inline-flex items-center gap-2 rounded-full bg-[#1E4DB7] px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#183E91]"
-                          >
-                            Rate visit
-                          </button>
-                        ) : null}
 export default function Appointment() {
   const navigate = useNavigate();
   const { t, language } = useTranslation();
@@ -1178,7 +1164,6 @@ export default function Appointment() {
       if (!response.ok) {
         throw new Error(data?.error ?? "Unable to submit review.");
       }
-
       toast({
         title: t("Thanks for your feedback"),
         description: reviewIsPublic
