@@ -32,8 +32,14 @@ const getTwilioCallerId = () => {
   return from;
 };
 
+const normalizeBaseUrl = (value: string) => {
+  const trimmed = value.trim().replace(/\/$/, "");
+  if (!trimmed) return trimmed;
+  return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+};
+
 const getVoiceWebhookBaseUrl = () =>
-  process.env.VOICE_WEBHOOK_BASE_URL ?? DEFAULT_VOICE_BASE_URL;
+  normalizeBaseUrl(process.env.VOICE_WEBHOOK_BASE_URL ?? DEFAULT_VOICE_BASE_URL);
 
 const getVoiceWebhookSecret = () => {
   const secret = process.env.VOICE_WEBHOOK_SECRET;
