@@ -93,6 +93,7 @@ const translateToJapanese = async (inputs: string[], logger: Logger) => {
   if (inputs.length === 0) return inputs;
   const sanitizedInputs = inputs.map((value) => value?.trim() ?? "");
   const shouldTranslate = sanitizedInputs.map((value) => value && !containsJapanese(value));
+  let translatedResults = [...sanitizedInputs];
 
   if (DEEPL_API_KEY && shouldTranslate.some(Boolean)) {
     const params = new URLSearchParams();
@@ -116,7 +117,7 @@ const translateToJapanese = async (inputs: string[], logger: Logger) => {
         if (data.translations) {
           const translations = data.translations.map((item) => item.text ?? "");
           let translateIndex = 0;
-          return sanitizedInputs.map((value, index) => {
+          translatedResults = sanitizedInputs.map((value, index) => {
             if (!shouldTranslate[index]) return value;
             const translated = translations[translateIndex] ?? value;
             translateIndex += 1;
@@ -137,8 +138,10 @@ const translateToJapanese = async (inputs: string[], logger: Logger) => {
 
   const translatedWithGoogle = await Promise.all(
     sanitizedInputs.map(async (value, index) => {
-      if (!shouldTranslate[index]) return value;
-      return (await translateWithGoogle(value, logger)) ?? value;
+      if (!shouldTranslate[index]) return translatedResults[index];
+      const deepLResult = translatedResults[index];
+      if (deepLResult && deepLResult !== value) return deepLResult;
+      return (await translateWithGoogle(value, logger)) ?? deepLResult ?? value;
     }),
   );
   return translatedWithGoogle;

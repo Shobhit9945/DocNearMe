@@ -88,6 +88,8 @@ export interface IntakeFormAnswer {
   questionType: IntakeQuestionType;
   dataType: IntakeDataType;
   value: IntakeAnswerValue;
+  labelTranslated?: string;
+  valueTranslated?: IntakeAnswerValue;
 }
 
 export interface IntakeFormResponsePayload {
@@ -194,7 +196,9 @@ export interface ClinicPatientDetailsResponse {
     nameTranslated?: string;
     age?: number;
     country?: string;
+    countryTranslated?: string;
     visaType?: VisaType;
+    visaTypeTranslated?: string;
   };
   sharedRecord?: SharedMedicalRecord;
   intakeResponse?: IntakeFormResponsePayload;

@@ -366,6 +366,34 @@ const translateToJapanese = async (text?: string) => {
   }
 };
 
+const translateAnswerValue = async (value: IntakeAnswerValue) => {
+  if (Array.isArray(value)) {
+    const translatedValues = await Promise.all(
+      value.map(async (item) => (typeof item === "string" ? (await translateToJapanese(item)) ?? item : String(item))),
+    );
+    return translatedValues as IntakeAnswerValue;
+  }
+  if (typeof value === "string") {
+    return (await translateToJapanese(value)) ?? value;
+  }
+  return value;
+};
+
+const translateIntakeResponses = async (responses?: IntakeFormAnswer[]) => {
+  if (!responses?.length) return responses;
+  return Promise.all(
+    responses.map(async (response) => {
+      const labelTranslated = await translateToJapanese(response.label);
+      const valueTranslated = await translateAnswerValue(response.value);
+      return {
+        ...response,
+        labelTranslated: labelTranslated ?? response.label,
+        valueTranslated: valueTranslated ?? response.value,
+      };
+    }),
+  );
+};
+
 const calculateAge = (dateOfBirth?: string) => {
   if (!dateOfBirth) return undefined;
   const parsed = new Date(dateOfBirth);
@@ -392,6 +420,8 @@ const buildTokenPatientDetails = async (appointment: Appointment, appointmentId:
   const patientNameTranslated = await translateToJapanese(patientName);
   const patientCountry = patient?.nationality ?? undefined;
   const patientVisaType = appointment.patientVisaType ?? patient?.visaType ?? undefined;
+  const patientCountryTranslated = await translateToJapanese(patientCountry);
+  const patientVisaTypeTranslated = await translateToJapanese(patientVisaType);
   const patientAge = calculateAge(patient?.dateOfBirth);
 
   const sharedRecord = appointment.sharedRecord ? { ...appointment.sharedRecord } : undefined;
@@ -401,6 +431,7 @@ const buildTokenPatientDetails = async (appointment: Appointment, appointmentId:
     appointmentId,
     clinicId: appointment.clinicId,
   });
+  const translatedIntakeResponses = await translateIntakeResponses(intakeResponse?.responses);
 
   return {
     patient: {
@@ -408,12 +439,14 @@ const buildTokenPatientDetails = async (appointment: Appointment, appointmentId:
       nameTranslated: patientNameTranslated,
       age: patientAge,
       country: patientCountry,
+      countryTranslated: patientCountryTranslated ?? patientCountry,
       visaType: patientVisaType,
+      visaTypeTranslated: patientVisaTypeTranslated ?? patientVisaType,
     },
     sharedRecord,
     intakeResponse: intakeResponse
       ? {
-          responses: intakeResponse.responses,
+          responses: translatedIntakeResponses ?? intakeResponse.responses,
           submittedAt: intakeResponse.createdAt instanceof Date ? intakeResponse.createdAt.toISOString() : undefined,
         }
       : undefined,

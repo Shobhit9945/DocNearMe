@@ -39,8 +39,34 @@ const isAlreadyProcessedError = (message: string) => {
     normalized.includes("not awaiting confirmation") ||
     normalized.includes("invalid confirmation token") ||
     normalized.includes("invalid or expired confirmation token") ||
-    normalized.includes("confirmation token expired")
+    normalized.includes("confirmation token expired") ||
+    message.includes("確認トークン") ||
+    message.includes("承認待ちではありません") ||
+    message.includes("処理済み")
   );
+};
+
+const translateErrorMessage = (message: string) => {
+  const normalized = message.toLowerCase();
+  if (normalized.includes("appointment not found")) {
+    return "予約が見つかりませんでした。";
+  }
+  if (normalized.includes("clinic confirmation token required")) {
+    return "確認トークンが必要です。";
+  }
+  if (normalized.includes("invalid or expired confirmation token") || normalized.includes("confirmation token expired")) {
+    return "確認トークンの有効期限が切れています。";
+  }
+  if (normalized.includes("invalid confirmation token")) {
+    return "確認トークンが無効です。";
+  }
+  if (normalized.includes("not awaiting confirmation")) {
+    return "この予約は承認待ちではありません。";
+  }
+  if (normalized.includes("unable to process") || normalized.includes("failed to confirm") || normalized.includes("failed to decline")) {
+    return "リクエストを処理できませんでした。";
+  }
+  return message;
 };
 
 export default function ClinicConfirm() {
@@ -70,12 +96,13 @@ export default function ClinicConfirm() {
         if (!response.ok) {
           const message =
             "error" in data && data.error ? data.error : "リクエストを処理できませんでした。";
-          throw new Error(message);
+          throw new Error(translateErrorMessage(message));
         }
         setPayload(data as ConfirmPayload);
       } catch (err) {
         if (err instanceof DOMException && err.name === "AbortError") return;
-        setError(err instanceof Error ? err.message : "リクエストを処理できませんでした。");
+        const message = err instanceof Error ? err.message : "リクエストを処理できませんでした。";
+        setError(translateErrorMessage(message));
       } finally {
         setIsLoading(false);
       }
@@ -233,8 +260,12 @@ export default function ClinicConfirm() {
                 <div className="mt-3 space-y-3">
                   {intakeResponse.responses.map((item) => (
                     <div key={item.questionId} className="rounded-xl border border-slate-100 bg-white p-3">
-                      <p className="text-xs font-semibold text-slate-500">{item.label}</p>
-                      <p className="mt-1 text-sm text-slate-700">{formatAnswerValue(item.value)}</p>
+                      <p className="text-xs font-semibold text-slate-500">
+                        {item.labelTranslated ?? item.label}
+                      </p>
+                      <p className="mt-1 text-sm text-slate-700">
+                        {formatAnswerValue(item.valueTranslated ?? item.value)}
+                      </p>
                     </div>
                   ))}
                 </div>
@@ -265,11 +296,15 @@ export default function ClinicConfirm() {
                 </div>
                 <div className="flex items-center justify-between gap-3">
                   <span className="text-slate-500">ビザ</span>
-                  <span className="font-medium text-slate-900">{patientDetails?.visaType ?? "-"}</span>
+                  <span className="font-medium text-slate-900">
+                    {patientDetails?.visaTypeTranslated ?? patientDetails?.visaType ?? "-"}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between gap-3">
                   <span className="text-slate-500">国籍</span>
-                  <span className="font-medium text-slate-900">{patientDetails?.country ?? "-"}</span>
+                  <span className="font-medium text-slate-900">
+                    {patientDetails?.countryTranslated ?? patientDetails?.country ?? "-"}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between gap-3">
                   <span className="flex items-center gap-2 text-slate-500">
