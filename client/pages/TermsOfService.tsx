@@ -1,8 +1,8 @@
-import PageScaffold from "../components/PageScaffold";
+import { PageScaffold } from "@/components/PageScaffold";
 
 export default function TermsOfService() {
   return (
-    <PageScaffold title="Terms of Service">
+    <PageScaffold>
       <div className="prose max-w-2xl mx-auto">
         <h1>Terms of Service</h1>
         <p>
