@@ -1,8 +1,8 @@
-import PageScaffold from "../components/PageScaffold";
+import { PageScaffold } from "@/components/PageScaffold";
 
 export default function ContentPolicies() {
   return (
-    <PageScaffold title="Content Policies">
+    <PageScaffold>
       <div className="prose max-w-2xl mx-auto">
         <h1>Content Policies</h1>
         <p>
