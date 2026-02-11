@@ -1,4 +1,5 @@
 import { ReactNode } from "react";
+import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { DesktopNav } from "./DesktopNav";
 import { LanguageSwitcher } from "./LanguageSwitcher";
@@ -25,12 +26,22 @@ export function PageScaffold({ children, contentClassName }: PageScaffoldProps) 
           {children}
           <footer className="mt-auto border-t border-slate-200 bg-white px-6 py-6 text-xs text-slate-500">
             <p>
-              By continuing past this page, you agree to our
-              <a href="/terms-of-service" className="text-sky-400 hover:underline mx-1">Terms of Service</a>,
-              <a href="/terms-of-service" className="text-sky-400 hover:underline mx-1">Terms of Service</a>,
-              <a href="/terms-of-service" className="text-sky-400 hover:underline mx-1">Terms of Service</a> and
-              <a href="/content-policies" className="text-sky-400 hover:underline mx-1">Content Policies</a>.
-              All trademarks are properties of their respective owners.
+              By continuing past this page, you agree to our{" "}
+              <Link to="/terms-of-service" className="text-sky-600 hover:underline">
+                Terms of Service
+              </Link>
+              ,{" "}
+              <Link to="/cookie-policy" className="text-sky-600 hover:underline">
+                Cookie Policy
+              </Link>
+              ,{" "}
+              <Link to="/privacy-policy" className="text-sky-600 hover:underline">
+                Privacy Policy
+              </Link>{" "}
+              and{" "}
+              <Link to="/content-policies" className="text-sky-600 hover:underline">
+                Content Policies
+              </Link>. All trademarks are properties of their respective owners.
             </p>
             <p className="mt-2">2025-2026 © DocNearMe™ Ltd. All rights reserved.</p>
           </footer>

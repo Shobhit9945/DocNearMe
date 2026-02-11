@@ -1,37 +1,80 @@
-import { PageScaffold } from "@/components/PageScaffold";
+import { PolicyDocument } from "@/components/PolicyDocument";
 
 export default function ContentPolicies() {
+  const sections = [
+    {
+      title: "Purpose and safety standards",
+      paragraphs: [
+        "DocNearMe maintains content standards designed to support patient safety, trust, and legal compliance.",
+        "Content must be clear, respectful, and suitable for a healthcare environment.",
+      ],
+    },
+    {
+      title: "Medical and clinic information",
+      paragraphs: [
+        "Clinic details, specialties, and appointment information should be accurate and not misleading.",
+        "Medical information published through DocNearMe is informational and should not be interpreted as individualized diagnosis or treatment instructions.",
+      ],
+    },
+    {
+      title: "Prohibited content",
+      paragraphs: [
+        "The following content categories are not allowed on DocNearMe.",
+      ],
+      bullets: [
+        "False, deceptive, or manipulated information likely to mislead patients.",
+        "Harassment, hate speech, threats, or discriminatory content.",
+        "Promotion of illegal activity, violence, or self-harm.",
+        "Unauthorized use of copyrighted or trademarked material.",
+        "Spam, phishing, or malicious links.",
+      ],
+    },
+    {
+      title: "User submissions and responsibility",
+      paragraphs: [
+        "If you submit text, files, or records, you remain responsible for ensuring your submissions are lawful and appropriate.",
+        "You must only submit information you have a right to share.",
+      ],
+    },
+    {
+      title: "Moderation and enforcement",
+      paragraphs: [
+        "We may review, remove, or restrict content that violates these policies or creates safety, legal, or operational risk.",
+        "Repeated violations may result in temporary or permanent account restrictions.",
+      ],
+    },
+    {
+      title: "Reporting concerns",
+      paragraphs: [
+        "Users can report suspected policy violations by contacting support@docnearme.jp with sufficient detail for investigation.",
+        "We review reports promptly and take action based on severity, supporting evidence, and legal obligations.",
+      ],
+    },
+    {
+      title: "Policy updates",
+      paragraphs: [
+        "These content policies may be updated to reflect product changes, legal requirements, and evolving safety standards.",
+        "When updates are material, we will publish the revised date and policy version on this page.",
+      ],
+    },
+  ];
+
+  const relatedPolicies = [
+    { label: "Terms of Service", href: "/terms-of-service" },
+    { label: "Cookie Policy", href: "/cookie-policy" },
+    { label: "Privacy Policy", href: "/privacy-policy" },
+    { label: "Content Policies", href: "/content-policies" },
+  ];
+
   return (
-    <PageScaffold>
-      <div className="prose max-w-2xl mx-auto">
-        <h1>Content Policies</h1>
-        <p>
-          DocNearMe is committed to compliance with Japanese laws and ethical standards. Our content policies ensure safety, privacy, and accuracy for all users.
-        </p>
-        <h2>1. Medical Information</h2>
-        <p>
-          Information provided is for reference only and not a substitute for professional medical advice. Users should consult qualified healthcare professionals for medical concerns.
-        </p>
-        <h2>2. Privacy and Data Protection</h2>
-        <p>
-          Personal data is handled in accordance with the Act on the Protection of Personal Information (APPI) and other relevant Japanese laws. We do not share personal data without consent except as required by law.
-        </p>
-        <h2>3. Prohibited Content</h2>
-        <ul>
-          <li>Content that violates Japanese law or public order.</li>
-          <li>False, misleading, or fraudulent information.</li>
-          <li>Hate speech, harassment, or discrimination.</li>
-          <li>Unauthorized use of intellectual property.</li>
-        </ul>
-        <h2>4. Reporting Violations</h2>
-        <p>
-          Users may report content violations via support@docnearme.jp. We review reports promptly and take appropriate action.
-        </p>
-        <h2>5. Updates</h2>
-        <p>
-          Content policies may be updated. Continued use constitutes acceptance of the revised policies.
-        </p>
-      </div>
-    </PageScaffold>
+    <PolicyDocument
+      badge="Trust & Safety"
+      title="Content Policies"
+      summary="These policies describe how content on DocNearMe is governed to protect patients, clinics, and platform integrity."
+      effectiveDate="January 1, 2026"
+      lastUpdated="January 1, 2026"
+      sections={sections}
+      relatedPolicies={relatedPolicies}
+    />
   );
 }

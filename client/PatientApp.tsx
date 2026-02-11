@@ -18,6 +18,8 @@ import Profile from "./pages/Profile";
 import Search from "./pages/Search";
 import TermsOfService from "./pages/TermsOfService";
 import ContentPolicies from "./pages/ContentPolicies";
+import CookiePolicy from "./pages/CookiePolicy";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
 
 const queryClient = new QueryClient();
 
@@ -43,6 +45,8 @@ const routes = [
   { path: "/patient-auth", element: <PatientAuth /> },
   { path: "/admin/bookings", element: <AdminBookings /> },
   { path: "/terms-of-service", element: <TermsOfService /> },
+  { path: "/cookie-policy", element: <CookiePolicy /> },
+  { path: "/privacy-policy", element: <PrivacyPolicy /> },
   { path: "/content-policies", element: <ContentPolicies /> },
 ] as const;
 
