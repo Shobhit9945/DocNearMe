@@ -16,6 +16,8 @@ import NotFound from "./pages/NotFound";
 import PatientAuth from "./pages/PatientAuth";
 import Profile from "./pages/Profile";
 import Search from "./pages/Search";
+import TermsOfService from "./pages/TermsOfService";
+import ContentPolicies from "./pages/ContentPolicies";
 
 const queryClient = new QueryClient();
 
@@ -40,6 +42,8 @@ const routes = [
   { path: "/docdaisy", element: <DocDaisy /> },
   { path: "/patient-auth", element: <PatientAuth /> },
   { path: "/admin/bookings", element: <AdminBookings /> },
+  { path: "/terms-of-service", element: <TermsOfService /> },
+  { path: "/content-policies", element: <ContentPolicies /> },
 ] as const;
 
 const TrackPageView = () => {
