@@ -25,8 +25,12 @@ export function PageScaffold({ children, contentClassName }: PageScaffoldProps) 
           {children}
           <footer className="mt-auto border-t border-slate-200 bg-white px-6 py-6 text-xs text-slate-500">
             <p>
-              By continuing past this page, you agree to our Terms of Service, Cookie Policy, Privacy Policy and
-              Content Policies. All trademarks are properties of their respective owners.
+              By continuing past this page, you agree to our
+              <a href="/terms-of-service" className="text-sky-400 hover:underline mx-1">Terms of Service</a>,
+              <a href="/terms-of-service" className="text-sky-400 hover:underline mx-1">Terms of Service</a>,
+              <a href="/terms-of-service" className="text-sky-400 hover:underline mx-1">Terms of Service</a> and
+              <a href="/content-policies" className="text-sky-400 hover:underline mx-1">Content Policies</a>.
+              All trademarks are properties of their respective owners.
             </p>
             <p className="mt-2">2025-2026 © DocNearMe™ Ltd. All rights reserved.</p>
           </footer>

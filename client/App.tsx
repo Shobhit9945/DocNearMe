@@ -1,5 +1,7 @@
 import "./global.css";
 import { Suspense, lazy, useEffect } from "react";
+import TermsOfService from "./pages/TermsOfService";
+import ContentPolicies from "./pages/ContentPolicies";
 import { createRoot } from "react-dom/client";
 import { LoadingScreen } from "./components/LoadingScreen";
 
@@ -143,6 +145,11 @@ const getApp = () => {
       }
     >
       <PatientApp />
+      {/* Static legal pages for SEO and compliance */}
+      <Routes>
+        <Route path="/terms-of-service" element={<TermsOfService />} />
+        <Route path="/content-policies" element={<ContentPolicies />} />
+      </Routes>
     </Suspense>
   );
 };
