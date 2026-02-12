@@ -193,7 +193,7 @@ export const sendClinicBookingNotificationCall = async (
 
 export const buildVoicePrompt = (details: VoiceNotificationDetails) => {
   return [
-    "もしもし。DocNearMeのDocDaisyと申します。",
+    "もしもし。Doc Near Me の Doc Daisy と申します。",
     `新しい予約リクエストがあります。患者名は${details.patientName}です。`,
     `希望日時は${details.requestedDateTime}です。`,
     "承認は1、却下は2、日程変更希望は3を押してください。",

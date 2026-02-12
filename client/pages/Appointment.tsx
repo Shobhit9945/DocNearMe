@@ -250,6 +250,7 @@ export default function Appointment() {
   const [actionSlot, setActionSlot] = useState<string | undefined>();
   const [actionError, setActionError] = useState<string | null>(null);
   const [isActionSubmitting, setIsActionSubmitting] = useState(false);
+  const [actionDialogKeyboardInset, setActionDialogKeyboardInset] = useState(0);
   const [reviewAppointment, setReviewAppointment] = useState<UpcomingAppointment | null>(null);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
@@ -282,6 +283,7 @@ export default function Appointment() {
   const [showHowVisits, setShowHowVisits] = useState(false);
   const [howVisitStep, setHowVisitStep] = useState(0);
   const touchStartYRef = useRef<number | null>(null);
+  const isActionDialogOpen = Boolean(actionType && actionAppointment);
 
   useEffect(() => {
     const nextClinicId = clinicId ?? "";
@@ -715,6 +717,36 @@ export default function Appointment() {
     }
     setAvailabilityNotice(slotsData.reason ?? "Clinic is closed for this date.");
   }, [slotsData?.isClosed, slotsData?.reason]);
+
+  useEffect(() => {
+    if (!isActionDialogOpen) {
+      setActionDialogKeyboardInset(0);
+      return;
+    }
+    if (typeof window === "undefined") return;
+    const viewport = window.visualViewport;
+    if (!viewport) return;
+
+    const updateKeyboardInset = () => {
+      if (!window.matchMedia("(max-width: 639px)").matches) {
+        setActionDialogKeyboardInset(0);
+        return;
+      }
+      const inset = Math.max(0, window.innerHeight - (viewport.height + viewport.offsetTop));
+      setActionDialogKeyboardInset((previous) => (Math.abs(previous - inset) < 1 ? previous : inset));
+    };
+
+    updateKeyboardInset();
+    viewport.addEventListener("resize", updateKeyboardInset);
+    viewport.addEventListener("scroll", updateKeyboardInset);
+    window.addEventListener("orientationchange", updateKeyboardInset);
+
+    return () => {
+      viewport.removeEventListener("resize", updateKeyboardInset);
+      viewport.removeEventListener("scroll", updateKeyboardInset);
+      window.removeEventListener("orientationchange", updateKeyboardInset);
+    };
+  }, [isActionDialogOpen]);
 
   useEffect(() => {
     if (!selectedVaultRecordId) {
@@ -1644,12 +1676,15 @@ export default function Appointment() {
         </Dialog>
 
         <Dialog
-          open={Boolean(actionType && actionAppointment)}
+          open={isActionDialogOpen}
           onOpenChange={(open) => {
             if (!open) handleCloseAction();
           }}
         >
-          <DialogContent>
+          <DialogContent
+            className="top-auto bottom-0 max-h-[92dvh] translate-y-0 overflow-y-auto rounded-t-3xl transition-[bottom] duration-200 sm:bottom-auto sm:top-[50%] sm:max-h-[85vh] sm:translate-y-[-50%] sm:rounded-lg"
+            style={actionDialogKeyboardInset > 0 ? { bottom: `${actionDialogKeyboardInset}px` } : undefined}
+          >
             <DialogHeader>
               <DialogTitle>
                 {actionType === "cancel" ? "Cancel appointment" : "Reschedule appointment"}
