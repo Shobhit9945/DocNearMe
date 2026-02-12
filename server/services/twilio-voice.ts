@@ -79,11 +79,12 @@ const buildVoiceDetails = (clinic: ClinicInfo, appointment: any): VoiceNotificat
 };
 
 const buildCallUrl = (appointmentId: string) => {
-  const baseUrl = getVoiceWebhookBaseUrl().replace(/\/$/, "");
+  const baseUrl = getVoiceWebhookBaseUrl();
   const token = buildVoiceToken(appointmentId);
-  return `${baseUrl}/api/voice/appointment?appointmentId=${encodeURIComponent(
-    appointmentId,
-  )}&token=${encodeURIComponent(token)}`;
+  const url = new URL("/api/voice/appointment", `${baseUrl}/`);
+  url.searchParams.set("appointmentId", appointmentId);
+  url.searchParams.set("token", token);
+  return url.toString();
 };
 
 
@@ -208,4 +209,3 @@ export const verifyVoiceToken = (appointmentId: string, token: string) => {
   if (expectedBuffer.length !== tokenBuffer.length) return false;
   return crypto.timingSafeEqual(expectedBuffer, tokenBuffer);
 };
-

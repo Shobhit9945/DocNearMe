@@ -5,12 +5,24 @@ import { getDateKey } from "../lib/scheduling";
 import type { AppointmentStatus } from "@shared/api";
 import { buildVoicePrompt, verifyVoiceToken } from "../services/twilio-voice";
 
+const normalizeBaseUrl = (value: string) => {
+  const trimmed = value.trim().replace(/\/$/, "");
+  if (!trimmed) return "";
+  return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+};
+
 const getVoiceBaseUrl = (req?: Request) => {
-  const configured = (process.env.VOICE_WEBHOOK_BASE_URL ?? "").replace(/\/$/, "");
+  const configured = normalizeBaseUrl(process.env.VOICE_WEBHOOK_BASE_URL ?? "");
   if (configured) return configured;
   if (!req) return "";
-  const host = req.get("host") ?? "";
-  const protocol = req.get("x-forwarded-proto") ?? req.protocol ?? "https";
+  const host = (req.get("x-forwarded-host") ?? req.get("host") ?? "").split(",")[0].trim();
+  const forwardedProto = req.get("x-forwarded-proto");
+  const protocolCandidate = (
+    forwardedProto ? forwardedProto.split(",")[0] : req.protocol ?? "https"
+  )
+    .trim()
+    .toLowerCase();
+  const protocol = protocolCandidate === "http" ? "http" : "https";
   return host ? `${protocol}://${host}` : "";
 };
 
@@ -217,11 +229,16 @@ export const handleVoiceAppointment: RequestHandler = async (req: Request, res: 
     });
 
     const baseUrl = getVoiceBaseUrl(req);
-    const actionUrl = `${baseUrl}/api/voice/appointment/response?appointmentId=${encodeURIComponent(
-      appointmentId,
-    )}&token=${encodeURIComponent(token)}`;
+    if (!baseUrl) {
+      console.error("[clinic-call] missing base URL for Twilio gather action");
+      return renderXml(res, buildCompletionTwiml(["処理できませんでした。"]));
+    }
 
-    return renderXml(res, buildGatherTwiml(message, actionUrl));
+    const actionUrl = new URL("/api/voice/appointment/response", `${baseUrl}/`);
+    actionUrl.searchParams.set("appointmentId", appointmentId);
+    actionUrl.searchParams.set("token", token);
+
+    return renderXml(res, buildGatherTwiml(message, actionUrl.toString()));
   } catch (error) {
     console.error("[clinic-call] voice appointment error", {
       error: error instanceof Error ? error.message : String(error),
@@ -284,4 +301,3 @@ export const handleVoiceAppointmentResponse: RequestHandler = async (req: Reques
     return renderXml(res, buildCompletionTwiml(["処理できませんでした。"]));
   }
 };
-
