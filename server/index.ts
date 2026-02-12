@@ -86,7 +86,14 @@ import {
 import { requireClinicAuth } from "./middleware/clinic-auth";
 import { requireAdminAuth } from "./middleware/admin-auth";
 import { handleAdminAuthCheck, handleAdminClinicList, handleAdminCreateClinic } from "./routes/admin";
-import { handleGetProfile, handleUpdateProfile } from "./routes/profile";
+import {
+  handleGetProfile,
+  handleRequestProfileEmailChangeOtp,
+  handleRequestProfilePhoneChangeOtp,
+  handleUpdateProfile,
+  handleVerifyProfileEmailChangeOtp,
+  handleVerifyProfilePhoneChangeOtp,
+} from "./routes/profile";
 import { handleTranslate } from "./routes/translate";
 
 export async function createServer(): Promise<Express> {
@@ -210,6 +217,10 @@ export async function createServer(): Promise<Express> {
   app.post("/api/auth/request-password-reset", handleRequestPasswordReset);
   app.post("/api/auth/reset-password", handleResetPassword);
   app.get("/api/profile", requireAuth, handleGetProfile);
+  app.post("/api/profile/email-change/request", requireAuth, handleRequestProfileEmailChangeOtp);
+  app.post("/api/profile/email-change/verify", requireAuth, handleVerifyProfileEmailChangeOtp);
+  app.post("/api/profile/phone-change/request", requireAuth, handleRequestProfilePhoneChangeOtp);
+  app.post("/api/profile/phone-change/verify", requireAuth, handleVerifyProfilePhoneChangeOtp);
   app.put("/api/profile", requireAuth, handleUpdateProfile);
   app.post("/api/clinic-auth/login", handleClinicLogin);
   app.get("/api/clinic-credentials", handleClinicCredentials);

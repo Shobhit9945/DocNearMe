@@ -379,11 +379,39 @@ export interface PatientProfileUpdateRequest {
   name?: string;
   email?: string;
   phone?: string;
+  emailProofToken?: string;
+  phoneProofToken?: string;
   address?: string;
   visaType?: VisaType;
   emergencyContact?: string;
   preferredLanguage?: string;
   notificationsEnabled?: boolean;
+}
+
+export interface ProfileEmailChangeRequest {
+  email: string;
+}
+
+export interface ProfileEmailChangeVerifyRequest {
+  email: string;
+  otp: string;
+}
+
+export interface ProfileEmailChangeVerifyResponse extends OtpResponse {
+  emailProofToken?: string;
+}
+
+export interface ProfilePhoneChangeRequest {
+  phone: string;
+}
+
+export interface ProfilePhoneChangeVerifyRequest {
+  phone: string;
+  otp: string;
+}
+
+export interface ProfilePhoneChangeVerifyResponse extends OtpResponse {
+  phoneProofToken?: string;
 }
 
 export interface RequestOtpRequest {

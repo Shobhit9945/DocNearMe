@@ -6,12 +6,17 @@ const getVerifyServiceSid = () => {
   return serviceSid;
 };
 
-const getTwilioAuthHeader = () => {
+const getTwilioCredentials = () => {
   const sid = process.env.TWILIO_SID;
   const secret = process.env.TWILIO_SECRET;
   if (!sid || !secret) {
     throw new Error("Twilio credentials are not configured.");
   }
+  return { sid, secret };
+};
+
+const getTwilioAuthHeader = () => {
+  const { sid, secret } = getTwilioCredentials();
   return `Basic ${Buffer.from(`${sid}:${secret}`).toString("base64")}`;
 };
 
@@ -48,4 +53,37 @@ export const checkPhoneVerification = async (phone: string, code: string) => {
     Code: code,
   });
   return data.status ?? "unknown";
+};
+
+export const sendPhoneSecurityAlert = async (phone: string, message: string) => {
+  const { sid } = getTwilioCredentials();
+  const messagingServiceSid = process.env.TWILIO_MESSAGING_SERVICE_SID;
+  const from = process.env.TWILIO_SMS_FROM ?? process.env.TWILIO_CALLER_ID;
+  if (!messagingServiceSid && !from) {
+    throw new Error("Twilio messaging sender is not configured.");
+  }
+
+  const body = new URLSearchParams({
+    To: phone,
+    Body: message,
+  });
+  if (messagingServiceSid) {
+    body.set("MessagingServiceSid", messagingServiceSid);
+  } else if (from) {
+    body.set("From", from);
+  }
+
+  const response = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`, {
+    method: "POST",
+    headers: {
+      Authorization: getTwilioAuthHeader(),
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: body.toString(),
+  });
+
+  if (!response.ok) {
+    const data = (await response.json().catch(() => ({}))) as { message?: string };
+    throw new Error(data.message ?? "Unable to send SMS alert.");
+  }
 };

@@ -147,7 +147,7 @@ export interface EmailOtp {
   otpHash: string;
   createdAt: Date;
   expiresAt: Date;
-  purpose?: "signup" | "password_reset";
+  purpose?: "signup" | "password_reset" | "profile_email_change";
   verifiedAt?: Date;
   usedAt?: Date;
 }

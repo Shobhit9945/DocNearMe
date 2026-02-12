@@ -8,7 +8,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { phoneCountryOptions } from "@/lib/phone-countries";
-import type { PatientProfile, PatientProfileResponse, PatientProfileUpdateRequest } from "@shared/api";
+import type {
+  OtpResponse,
+  PatientProfile,
+  PatientProfileResponse,
+  PatientProfileUpdateRequest,
+  ProfileEmailChangeVerifyResponse,
+  ProfilePhoneChangeVerifyResponse,
+} from "@shared/api";
 
 export default function Profile() {
   const { t } = useTranslation();
@@ -28,14 +35,51 @@ export default function Profile() {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [vaultEnabled, setVaultEnabled] = useState(true);
   const [profileSaved, setProfileSaved] = useState(false);
+  const [profileError, setProfileError] = useState<string | null>(null);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [isSyncingProfile, setIsSyncingProfile] = useState(false);
+  const [initialProfileEmail, setInitialProfileEmail] = useState("");
+  const [initialProfilePhone, setInitialProfilePhone] = useState("");
+  const [emailOtpCode, setEmailOtpCode] = useState("");
+  const [phoneOtpCode, setPhoneOtpCode] = useState("");
+  const [emailProofToken, setEmailProofToken] = useState("");
+  const [phoneProofToken, setPhoneProofToken] = useState("");
+  const [verifiedEmailValue, setVerifiedEmailValue] = useState("");
+  const [verifiedPhoneValue, setVerifiedPhoneValue] = useState("");
+  const [emailOtpSent, setEmailOtpSent] = useState(false);
+  const [phoneOtpSent, setPhoneOtpSent] = useState(false);
+  const [emailVerificationMessage, setEmailVerificationMessage] = useState<string | null>(null);
+  const [phoneVerificationMessage, setPhoneVerificationMessage] = useState<string | null>(null);
+  const [isSendingEmailOtp, setIsSendingEmailOtp] = useState(false);
+  const [isVerifyingEmailOtp, setIsVerifyingEmailOtp] = useState(false);
+  const [isSendingPhoneOtp, setIsSendingPhoneOtp] = useState(false);
+  const [isVerifyingPhoneOtp, setIsVerifyingPhoneOtp] = useState(false);
 
   const TOKEN_KEY = "docnearme_patient_token";
   const emergencyCountry = useMemo(
     () => phoneCountryOptions.find((option) => option.iso === emergencyContactCountryIso) ?? phoneCountryOptions[0],
     [emergencyContactCountryIso],
   );
+
+  const normalizePhone = (value: string) => {
+    const compact = value.replace(/[\s\-()]/g, "");
+    if (!compact) return "";
+    if (compact.startsWith("+")) {
+      return `+${compact.slice(1).replace(/\D/g, "")}`;
+    }
+    const digits = compact.replace(/\D/g, "");
+    return digits ? `+${digits}` : "";
+  };
+
+  const normalizedProfileEmail = profileEmail.trim().toLowerCase();
+  const normalizedInitialEmail = initialProfileEmail.trim().toLowerCase();
+  const normalizedProfilePhone = normalizePhone(profilePhone);
+  const normalizedInitialPhone = normalizePhone(initialProfilePhone);
+  const emailNeedsVerification = normalizedProfileEmail.length > 0 && normalizedProfileEmail !== normalizedInitialEmail;
+  const phoneNeedsVerification = normalizedProfilePhone.length > 0 && normalizedProfilePhone !== normalizedInitialPhone;
+  const isEmailVerifiedForCurrentValue = !emailNeedsVerification || verifiedEmailValue === normalizedProfileEmail;
+  const isPhoneVerifiedForCurrentValue = !phoneNeedsVerification || verifiedPhoneValue === normalizedProfilePhone;
+  const hasSessionToken = typeof window !== "undefined" && Boolean(localStorage.getItem(TOKEN_KEY));
 
   const formatEmergencyNumber = (value: string) => {
     const digits = value.replace(/\D/g, "").slice(0, 15);
@@ -71,6 +115,10 @@ export default function Profile() {
       setEmergencyContact("");
       setPreferredLanguage("Japanese");
       setNotificationsEnabled(true);
+      setInitialProfileEmail(storedEmail);
+      setInitialProfilePhone("");
+      setVerifiedEmailValue(storedEmail.trim().toLowerCase());
+      setVerifiedPhoneValue("");
       return;
     }
 
@@ -93,6 +141,10 @@ export default function Profile() {
     parseEmergencyContact(parsed.emergencyContact);
     setPreferredLanguage(parsed.preferredLanguage ?? "Japanese");
     setNotificationsEnabled(parsed.notificationsEnabled ?? true);
+    setInitialProfileEmail((parsed.email ?? storedEmail).trim().toLowerCase());
+    setInitialProfilePhone(parsed.phone ?? "");
+    setVerifiedEmailValue((parsed.email ?? storedEmail).trim().toLowerCase());
+    setVerifiedPhoneValue(normalizePhone(parsed.phone ?? ""));
   };
 
   const persistProfileToStorage = (profile: PatientProfile) => {
@@ -123,6 +175,18 @@ export default function Profile() {
     parseEmergencyContact(profile.emergencyContact);
     setPreferredLanguage(profile.preferredLanguage ?? "Japanese");
     setNotificationsEnabled(profile.notificationsEnabled ?? true);
+    setInitialProfileEmail(profile.email.trim().toLowerCase());
+    setInitialProfilePhone(profile.phone ?? "");
+    setVerifiedEmailValue(profile.email.trim().toLowerCase());
+    setVerifiedPhoneValue(normalizePhone(profile.phone ?? ""));
+    setEmailOtpCode("");
+    setPhoneOtpCode("");
+    setEmailProofToken("");
+    setPhoneProofToken("");
+    setEmailOtpSent(false);
+    setPhoneOtpSent(false);
+    setEmailVerificationMessage(null);
+    setPhoneVerificationMessage(null);
     setUserName(profile.name);
     setUserEmail(profile.email);
     persistProfileToStorage(profile);
@@ -175,6 +239,32 @@ export default function Profile() {
     }
   }, [userName]);
 
+  useEffect(() => {
+    if (!emailNeedsVerification) {
+      setEmailOtpCode("");
+      setEmailProofToken("");
+      setEmailOtpSent(false);
+      setEmailVerificationMessage(null);
+      return;
+    }
+    if (verifiedEmailValue !== normalizedProfileEmail) {
+      setEmailProofToken("");
+    }
+  }, [emailNeedsVerification, normalizedProfileEmail, verifiedEmailValue]);
+
+  useEffect(() => {
+    if (!phoneNeedsVerification) {
+      setPhoneOtpCode("");
+      setPhoneProofToken("");
+      setPhoneOtpSent(false);
+      setPhoneVerificationMessage(null);
+      return;
+    }
+    if (verifiedPhoneValue !== normalizedProfilePhone) {
+      setPhoneProofToken("");
+    }
+  }, [phoneNeedsVerification, normalizedProfilePhone, verifiedPhoneValue]);
+
   const handleLogout = () => {
     localStorage.removeItem("docnearme_patient_token");
     localStorage.removeItem("docnearme_user_name");
@@ -184,8 +274,161 @@ export default function Profile() {
     navigate("/");
   };
 
+  const handleRequestEmailOtp = async () => {
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (!token) return;
+    if (!emailNeedsVerification) return;
+
+    setProfileError(null);
+    setEmailVerificationMessage(null);
+    setIsSendingEmailOtp(true);
+    try {
+      const response = await fetch("/api/profile/email-change/request", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ email: normalizedProfileEmail }),
+      });
+      const data = (await response.json()) as OtpResponse | { error?: string; message?: string };
+      if (!response.ok) {
+        throw new Error(("error" in data && data.error) || ("message" in data && data.message) || "Unable to send verification code.");
+      }
+      setEmailOtpSent(true);
+      setEmailOtpCode("");
+      setEmailVerificationMessage(
+        "message" in data && data.message ? data.message : "Verification code sent to your new email.",
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to send verification code.";
+      setEmailVerificationMessage(message);
+      setProfileError(message);
+    } finally {
+      setIsSendingEmailOtp(false);
+    }
+  };
+
+  const handleVerifyEmailOtp = async () => {
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (!token) return;
+    if (!emailNeedsVerification) return;
+
+    const otp = emailOtpCode.trim();
+    if (otp.length !== 6) {
+      setEmailVerificationMessage("Enter the 6-digit email verification code.");
+      return;
+    }
+
+    setProfileError(null);
+    setEmailVerificationMessage(null);
+    setIsVerifyingEmailOtp(true);
+    try {
+      const response = await fetch("/api/profile/email-change/verify", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ email: normalizedProfileEmail, otp }),
+      });
+      const data = (await response.json()) as ProfileEmailChangeVerifyResponse | { error?: string; message?: string };
+      if (!response.ok || !("emailProofToken" in data) || !data.emailProofToken) {
+        throw new Error(
+          ("error" in data && data.error) || ("message" in data && data.message) || "Unable to verify email.",
+        );
+      }
+      setVerifiedEmailValue(normalizedProfileEmail);
+      setEmailProofToken(data.emailProofToken);
+      setEmailVerificationMessage(data.message || "Email verified.");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to verify email.";
+      setEmailVerificationMessage(message);
+      setProfileError(message);
+    } finally {
+      setIsVerifyingEmailOtp(false);
+    }
+  };
+
+  const handleRequestPhoneOtp = async () => {
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (!token) return;
+    if (!phoneNeedsVerification) return;
+
+    setProfileError(null);
+    setPhoneVerificationMessage(null);
+    setIsSendingPhoneOtp(true);
+    try {
+      const response = await fetch("/api/profile/phone-change/request", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ phone: profilePhone }),
+      });
+      const data = (await response.json()) as OtpResponse | { error?: string; message?: string };
+      if (!response.ok) {
+        throw new Error(("error" in data && data.error) || ("message" in data && data.message) || "Unable to send verification code.");
+      }
+      setPhoneOtpSent(true);
+      setPhoneOtpCode("");
+      setPhoneVerificationMessage(
+        "message" in data && data.message ? data.message : "Verification code sent to your new phone number.",
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to send verification code.";
+      setPhoneVerificationMessage(message);
+      setProfileError(message);
+    } finally {
+      setIsSendingPhoneOtp(false);
+    }
+  };
+
+  const handleVerifyPhoneOtp = async () => {
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (!token) return;
+    if (!phoneNeedsVerification) return;
+
+    const otp = phoneOtpCode.trim();
+    if (otp.length !== 6) {
+      setPhoneVerificationMessage("Enter the 6-digit phone verification code.");
+      return;
+    }
+
+    setProfileError(null);
+    setPhoneVerificationMessage(null);
+    setIsVerifyingPhoneOtp(true);
+    try {
+      const response = await fetch("/api/profile/phone-change/verify", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ phone: profilePhone, otp }),
+      });
+      const data = (await response.json()) as ProfilePhoneChangeVerifyResponse | { error?: string; message?: string };
+      if (!response.ok || !("phoneProofToken" in data) || !data.phoneProofToken) {
+        throw new Error(
+          ("error" in data && data.error) || ("message" in data && data.message) || "Unable to verify phone number.",
+        );
+      }
+      setVerifiedPhoneValue(normalizedProfilePhone);
+      setPhoneProofToken(data.phoneProofToken);
+      setPhoneVerificationMessage(data.message || "Phone number verified.");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to verify phone number.";
+      setPhoneVerificationMessage(message);
+      setProfileError(message);
+    } finally {
+      setIsVerifyingPhoneOtp(false);
+    }
+  };
+
   const handleProfileSave = async () => {
     const token = localStorage.getItem(TOKEN_KEY);
+    let didSave = false;
     const composedEmergencyContact = [
       emergencyContactName.trim(),
       `${emergencyCountry.dialCode} ${emergencyContactNumber}`.trim(),
@@ -205,8 +448,24 @@ export default function Profile() {
       notificationsEnabled,
     };
 
+    if (token && emailNeedsVerification && !isEmailVerifiedForCurrentValue) {
+      setProfileError("Please verify your new email address before saving.");
+      return;
+    }
+    if (token && phoneNeedsVerification && !isPhoneVerifiedForCurrentValue) {
+      setProfileError("Please verify your new phone number before saving.");
+      return;
+    }
+    if (token && emailNeedsVerification) {
+      profilePayload.emailProofToken = emailProofToken;
+    }
+    if (token && phoneNeedsVerification) {
+      profilePayload.phoneProofToken = phoneProofToken;
+    }
+
     if (token) {
       setIsSyncingProfile(true);
+      setProfileError(null);
       try {
         const response = await fetch("/api/profile", {
           method: "PUT",
@@ -217,12 +476,16 @@ export default function Profile() {
           body: JSON.stringify(profilePayload),
         });
         if (!response.ok) {
-          throw new Error("Failed to save profile");
+          const errorData = (await response.json().catch(() => ({}))) as { error?: string };
+          throw new Error(errorData.error ?? "Failed to save profile");
         }
         const data = (await response.json()) as PatientProfileResponse;
         applyProfile(data.profile);
+        didSave = true;
       } catch (error) {
+        const message = error instanceof Error ? error.message : "Profile update failed";
         console.error("Profile update failed", error);
+        setProfileError(message);
       } finally {
         setIsSyncingProfile(false);
       }
@@ -239,17 +502,22 @@ export default function Profile() {
       });
       setUserName(profileName);
       setUserEmail(profileEmail);
+      setProfileError(null);
+      didSave = true;
     }
 
-    setProfileSaved(true);
-    setIsEditingProfile(false);
-    window.setTimeout(() => setProfileSaved(false), 2000);
+    if (didSave) {
+      setProfileSaved(true);
+      setIsEditingProfile(false);
+      window.setTimeout(() => setProfileSaved(false), 2000);
+    }
   };
 
   const handleProfileCancel = () => {
     loadProfileFromStorage();
     setIsEditingProfile(false);
     setProfileSaved(false);
+    setProfileError(null);
   };
 
   return (
@@ -290,6 +558,7 @@ export default function Profile() {
                       onClick={() => {
                         setIsEditingProfile(true);
                         setProfileSaved(false);
+                        setProfileError(null);
                       }}
                     >
                       {t("Edit info")}
@@ -349,6 +618,53 @@ export default function Profile() {
                       className="mt-2"
                       disabled={!isEditingProfile}
                     />
+                    {isEditingProfile && hasSessionToken && emailNeedsVerification ? (
+                      <div className="mt-2 space-y-2">
+                        <p className="text-xs text-slate-500">{t("Verify your new email before saving.")}</p>
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className="border-slate-200"
+                            onClick={handleRequestEmailOtp}
+                            disabled={isSendingEmailOtp || isSyncingProfile}
+                          >
+                            {isSendingEmailOtp ? t("Sending...") : emailOtpSent ? t("Resend code") : t("Send code")}
+                          </Button>
+                          <Input
+                            type="text"
+                            inputMode="numeric"
+                            maxLength={6}
+                            value={emailOtpCode}
+                            onChange={(event) => setEmailOtpCode(event.target.value.replace(/\D/g, ""))}
+                            placeholder={t("6-digit code")}
+                            className="max-w-[140px]"
+                          />
+                          <Button
+                            type="button"
+                            size="sm"
+                            className="bg-[#1E6FD9] hover:bg-[#185DB8]"
+                            onClick={handleVerifyEmailOtp}
+                            disabled={isVerifyingEmailOtp || emailOtpCode.trim().length !== 6}
+                          >
+                            {isVerifyingEmailOtp ? t("Verifying...") : t("Verify")}
+                          </Button>
+                        </div>
+                        {isEmailVerifiedForCurrentValue ? (
+                          <p className="text-xs text-emerald-600">{t("New email verified.")}</p>
+                        ) : null}
+                        {emailVerificationMessage ? (
+                          <p
+                            className={`text-xs ${
+                              isEmailVerifiedForCurrentValue ? "text-emerald-600" : "text-slate-500"
+                            }`}
+                          >
+                            {emailVerificationMessage}
+                          </p>
+                        ) : null}
+                      </div>
+                    ) : null}
                   </div>
                   <div>
                     <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -362,6 +678,55 @@ export default function Profile() {
                       className="mt-2"
                       disabled={!isEditingProfile}
                     />
+                    {isEditingProfile && hasSessionToken && phoneNeedsVerification ? (
+                      <div className="mt-2 space-y-2">
+                        <p className="text-xs text-slate-500">
+                          {t("Verify your new phone before saving. Use international format (e.g. +819012345678).")}
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className="border-slate-200"
+                            onClick={handleRequestPhoneOtp}
+                            disabled={isSendingPhoneOtp || isSyncingProfile}
+                          >
+                            {isSendingPhoneOtp ? t("Sending...") : phoneOtpSent ? t("Resend code") : t("Send code")}
+                          </Button>
+                          <Input
+                            type="text"
+                            inputMode="numeric"
+                            maxLength={6}
+                            value={phoneOtpCode}
+                            onChange={(event) => setPhoneOtpCode(event.target.value.replace(/\D/g, ""))}
+                            placeholder={t("6-digit code")}
+                            className="max-w-[140px]"
+                          />
+                          <Button
+                            type="button"
+                            size="sm"
+                            className="bg-[#1E6FD9] hover:bg-[#185DB8]"
+                            onClick={handleVerifyPhoneOtp}
+                            disabled={isVerifyingPhoneOtp || phoneOtpCode.trim().length !== 6}
+                          >
+                            {isVerifyingPhoneOtp ? t("Verifying...") : t("Verify")}
+                          </Button>
+                        </div>
+                        {isPhoneVerifiedForCurrentValue ? (
+                          <p className="text-xs text-emerald-600">{t("New phone number verified.")}</p>
+                        ) : null}
+                        {phoneVerificationMessage ? (
+                          <p
+                            className={`text-xs ${
+                              isPhoneVerifiedForCurrentValue ? "text-emerald-600" : "text-slate-500"
+                            }`}
+                          >
+                            {phoneVerificationMessage}
+                          </p>
+                        ) : null}
+                      </div>
+                    ) : null}
                   </div>
                   <div className="sm:col-span-2">
                     <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -581,6 +946,7 @@ export default function Profile() {
               </>
             )}
             {profileSaved && <span className="text-sm text-emerald-600">{t("Profile saved.")}</span>}
+            {profileError && <span className="text-sm text-rose-600">{profileError}</span>}
             {isSyncingProfile && <span className="text-sm text-slate-500">{t("Syncing...")}</span>}
           </div>
 
