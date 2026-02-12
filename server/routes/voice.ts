@@ -2,8 +2,9 @@ import { Request, Response, RequestHandler } from "express";
 import { ObjectId } from "mongodb";
 import { getAppointmentsCollection, getPatientsCollection } from "../db";
 import { getDateKey } from "../lib/scheduling";
-import type { AppointmentStatus } from "@shared/api";
+import type { AppointmentStatus, AuditAction } from "@shared/api";
 import { buildVoicePrompt, verifyVoiceToken } from "../services/twilio-voice";
+import { logAuditEvent } from "../services/audit-log";
 
 const normalizeBaseUrl = (value: string) => {
   const trimmed = value.trim().replace(/\/$/, "");
@@ -129,9 +130,11 @@ const applyDecision = async (appointmentId: string, appointment: any, digit: str
   const now = new Date();
   let update: Record<string, unknown> = { updatedAt: now };
   let patientUpdate: Record<string, unknown> = { updatedAt: now };
+  let auditAction: AuditAction | null = null;
   const normalizedDigit = normalizeDigit(digit).charAt(0);
 
   if (normalizedDigit === "1") {
+    auditAction = "appointment_confirmed";
     const confirmFields = resolveConfirmFields(appointment);
     update = {
       ...update,
@@ -155,6 +158,7 @@ const applyDecision = async (appointmentId: string, appointment: any, digit: str
       slot: confirmFields.slot,
     };
   } else if (normalizedDigit === "2") {
+    auditAction = "appointment_declined";
     update = {
       ...update,
       status: "DECLINED",
@@ -169,6 +173,7 @@ const applyDecision = async (appointmentId: string, appointment: any, digit: str
       declineReason: "Declined by clinic (phone)",
     };
   } else if (normalizedDigit === "3") {
+    auditAction = "appointment_reschedule_requested";
     update = {
       ...update,
       status: "RESCHEDULE_REQUESTED",
@@ -190,6 +195,26 @@ const applyDecision = async (appointmentId: string, appointment: any, digit: str
     { $set: update },
   );
   await updatePatientSummary(appointmentId, appointment.patientId, patientUpdate);
+
+  if (auditAction) {
+    await logAuditEvent({
+      action: auditAction,
+      actorRole: "clinic",
+      actorId: `${appointment.clinicId}:voice`,
+      actorLabel: appointment.clinicId,
+      clinicId: appointment.clinicId,
+      patientId: appointment.patientId,
+      appointmentId,
+      targetType: "appointment",
+      targetId: appointmentId,
+      details: {
+        previousStatus: appointment.status,
+        digit: normalizedDigit,
+        via: "voice_call",
+      },
+      source: "voice",
+    });
+  }
 
   return { ok: true, status: update.status as AppointmentStatus };
 };

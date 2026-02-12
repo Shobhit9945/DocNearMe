@@ -7,10 +7,14 @@ import {
   getClinicInfoCollection,
 } from "../db";
 import { computeDoctorNextAvailability } from "./clinic";
+import { getAuditRequestMeta, listAuditLogs, logAuditEvent } from "../services/audit-log";
 import type {
+  AdminAuditLogsResponse,
   AdminAuthCheckResponse,
   AdminCreateClinicRequest,
   AdminCreateClinicResponse,
+  AuditAction,
+  AuditActorRole,
   ClinicProfile,
 } from "@shared/api";
 
@@ -120,6 +124,31 @@ const adminCreateClinicSchema = z.object({
   adminPassword: z.string().trim().min(6).max(120).optional(),
 });
 
+const auditActions: AuditAction[] = [
+  "patient_account_created",
+  "clinic_account_created",
+  "appointment_booked",
+  "appointment_confirmed",
+  "appointment_declined",
+  "appointment_cancelled_by_patient",
+  "appointment_cancelled_by_clinic",
+  "appointment_reschedule_requested",
+  "appointment_completed",
+  "appointment_deleted_by_clinic",
+  "admin_change",
+];
+
+const auditActorRoles: AuditActorRole[] = ["patient", "clinic", "admin", "system"];
+
+const adminAuditLogsQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(500).optional(),
+  action: z.enum(auditActions as [AuditAction, ...AuditAction[]]).optional(),
+  actorRole: z.enum(auditActorRoles as [AuditActorRole, ...AuditActorRole[]]).optional(),
+  clinicId: z.string().trim().min(1).max(120).optional(),
+  patientId: z.string().trim().min(1).max(120).optional(),
+  appointmentId: z.string().trim().min(1).max(120).optional(),
+});
+
 
 export const handleAdminAuthCheck: RequestHandler = (_req, res) => {
   const response: AdminAuthCheckResponse = { ok: true };
@@ -211,6 +240,38 @@ export const handleAdminCreateClinic: RequestHandler = async (req, res, next) =>
       createdAt: new Date(),
     });
 
+    const adminUsername = req.adminAuth?.username ?? "admin";
+    const requestMeta = getAuditRequestMeta(req);
+    await logAuditEvent({
+      action: "clinic_account_created",
+      actorRole: "admin",
+      actorId: adminUsername,
+      actorLabel: adminUsername,
+      clinicId,
+      targetType: "clinic_account",
+      targetId: adminUserId,
+      details: {
+        clinicName: clinic.name,
+      },
+      ...requestMeta,
+    });
+    await logAuditEvent({
+      action: "admin_change",
+      actorRole: "admin",
+      actorId: adminUsername,
+      actorLabel: adminUsername,
+      clinicId,
+      targetType: "clinic",
+      targetId: clinicId,
+      details: {
+        change: "create_clinic",
+        clinicName: clinic.name,
+        doctorsCount: doctors?.length ?? 0,
+        createdAdminUserId: adminUserId,
+      },
+      ...requestMeta,
+    });
+
     const response: AdminCreateClinicResponse = {
       clinicId,
       clinicName: clinic.name,
@@ -227,6 +288,22 @@ export const handleAdminCreateClinic: RequestHandler = async (req, res, next) =>
           path: issue.path.join("."),
           message: issue.message,
         })),
+      });
+    }
+    return next(error);
+  }
+};
+
+export const handleAdminAuditLogs: RequestHandler = async (req, res, next) => {
+  try {
+    const query = adminAuditLogsQuerySchema.parse(req.query);
+    const response: AdminAuditLogsResponse = await listAuditLogs(query);
+    return res.json(response);
+  } catch (error) {
+    if (error instanceof ZodError) {
+      return res.status(400).json({
+        error: "Invalid audit log query.",
+        detail: "validation_error",
       });
     }
     return next(error);

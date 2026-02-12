@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { AdminCreateClinicRequest, AdminCreateClinicResponse, ClinicDoctor, ClinicProfile } from "@shared/api";
 import { useAddressSearch } from "@/hooks/useAddressSearch";
 import { supportedLanguages } from "@/lib/translations";
+import { AdminAuditLogsPanel } from "@/components/admin/AdminAuditLogsPanel";
 import {
   Select,
   SelectContent,
@@ -567,6 +568,8 @@ export default function AdminClinicOnboarding() {
             Add a new clinic, create its admin login, and register doctors in one flow.
           </p>
         </header>
+
+        <AdminAuditLogsPanel username={credentials.username} password={credentials.password} />
 
         <form onSubmit={handleSubmitClinic} className="space-y-6">
           <section className="rounded-2xl bg-white p-6 shadow">

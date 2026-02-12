@@ -1,5 +1,9 @@
 import { RequestHandler } from "express";
 
+export type AdminAuthContext = {
+  username: string;
+};
+
 const adminUsername =
   process.env.ADMIN_USERNAME ?? process.env.ADMIN_EMAIL ?? "somebody";
 const adminPassword = process.env.ADMIN_PASSWORD ?? "password";
@@ -27,5 +31,14 @@ export const requireAdminAuth: RequestHandler = (req, res, next) => {
     res.setHeader("WWW-Authenticate", "Basic");
     return res.status(401).json({ error: "Invalid admin credentials." });
   }
+  req.adminAuth = {
+    username: parsed.username,
+  };
   return next();
 };
+
+declare module "express-serve-static-core" {
+  interface Request {
+    adminAuth?: AdminAuthContext;
+  }
+}

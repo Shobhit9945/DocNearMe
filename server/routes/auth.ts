@@ -25,6 +25,7 @@ import {
 import { buildOtpEmail, generateOtpCode, getOtpTtlMinutes, hashOtp, verifyOtp } from "../services/otp";
 import { sendEmail } from "../services/mailer";
 import { checkPhoneVerification, requestPhoneVerification } from "../services/twilio";
+import { getAuditRequestMeta, logAuditEvent } from "../services/audit-log";
 
 const emailSchema = z.string().trim().toLowerCase().email().max(254);
 const passwordSchema = z.string().min(8).max(128);
@@ -658,6 +659,22 @@ export const handleSignup: RequestHandler = async (req, res, next) => {
         },
       },
     );
+
+    await logAuditEvent({
+      action: "patient_account_created",
+      actorRole: "patient",
+      actorId: patientId,
+      actorLabel: user.name,
+      patientId,
+      targetType: "patient_account",
+      targetId: patientId,
+      details: {
+        email: normalizedEmail,
+        hasPhone: Boolean(payload.phone),
+        visaType: payload.visaType,
+      },
+      ...getAuditRequestMeta(req),
+    });
 
     return res.status(201).json(response);
   } catch (error) {

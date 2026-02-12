@@ -3,6 +3,7 @@ import "dotenv/config";
 import bcryptjs from "bcryptjs";
 import { MongoClient, Db, Collection, ObjectId } from "mongodb";
 import {
+  AuditLog,
   Appointment,
   ClinicIntakeForm,
   ClinicReview,
@@ -167,6 +168,7 @@ export type InMemoryPatientDb = {
     vaultKeys: InMemoryCollection<VaultKeyRecord>;
     vaultDocs: InMemoryCollection<VaultDocument>;
     intakeResponses: InMemoryCollection<IntakeFormResponse>;
+    auditLogs: InMemoryCollection<AuditLog>;
   };
 };
 
@@ -193,6 +195,7 @@ const inMemoryPatientDb: InMemoryPatientDb = {
     vaultKeys: new InMemoryCollection<VaultKeyRecord>([]),
     vaultDocs: new InMemoryCollection<VaultDocument>([]),
     intakeResponses: new InMemoryCollection<IntakeFormResponse>([]),
+    auditLogs: new InMemoryCollection<AuditLog>([]),
   },
 };
 
@@ -223,7 +226,8 @@ const getPatientCollection = <T>(
     | "medicalRecordKeys"
     | "vaultKeys"
     | "vaultDocs"
-    | "intakeResponses",
+    | "intakeResponses"
+    | "auditLogs",
 ) => (isMemoryPatientDb(db) ? db.collections[name] : db.collection<T>(name));
 
 const getClinicCollection = <T>(
@@ -256,6 +260,7 @@ async function preparePatientOnce(db: Db | InMemoryPatientDb) {
   const vaultKeys = getPatientCollection<VaultKeyRecord>(db, "vaultKeys");
   const vaultDocs = getPatientCollection<VaultDocument>(db, "vaultDocs");
   const intakeResponses = getPatientCollection<IntakeFormResponse>(db, "intakeResponses");
+  const auditLogs = getPatientCollection<AuditLog>(db, "auditLogs");
 
   // Run in parallel, but only once per warm container
   await Promise.all([
@@ -272,6 +277,11 @@ async function preparePatientOnce(db: Db | InMemoryPatientDb) {
     vaultDocs.createIndex({ userId: 1, createdAt: -1 }),
     intakeResponses.createIndex({ appointmentId: 1 }, { unique: true }),
     intakeResponses.createIndex({ clinicId: 1, createdAt: -1 }),
+    auditLogs.createIndex({ createdAt: -1 }),
+    auditLogs.createIndex({ action: 1, createdAt: -1 }),
+    auditLogs.createIndex({ actorRole: 1, createdAt: -1 }),
+    auditLogs.createIndex({ clinicId: 1, createdAt: -1 }),
+    auditLogs.createIndex({ appointmentId: 1, createdAt: -1 }),
   ]);
 
   cache.preparedPatients = true;
@@ -453,6 +463,11 @@ export async function getIntakeResponsesCollection(): Promise<
   return getPatientCollection<IntakeFormResponse>(db, "intakeResponses") as
     | Collection<IntakeFormResponse>
     | InMemoryCollection<IntakeFormResponse>;
+}
+
+export async function getAuditLogsCollection(): Promise<Collection<AuditLog> | InMemoryCollection<AuditLog>> {
+  const db = await connectToDatabase();
+  return getPatientCollection<AuditLog>(db, "auditLogs") as Collection<AuditLog> | InMemoryCollection<AuditLog>;
 }
 
 export async function getClinicReviewsCollection(): Promise<

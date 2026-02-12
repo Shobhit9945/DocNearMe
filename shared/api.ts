@@ -696,6 +696,46 @@ export interface AdminCreateClinicResponse {
   adminPassword: string;
 }
 
+export type AuditActorRole = "patient" | "clinic" | "admin" | "system";
+
+export type AuditEventSource = "api" | "voice" | "system";
+
+export type AuditAction =
+  | "patient_account_created"
+  | "clinic_account_created"
+  | "appointment_booked"
+  | "appointment_confirmed"
+  | "appointment_declined"
+  | "appointment_cancelled_by_patient"
+  | "appointment_cancelled_by_clinic"
+  | "appointment_reschedule_requested"
+  | "appointment_completed"
+  | "appointment_deleted_by_clinic"
+  | "admin_change";
+
+export interface AuditLogEntry {
+  id: string;
+  action: AuditAction;
+  actorRole: AuditActorRole;
+  actorId?: string;
+  actorLabel?: string;
+  clinicId?: string;
+  patientId?: string;
+  appointmentId?: string;
+  targetType?: string;
+  targetId?: string;
+  details?: Record<string, unknown>;
+  source?: AuditEventSource;
+  ipAddress?: string;
+  userAgent?: string;
+  createdAt: string;
+}
+
+export interface AdminAuditLogsResponse {
+  logs: AuditLogEntry[];
+  limit: number;
+}
+
 export interface MedicalConsentRequest {
   consentVersion: string;
   consentText: string;

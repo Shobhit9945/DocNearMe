@@ -1,6 +1,8 @@
-import { Link } from "react-router-dom";
+import { ChevronLeft } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
 import { PageScaffold } from "@/components/PageScaffold";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 
 type PolicySection = {
   title: string;
@@ -32,10 +34,32 @@ export function PolicyDocument({
   sections,
   relatedPolicies,
 }: PolicyDocumentProps) {
+  const navigate = useNavigate();
+
+  const handleBack = () => {
+    if (typeof window !== "undefined" && window.history.length > 1) {
+      navigate(-1);
+      return;
+    }
+    navigate("/");
+  };
+
   return (
     <PageScaffold contentClassName="pb-10">
       <main className="px-4 pt-16 pb-6 lg:px-10 lg:pt-14">
         <div className="mx-auto w-full max-w-4xl space-y-4">
+          <div className="flex items-center">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+              onClick={handleBack}
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Back
+            </Button>
+          </div>
           <header className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
             <p className="text-xs uppercase tracking-[0.2em] text-[#0089FF] font-semibold">{badge}</p>
             <h1 className="mt-2 text-3xl font-bold text-[#002D55]">{title}</h1>

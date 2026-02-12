@@ -22,6 +22,7 @@ import {
 import { sendEmail } from "../services/mailer";
 import { queueClinicBookingNotificationEmail } from "../services/clinic-booking-notifications";
 import { sendClinicBookingNotificationCall } from "../services/twilio-voice";
+import { getAuditRequestMeta, logAuditEvent } from "../services/audit-log";
 import { findConfirmedOverlap } from "./appointment-utils";
 import { getDateKey, isClinicClosedOnDate, isSlotInFutureJst, normalizeClinicHours } from "../lib/scheduling";
 
@@ -751,6 +752,25 @@ export const handleRequestAppointment = async (req: Request, res: Response) => {
 
     const responseAppointment = serializeAppointment({ ...record, _id: appointmentId });
 
+    await logAuditEvent({
+      action: "appointment_booked",
+      actorRole: "patient",
+      actorId: req.auth.id,
+      actorLabel: req.auth.name,
+      patientId: req.auth.id,
+      clinicId: clinicKey,
+      appointmentId,
+      targetType: "appointment",
+      targetId: appointmentId,
+      details: {
+        specialization: record.specialization,
+        doctorName: record.doctorName,
+        preferredStart: record.preferredStart,
+        preferredEnd: record.preferredEnd,
+      },
+      ...getAuditRequestMeta(req),
+    });
+
     res.status(201).json({
       success: true,
       id: appointmentId,
@@ -1028,6 +1048,25 @@ export const handleClinicConfirmAppointment = async (req: Request, res: Response
 
     const tokenDetails = await buildTokenPatientDetails(appointment, appointmentId);
 
+    await logAuditEvent({
+      action: "appointment_confirmed",
+      actorRole: "clinic",
+      actorId: req.clinicAuth.userId,
+      actorLabel: req.clinicAuth.userId,
+      clinicId: appointment.clinicId,
+      patientId: appointment.patientId,
+      appointmentId,
+      targetType: "appointment",
+      targetId: appointmentId,
+      details: {
+        previousStatus: appointment.status,
+        confirmedStart: confirmTimes.confirmedStart.toISOString(),
+        confirmedEnd: confirmTimes.confirmedEnd.toISOString(),
+        source: "clinic_dashboard",
+      },
+      ...getAuditRequestMeta(req),
+    });
+
     res.json({
       success: true,
       appointment: serializeAppointment({
@@ -1089,6 +1128,22 @@ export const handleClinicCompleteAppointment = async (req: Request, res: Respons
     await updatePatientAppointmentSummary(appointmentId, appointment.patientId, {
       status: "COMPLETED",
       updatedAt: now,
+    });
+
+    await logAuditEvent({
+      action: "appointment_completed",
+      actorRole: "clinic",
+      actorId: req.clinicAuth.userId,
+      actorLabel: req.clinicAuth.userId,
+      clinicId: appointment.clinicId,
+      patientId: appointment.patientId,
+      appointmentId,
+      targetType: "appointment",
+      targetId: appointmentId,
+      details: {
+        previousStatus: appointment.status,
+      },
+      ...getAuditRequestMeta(req),
     });
 
     return res.json({
@@ -1179,6 +1234,24 @@ export const handleClinicDeclineAppointment = async (req: Request, res: Response
 
     const tokenDetails = await buildTokenPatientDetails(appointment, appointmentId);
 
+    await logAuditEvent({
+      action: "appointment_declined",
+      actorRole: "clinic",
+      actorId: req.clinicAuth.userId,
+      actorLabel: req.clinicAuth.userId,
+      clinicId: appointment.clinicId,
+      patientId: appointment.patientId,
+      appointmentId,
+      targetType: "appointment",
+      targetId: appointmentId,
+      details: {
+        previousStatus: appointment.status,
+        declineReason,
+        source: "clinic_dashboard",
+      },
+      ...getAuditRequestMeta(req),
+    });
+
     res.json({
       success: true,
       appointment: serializeAppointment({
@@ -1246,6 +1319,24 @@ export const handleClinicRescheduleMessage = async (req: Request, res: Response)
     await updatePatientAppointmentSummary(appointmentId, appointment.patientId, {
       status: "RESCHEDULE_REQUESTED",
       updatedAt: now,
+    });
+
+    await logAuditEvent({
+      action: "appointment_reschedule_requested",
+      actorRole: "clinic",
+      actorId: req.clinicAuth.userId,
+      actorLabel: req.clinicAuth.userId,
+      clinicId: appointment.clinicId,
+      patientId: appointment.patientId,
+      appointmentId,
+      targetType: "appointment",
+      targetId: appointmentId,
+      details: {
+        previousStatus: appointment.status,
+        message,
+        source: "clinic_dashboard",
+      },
+      ...getAuditRequestMeta(req),
     });
 
     if (appointment.patientEmail) {
@@ -1349,6 +1440,24 @@ export const handleClinicCancelAppointment = async (req: Request, res: Response)
       updatedAt: now,
     });
 
+    await logAuditEvent({
+      action: "appointment_cancelled_by_clinic",
+      actorRole: "clinic",
+      actorId: req.clinicAuth.userId,
+      actorLabel: req.clinicAuth.userId,
+      clinicId: appointment.clinicId,
+      patientId: appointment.patientId,
+      appointmentId,
+      targetType: "appointment",
+      targetId: appointmentId,
+      details: {
+        previousStatus: appointment.status,
+        reason,
+        source: "clinic_dashboard",
+      },
+      ...getAuditRequestMeta(req),
+    });
+
     await removeIntakeResponseForAppointment(appointmentId);
 
     if (appointment.patientEmail) {
@@ -1425,6 +1534,22 @@ export const handleClinicDeleteAppointment = async (req: Request, res: Response)
 
     await removePatientAppointmentSummary(appointmentId, appointment.patientId);
     await removeIntakeResponseForAppointment(appointmentId);
+
+    await logAuditEvent({
+      action: "appointment_deleted_by_clinic",
+      actorRole: "clinic",
+      actorId: req.clinicAuth.userId,
+      actorLabel: req.clinicAuth.userId,
+      clinicId: appointment.clinicId,
+      patientId: appointment.patientId,
+      appointmentId,
+      targetType: "appointment",
+      targetId: appointmentId,
+      details: {
+        previousStatus: appointment.status,
+      },
+      ...getAuditRequestMeta(req),
+    });
 
     return res.json({ success: true, message: "Appointment deleted" });
   } catch (error) {
@@ -1524,6 +1649,26 @@ export const handleRescheduleAppointment = async (req: Request, res: Response) =
         },
       );
     }
+
+    await logAuditEvent({
+      action: "appointment_reschedule_requested",
+      actorRole: "patient",
+      actorId: req.auth.id,
+      actorLabel: req.auth.name,
+      clinicId: appointment.clinicId,
+      patientId: req.auth.id,
+      appointmentId,
+      targetType: "appointment",
+      targetId: appointmentId,
+      details: {
+        previousStatus: appointment.status,
+        reason: String(reason),
+        preferredStart: preferredTimes.preferredStart.toISOString(),
+        preferredEnd: preferredTimes.preferredEnd.toISOString(),
+        source: "patient_app",
+      },
+      ...getAuditRequestMeta(req),
+    });
 
     const clinicEmail = buildClinicNotificationEmail(appointment.clinicId);
     const baseUrl = buildAppBaseUrl();
@@ -1631,6 +1776,23 @@ export const handleCancelAppointment = async (req: Request, res: Response) => {
     }
 
     await removeIntakeResponseForAppointment(appointmentId);
+
+    await logAuditEvent({
+      action: "appointment_cancelled_by_patient",
+      actorRole: "patient",
+      actorId: req.auth.id,
+      actorLabel: req.auth.name,
+      clinicId: appointment.clinicId,
+      patientId: req.auth.id,
+      appointmentId,
+      targetType: "appointment",
+      targetId: appointmentId,
+      details: {
+        previousStatus: appointment.status,
+        reason: String(reason),
+      },
+      ...getAuditRequestMeta(req),
+    });
 
     res.json({
       success: true,
@@ -1821,6 +1983,25 @@ export const handleConfirmAppointment = async (req: Request, res: Response) => {
       updatedAt: now,
     });
 
+    await logAuditEvent({
+      action: "appointment_confirmed",
+      actorRole: "clinic",
+      actorId: `${appointment.clinicId}:token`,
+      actorLabel: appointment.clinicId,
+      clinicId: appointment.clinicId,
+      patientId: appointment.patientId,
+      appointmentId,
+      targetType: "appointment",
+      targetId: appointmentId,
+      details: {
+        previousStatus: appointment.status,
+        confirmedStart: confirmTimes.confirmedStart.toISOString(),
+        confirmedEnd: confirmTimes.confirmedEnd.toISOString(),
+        source: "clinic_confirmation_link",
+      },
+      ...getAuditRequestMeta(req),
+    });
+
     res.json({
       success: true,
       appointment: {
@@ -1960,6 +2141,24 @@ export const handleDeclineAppointment = async (req: Request, res: Response) => {
       clinicConfirmationTokenHash: null,
       tokenExpiresAt: null,
       updatedAt: now,
+    });
+
+    await logAuditEvent({
+      action: "appointment_declined",
+      actorRole: "clinic",
+      actorId: `${appointment.clinicId}:token`,
+      actorLabel: appointment.clinicId,
+      clinicId: appointment.clinicId,
+      patientId: appointment.patientId,
+      appointmentId,
+      targetType: "appointment",
+      targetId: appointmentId,
+      details: {
+        previousStatus: appointment.status,
+        declineReason,
+        source: "clinic_confirmation_link",
+      },
+      ...getAuditRequestMeta(req),
     });
 
     res.json({

@@ -1,4 +1,5 @@
 import type { ObjectId } from "mongodb";
+import type { AuditAction, AuditActorRole, AuditEventSource } from "@shared/api";
 
 export type AppointmentStatus =
   | "PENDING_CLINIC"
@@ -150,6 +151,24 @@ export interface EmailOtp {
   purpose?: "signup" | "password_reset" | "profile_email_change";
   verifiedAt?: Date;
   usedAt?: Date;
+}
+
+export interface AuditLog {
+  _id?: unknown;
+  action: AuditAction;
+  actorRole: AuditActorRole;
+  actorId?: string;
+  actorLabel?: string;
+  clinicId?: string;
+  patientId?: string;
+  appointmentId?: string;
+  targetType?: string;
+  targetId?: string;
+  details?: Record<string, unknown>;
+  source?: AuditEventSource;
+  ipAddress?: string;
+  userAgent?: string;
+  createdAt: Date;
 }
 
 export interface MedicalRecord {
