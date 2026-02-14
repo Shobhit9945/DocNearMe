@@ -1,5 +1,6 @@
 import { Toaster } from "@/components/ui/toaster";
 import { TranslationProvider } from "@/lib/i18n";
+import { LanguageTransitionOverlay } from "@/components/LanguageTransitionOverlay";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Suspense, lazy } from "react";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
@@ -30,6 +31,7 @@ interface ClinicAppProps {
 export default function ClinicApp({ basename }: ClinicAppProps) {
   return (
     <TranslationProvider defaultLanguage="ja" storageKey="dnm-clinic-language">
+      <LanguageTransitionOverlay />
       <QueryClientProvider client={queryClient}>
         <BrowserRouter basename={basename}>
           <Suspense

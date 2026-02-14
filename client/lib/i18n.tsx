@@ -5,6 +5,7 @@ interface TranslationContextValue {
   language: Language;
   setLanguage: (lang: Language) => void;
   toggleLanguage: () => void;
+  isTranslating: boolean;
   t: (key: string, fallback?: string) => string;
 }
 
@@ -50,8 +51,9 @@ export function TranslationProvider({
   defaultLanguage = "en",
   storageKey = "dnm-language",
 }: TranslationProviderProps) {
-  const [language, setLanguage] = useState<Language>(() => getInitialLanguage(defaultLanguage, storageKey));
+  const [language, setLanguageState] = useState<Language>(() => getInitialLanguage(defaultLanguage, storageKey));
   const [cacheVersion, setCacheVersion] = useState(0);
+  const [isTranslating, setIsTranslating] = useState(false);
   const cacheRef = useRef<Record<string, string>>({});
   const pendingRef = useRef<Set<string>>(new Set());
   const inFlightRef = useRef<Set<string>>(new Set());
@@ -82,10 +84,19 @@ export function TranslationProvider({
   }, [language]);
 
   useEffect(() => {
-    if (language === "en") return;
+    if (language === "en") {
+      setIsTranslating(false);
+      return;
+    }
     const queue = Array.from(pendingRef.current);
-    if (!queue.length) return;
+    if (!queue.length) {
+      if (inFlightRef.current.size === 0) {
+        setIsTranslating(false);
+      }
+      return;
+    }
     pendingRef.current.clear();
+    setIsTranslating(true);
 
     let cancelled = false;
 
@@ -143,6 +154,9 @@ export function TranslationProvider({
           // ignore translation failures
         } finally {
           inFlightRef.current.delete(key);
+          if (!cancelled && inFlightRef.current.size === 0 && pendingRef.current.size === 0) {
+            setIsTranslating(false);
+          }
         }
       }
     };
@@ -174,17 +188,22 @@ export function TranslationProvider({
   );
 
   const toggleLanguage = () => {
-    setLanguage((prev) => {
-      const index = supportedLanguages.findIndex((item) => item.code === prev);
-      if (index === -1) return "en";
-      const next = supportedLanguages[(index + 1) % supportedLanguages.length];
-      return next.code;
-    });
+    const index = supportedLanguages.findIndex((item) => item.code === language);
+    const next = index === -1 ? "en" : supportedLanguages[(index + 1) % supportedLanguages.length].code;
+    if (next === language) return;
+    setIsTranslating(true);
+    setLanguageState(next);
+  };
+
+  const setLanguage = (lang: Language) => {
+    if (lang === language) return;
+    setIsTranslating(true);
+    setLanguageState(lang);
   };
 
   const value = useMemo(
-    () => ({ language, setLanguage, toggleLanguage, t }),
-    [language, t]
+    () => ({ language, setLanguage, toggleLanguage, isTranslating, t }),
+    [language, isTranslating, t]
   );
 
   return <TranslationContext.Provider value={value}>{children}</TranslationContext.Provider>;

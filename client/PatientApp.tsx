@@ -2,6 +2,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { TranslationProvider } from "@/lib/i18n";
+import { LanguageTransitionOverlay } from "@/components/LanguageTransitionOverlay";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
@@ -74,6 +75,7 @@ const TrackPageView = () => {
 export default function PatientApp() {
   return (
     <TranslationProvider>
+      <LanguageTransitionOverlay />
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <Toaster />
