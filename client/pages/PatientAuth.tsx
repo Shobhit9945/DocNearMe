@@ -31,7 +31,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 const TOKEN_KEY = "docnearme_patient_token";
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const RECAPTCHA_SITE_KEY = "6LdYQFosAAAAABcfNljyySbgpKtmKKmYG4o96-qQ";
+const RECAPTCHA_SITE_KEY = "6LcNnGssAAAAAH4JBkU3qoxXjH4TbZKnaMuf5YaQ";
 
 type StatusState = {
   type: "idle" | "success" | "error";
