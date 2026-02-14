@@ -115,6 +115,14 @@ export function TranslationProvider({
           });
 
           if (!response.ok) {
+            if (response.status >= 400 && response.status < 500) {
+              // Cache fallback to avoid repeated client-side retry loops for invalid requests.
+              cacheRef.current = { ...cacheRef.current, [key]: sourceText };
+              if (typeof localStorage !== "undefined") {
+                localStorage.setItem(getCacheKey(language), JSON.stringify(cacheRef.current));
+              }
+              setCacheVersion((prev) => prev + 1);
+            }
             inFlightRef.current.delete(key);
             continue;
           }

@@ -1,6 +1,27 @@
 import { RequestHandler } from "express";
 import { z } from "zod";
 
+const SUPPORTED_LANGUAGES = [
+  "en",
+  "ja",
+  "ko",
+  "id",
+  "my",
+  "bn",
+  "ar",
+  "hi",
+  "th",
+  "fil",
+  "zh",
+  "es",
+  "vi",
+] as const;
+
+const SUPPORTED_SOURCE_LANGUAGES = ["auto", ...SUPPORTED_LANGUAGES] as const;
+
+type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number];
+type SupportedSourceLanguage = (typeof SUPPORTED_SOURCE_LANGUAGES)[number];
+
 const normalizeLanguageInput = (value: unknown) => {
   if (typeof value !== "string") return value;
   const normalized = value.trim().toLowerCase();
@@ -9,17 +30,13 @@ const normalizeLanguageInput = (value: unknown) => {
   return normalized;
 };
 
-const normalizeTextInput = (value: unknown) => {
-  if (typeof value !== "string") return value;
-  return value.trim();
-};
-
-const languageSchema = z.preprocess(normalizeLanguageInput, z.enum(["en", "ja", "vi", "id", "es"]));
-
 const translationRequestSchema = z.object({
   text: z.string().trim().min(1).max(5000),
-  targetLanguage: z.enum(["en", "ja", "vi", "id", "es"]),
-  sourceLanguage: z.enum(["auto", "en", "ja", "vi", "id", "es"]).optional().default("auto"),
+  targetLanguage: z.preprocess(normalizeLanguageInput, z.enum(SUPPORTED_LANGUAGES)),
+  sourceLanguage: z
+    .preprocess(normalizeLanguageInput, z.enum(SUPPORTED_SOURCE_LANGUAGES))
+    .optional()
+    .default("auto"),
 });
 
 const parseRequestBody = (body: unknown): unknown => {
@@ -50,8 +67,20 @@ const parseRequestBody = (body: unknown): unknown => {
 const translateBaseUrl = process.env.DEEPL_API_URL ?? "https://api-free.deepl.com/v2/translate";
 const translateApiKey = process.env.DEEPL;
 const googleTranslateBaseUrl = "https://translate.googleapis.com/translate_a/single";
+const DEEPL_SUPPORTED_LANGUAGE_SET = new Set<SupportedLanguage>([
+  "en",
+  "ja",
+  "ko",
+  "id",
+  "ar",
+  "hi",
+  "th",
+  "zh",
+  "es",
+  "vi",
+]);
 
-const mapDeepLLanguage = (language: "en" | "ja" | "ko" | "id" | "ar" | "hi" | "th" | "zh" | "vi" | "es") => {
+const mapDeepLLanguage = (language: SupportedLanguage) => {
   switch (language) {
     case "en":
       return "EN";
@@ -78,21 +107,17 @@ const mapDeepLLanguage = (language: "en" | "ja" | "ko" | "id" | "ar" | "hi" | "t
   }
 };
 
-const mapGoogleLanguage = (
-  language: "en" | "ja" | "ko" | "id" | "my" | "bn" | "ar" | "hi" | "th" | "fil" | "zh" | "es" | "vi",
-) => {
+const mapGoogleLanguage = (language: SupportedLanguage) => {
   if (language === "fil") return "tl";
   return language;
 };
 
-const isDeepLSupported = (
-  language: "en" | "ja" | "ko" | "id" | "my" | "bn" | "ar" | "hi" | "th" | "fil" | "zh" | "es" | "vi",
-) => ["en", "ja", "ko", "id", "ar", "hi", "th", "zh", "es", "vi"].includes(language);
+const isDeepLSupported = (language: SupportedLanguage) => DEEPL_SUPPORTED_LANGUAGE_SET.has(language);
 
 const translateWithGoogle = async (
   text: string,
-  targetLanguage: "en" | "ja" | "ko" | "id" | "my" | "bn" | "ar" | "hi" | "th" | "fil" | "zh" | "es" | "vi",
-  sourceLanguage: "auto" | "en" | "ja" | "ko" | "id" | "my" | "bn" | "ar" | "hi" | "th" | "fil" | "zh" | "es" | "vi",
+  targetLanguage: SupportedLanguage,
+  sourceLanguage: SupportedSourceLanguage,
 ) => {
   const target = mapGoogleLanguage(targetLanguage);
   const source = sourceLanguage === "auto" ? "auto" : mapGoogleLanguage(sourceLanguage);

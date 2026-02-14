@@ -59,6 +59,9 @@ export const useTranslatedText = (text: string, targetLanguage: Language, enable
       });
 
       if (!response.ok) {
+        if (response.status >= 400 && response.status < 500) {
+          return normalizedText;
+        }
         throw new Error("Translation failed");
       }
 
@@ -66,6 +69,7 @@ export const useTranslatedText = (text: string, targetLanguage: Language, enable
       return data.translation ?? normalizedText;
     },
     enabled: needsTranslation,
+    retry: false,
     staleTime: 1000 * 60 * 60,
     gcTime: 1000 * 60 * 60 * 12,
   });
