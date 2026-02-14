@@ -391,6 +391,14 @@ export default function Appointment() {
     setFieldErrors((prev) => ({ ...prev, [field]: undefined }));
   };
 
+  const clearPatientSession = () => {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(NAME_KEY);
+    localStorage.removeItem(EMAIL_KEY);
+    setAuthSession(null);
+    setAuthError(t("Session expired. Please sign in again."));
+  };
+
   const updateIntakeResponse = (questionId: string, value: IntakeAnswerValue) => {
     setIntakeResponses((prev) => ({ ...prev, [questionId]: value }));
     if (intakeFieldErrors[questionId]) {
@@ -603,7 +611,16 @@ export default function Appointment() {
         },
       });
       if (!res.ok) {
-        throw new Error("Unable to load appointments");
+        const payload = await res.json().catch(() => ({}));
+        const detail = typeof payload?.detail === "string" ? payload.detail : "";
+        if (
+          res.status === 401 &&
+          (detail === "invalid_token" || detail === "missing_token" || detail === "user_not_found")
+        ) {
+          clearPatientSession();
+          throw new Error(t("Session expired. Please sign in again."));
+        }
+        throw new Error(payload?.error ?? "Unable to load appointments");
       }
       return (await res.json()) as AppointmentListResponse;
     },

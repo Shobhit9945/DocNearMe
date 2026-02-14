@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/components/ui/use-toast";
-import { getClinicAuthHeader, getClinicSession } from "@/lib/clinic-auth";
+import { clearClinicSession, getClinicAuthHeader, getClinicSession } from "@/lib/clinic-auth";
 import { useTranslation } from "@/lib/i18n";
 import { getSpecializationLabel } from "@/lib/specializations";
 import { formatSlotForLanguage } from "@/lib/time-format";
@@ -51,6 +51,17 @@ const fetchClinicAppointments = async (): Promise<AppointmentListResponse> => {
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({}));
+    const detail = typeof error?.detail === "string" ? error.detail : "";
+    if (
+      response.status === 401 &&
+      (detail === "invalid_token" || detail === "missing_token" || detail === "user_not_found")
+    ) {
+      clearClinicSession();
+      if (typeof window !== "undefined" && window.location.pathname !== "/login") {
+        window.location.assign("/login");
+      }
+      throw new Error("Session expired. Please sign in again.");
+    }
     throw new Error(error?.error ?? "Unable to load appointments.");
   }
 

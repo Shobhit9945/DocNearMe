@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Users, Calendar, Clock, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { getClinicAuthHeader, getClinicSession } from "@/lib/clinic-auth";
+import { clearClinicSession, getClinicAuthHeader, getClinicSession } from "@/lib/clinic-auth";
 import { useClinicProfile } from "@/lib/clinic-data";
 import { useTranslation } from "@/lib/i18n";
 import { getDateKey, normalizeClinicHours } from "@/lib/scheduling";
@@ -30,6 +30,17 @@ export default function ClinicDashboard() {
 
       if (!response.ok) {
         const error = await response.json().catch(() => ({}));
+        const detail = typeof error?.detail === "string" ? error.detail : "";
+        if (
+          response.status === 401 &&
+          (detail === "invalid_token" || detail === "missing_token" || detail === "user_not_found")
+        ) {
+          clearClinicSession();
+          if (typeof window !== "undefined" && window.location.pathname !== "/login") {
+            window.location.assign("/login");
+          }
+          throw new Error(t("Session expired. Please sign in again."));
+        }
         throw new Error(error?.error ?? t("Unable to load appointments."));
       }
 
