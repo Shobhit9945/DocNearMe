@@ -96,8 +96,43 @@ import {
 } from "./routes/profile";
 import { handleTranslate } from "./routes/translate";
 
+const WEAK_SECRET_VALUES = new Set(["dev-secret-change-me", "password", "changeme", "secret"]);
+
+const isWeakSecret = (value: string, minLength: number) =>
+  value.trim().length < minLength || WEAK_SECRET_VALUES.has(value.trim().toLowerCase());
+
+const assertSecurityConfig = () => {
+  const errors: string[] = [];
+
+  const authJwtSecret = process.env.AUTH_JWT_SECRET ?? process.env.JWT_SECRET;
+  const clinicJwtSecret = process.env.CLINIC_JWT_SECRET ?? authJwtSecret;
+  const adminUsername = process.env.ADMIN_USERNAME ?? process.env.ADMIN_EMAIL;
+  const adminPassword = process.env.ADMIN_PASSWORD;
+
+  if (!authJwtSecret || isWeakSecret(authJwtSecret, 32)) {
+    errors.push("Set AUTH_JWT_SECRET (or JWT_SECRET) to a strong secret (minimum 32 characters).");
+  }
+
+  if (!clinicJwtSecret || isWeakSecret(clinicJwtSecret, 32)) {
+    errors.push("Set CLINIC_JWT_SECRET (or AUTH_JWT_SECRET) to a strong secret (minimum 32 characters).");
+  }
+
+  if (!adminUsername || adminUsername.trim().length < 3 || adminUsername.trim().toLowerCase() === "somebody") {
+    errors.push("Set ADMIN_USERNAME (or ADMIN_EMAIL) to a non-default value.");
+  }
+
+  if (!adminPassword || isWeakSecret(adminPassword, 12)) {
+    errors.push("Set ADMIN_PASSWORD to a strong secret (minimum 12 characters, non-default).");
+  }
+
+  if (errors.length > 0) {
+    throw new Error(`[security] Auth configuration is invalid:\n- ${errors.join("\n- ")}`);
+  }
+};
+
 export async function createServer(): Promise<Express> {
   const app = express();
+  assertSecurityConfig();
 
   // Middleware
   const allowedOrigins = [
@@ -171,7 +206,7 @@ export async function createServer(): Promise<Express> {
   app.post("/api/appointments/:id/decline", handleDeclineAppointment);
   app.get("/api/appointments/:id/confirm", handleConfirmAppointment);
   app.get("/api/appointments/:id/decline", handleDeclineAppointment);
-  app.get("/api/appointments", handleListAppointments);
+  app.get("/api/appointments", requireAdminAuth, handleListAppointments);
   app.get("/api/appointments/me", requireAuth, handleListAppointmentsForUser);
   app.get("/api/clinic/appointments", requireClinicAuth, handleListAppointmentsForClinic);
   app.get("/api/clinic/appointments/:id/patient", requireClinicAuth, handleClinicPatientDetails);
@@ -223,7 +258,7 @@ export async function createServer(): Promise<Express> {
   app.post("/api/profile/phone-change/verify", requireAuth, handleVerifyProfilePhoneChangeOtp);
   app.put("/api/profile", requireAuth, handleUpdateProfile);
   app.post("/api/clinic-auth/login", handleClinicLogin);
-  app.get("/api/clinic-credentials", handleClinicCredentials);
+  app.get("/api/clinic-credentials", requireAdminAuth, handleClinicCredentials);
   app.get("/api/admin/auth-check", requireAdminAuth, handleAdminAuthCheck);
   app.get("/api/admin/clinics", requireAdminAuth, handleAdminClinicList);
   app.post("/api/admin/clinics", requireAdminAuth, handleAdminCreateClinic);

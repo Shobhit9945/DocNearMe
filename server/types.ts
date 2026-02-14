@@ -276,7 +276,6 @@ export interface ClinicAccount {
   clinicId: string;
   userId: string;
   passwordHash: string;
-  tempPassword?: string;
   createdAt: Date;
   lastLoginAt?: Date;
 }

@@ -13,9 +13,18 @@ type ClinicTokenPayload = {
   userId?: string;
 };
 
-const jwtSecret = process.env.CLINIC_JWT_SECRET ?? process.env.AUTH_JWT_SECRET ?? process.env.JWT_SECRET ?? "dev-secret-change-me";
+const getClinicJwtSecret = () =>
+  process.env.CLINIC_JWT_SECRET ?? process.env.AUTH_JWT_SECRET ?? process.env.JWT_SECRET;
 
 export const requireClinicAuth: RequestHandler = async (req, res, next) => {
+  const jwtSecret = getClinicJwtSecret();
+  if (!jwtSecret || jwtSecret === "dev-secret-change-me") {
+    return res.status(500).json({
+      error: "Clinic authentication service is not configured.",
+      detail: "clinic_auth_misconfigured",
+    });
+  }
+
   const header = req.headers.authorization;
   if (!header || !header.startsWith("Bearer ")) {
     return res.status(401).json({

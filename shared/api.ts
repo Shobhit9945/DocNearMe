@@ -622,7 +622,6 @@ export interface ClinicCredentials {
   clinicId: string;
   clinicName: string;
   userId: string;
-  password: string;
 }
 
 export interface ClinicCredentialsResponse {

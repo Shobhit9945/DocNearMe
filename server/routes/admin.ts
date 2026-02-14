@@ -1,4 +1,5 @@
 import { RequestHandler } from "express";
+import crypto from "crypto";
 import { ZodError, z } from "zod";
 import bcryptjs from "bcryptjs";
 import {
@@ -121,8 +122,10 @@ const adminCreateClinicSchema = z.object({
   clinic: clinicSchema,
   doctors: z.array(doctorSchema).optional(),
   adminUserId: z.string().trim().min(3).max(120).optional(),
-  adminPassword: z.string().trim().min(6).max(120).optional(),
+  adminPassword: z.string().trim().min(12).max(120).optional(),
 });
+
+const generateStrongAdminPassword = () => crypto.randomBytes(18).toString("base64url");
 
 const auditActions: AuditAction[] = [
   "patient_account_created",
@@ -171,7 +174,7 @@ export const handleAdminCreateClinic: RequestHandler = async (req, res, next) =>
     const clinicPayload = payload.clinic;
     const clinicId = clinicPayload.id.trim();
     const adminUserId = payload.adminUserId?.trim() || `${clinicId}-admin`;
-    const adminPassword = payload.adminPassword?.trim() || `clinic-${clinicId}-2024`;
+    const adminPassword = payload.adminPassword?.trim() || generateStrongAdminPassword();
 
     const clinics = await getClinicInfoCollection();
     const existingClinic = await clinics.findOne({ clinicId });
@@ -236,7 +239,6 @@ export const handleAdminCreateClinic: RequestHandler = async (req, res, next) =>
       clinicId,
       userId: adminUserId,
       passwordHash,
-      tempPassword: adminPassword,
       createdAt: new Date(),
     });
 

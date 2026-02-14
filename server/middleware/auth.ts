@@ -15,9 +15,17 @@ type AuthTokenPayload = {
   name?: string;
 };
 
-const jwtSecret = process.env.AUTH_JWT_SECRET ?? process.env.JWT_SECRET ?? "dev-secret-change-me";
+const getJwtSecret = () => process.env.AUTH_JWT_SECRET ?? process.env.JWT_SECRET;
 
 export const requireAuth: RequestHandler = async (req, res, next) => {
+  const jwtSecret = getJwtSecret();
+  if (!jwtSecret || jwtSecret === "dev-secret-change-me") {
+    return res.status(500).json({
+      error: "Authentication service is not configured.",
+      detail: "auth_misconfigured",
+    });
+  }
+
   const header = req.headers.authorization;
   if (!header || !header.startsWith("Bearer ")) {
     return res.status(401).json({

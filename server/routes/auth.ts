@@ -107,7 +107,13 @@ const resetPasswordSchema = z.object({
   password: passwordSchema,
 });
 
-const jwtSecret = process.env.AUTH_JWT_SECRET ?? process.env.JWT_SECRET ?? "dev-secret-change-me";
+const getJwtSecret = () => {
+  const secret = process.env.AUTH_JWT_SECRET ?? process.env.JWT_SECRET;
+  if (!secret || secret === "dev-secret-change-me") {
+    throw new Error("AUTH_JWT_SECRET (or JWT_SECRET) must be configured.");
+  }
+  return secret;
+};
 const jwtExpiry = process.env.AUTH_JWT_EXPIRES_IN ?? "7d";
 const captchaProofExpiry = process.env.CAPTCHA_PROOF_EXPIRES_IN ?? "5m";
 const disposableEmailDomains = new Set([
@@ -150,7 +156,7 @@ const signToken = (user: PatientUser) =>
       email: user.email,
       name: user.name,
     },
-    jwtSecret,
+    getJwtSecret(),
     { expiresIn: jwtExpiry },
   );
 
@@ -160,13 +166,13 @@ const signCaptchaProof = (email: string) =>
       sub: email,
       scope: "captcha",
     },
-    jwtSecret,
+    getJwtSecret(),
     { expiresIn: captchaProofExpiry },
   );
 
 const verifyCaptchaProof = (token: string, email: string) => {
   try {
-    const payload = jwt.verify(token, jwtSecret) as { sub?: string; scope?: string };
+    const payload = jwt.verify(token, getJwtSecret()) as { sub?: string; scope?: string };
     return payload.sub === email && payload.scope === "captcha";
   } catch {
     return false;
@@ -179,13 +185,13 @@ const signPhoneProof = (phone: string) =>
       sub: phone,
       scope: "phone",
     },
-    jwtSecret,
+    getJwtSecret(),
     { expiresIn: captchaProofExpiry },
   );
 
 const verifyPhoneProof = (token: string, phone: string) => {
   try {
-    const payload = jwt.verify(token, jwtSecret) as { sub?: string; scope?: string };
+    const payload = jwt.verify(token, getJwtSecret()) as { sub?: string; scope?: string };
     return payload.sub === phone && payload.scope === "phone";
   } catch {
     return false;

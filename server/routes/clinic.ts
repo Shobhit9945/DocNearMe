@@ -31,8 +31,13 @@ import {
 import { validateClinicClosureDates } from "../lib/clinic-closures";
 import { isValidNotificationEmail } from "../lib/clinic-validation";
 
-const jwtSecret =
-  process.env.CLINIC_JWT_SECRET ?? process.env.AUTH_JWT_SECRET ?? process.env.JWT_SECRET ?? "dev-secret-change-me";
+const getClinicJwtSecret = () => {
+  const secret = process.env.CLINIC_JWT_SECRET ?? process.env.AUTH_JWT_SECRET ?? process.env.JWT_SECRET;
+  if (!secret || secret === "dev-secret-change-me") {
+    throw new Error("CLINIC_JWT_SECRET (or AUTH_JWT_SECRET/JWT_SECRET) must be configured.");
+  }
+  return secret;
+};
 const jwtExpiry = process.env.CLINIC_JWT_EXPIRES_IN ?? "7d";
 
 const loginSchema = z.object({
@@ -345,7 +350,7 @@ export const handleClinicLogin: RequestHandler = async (req, res, next) => {
         clinicId: account.clinicId,
         userId: account.userId,
       },
-      jwtSecret,
+      getClinicJwtSecret(),
       { expiresIn: jwtExpiry },
     );
 
@@ -373,7 +378,6 @@ export const handleClinicCredentials: RequestHandler = async (_req, res, next) =
         clinicId: account.clinicId,
         clinicName: clinicMap.get(account.clinicId) ?? account.clinicId,
         userId: account.userId,
-        password: account.tempPassword ?? "Use existing password",
       })),
     };
 

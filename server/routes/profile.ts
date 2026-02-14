@@ -63,7 +63,13 @@ const phoneChangeVerifySchema = z.object({
   otp: z.string().trim().length(6),
 });
 
-const jwtSecret = process.env.AUTH_JWT_SECRET ?? process.env.JWT_SECRET ?? "dev-secret-change-me";
+const getJwtSecret = () => {
+  const secret = process.env.AUTH_JWT_SECRET ?? process.env.JWT_SECRET;
+  if (!secret || secret === "dev-secret-change-me") {
+    throw new Error("AUTH_JWT_SECRET (or JWT_SECRET) must be configured.");
+  }
+  return secret;
+};
 const profileChangeProofExpiry = process.env.PROFILE_CHANGE_PROOF_EXPIRES_IN ?? "15m";
 
 const normalizePhone = (value: string) => {
@@ -84,13 +90,13 @@ const signProfileEmailProof = (email: string) =>
       sub: email,
       scope: "profile_email_change",
     },
-    jwtSecret,
+    getJwtSecret(),
     { expiresIn: profileChangeProofExpiry },
   );
 
 const verifyProfileEmailProof = (token: string, email: string) => {
   try {
-    const payload = jwt.verify(token, jwtSecret) as { sub?: string; scope?: string };
+    const payload = jwt.verify(token, getJwtSecret()) as { sub?: string; scope?: string };
     return payload.sub === email && payload.scope === "profile_email_change";
   } catch {
     return false;
@@ -103,13 +109,13 @@ const signProfilePhoneProof = (phone: string) =>
       sub: phone,
       scope: "profile_phone_change",
     },
-    jwtSecret,
+    getJwtSecret(),
     { expiresIn: profileChangeProofExpiry },
   );
 
 const verifyProfilePhoneProof = (token: string, phone: string) => {
   try {
-    const payload = jwt.verify(token, jwtSecret) as { sub?: string; scope?: string };
+    const payload = jwt.verify(token, getJwtSecret()) as { sub?: string; scope?: string };
     return payload.sub === phone && payload.scope === "profile_phone_change";
   } catch {
     return false;
