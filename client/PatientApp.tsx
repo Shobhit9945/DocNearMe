@@ -5,7 +5,7 @@ import { TranslationProvider } from "@/lib/i18n";
 import { LanguageTransitionOverlay } from "@/components/LanguageTransitionOverlay";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useEffect } from "react";
-import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import AdminBookings from "./pages/AdminBookings";
 import Appointment from "./pages/Appointment";
 import Clinics from "./pages/Clinics";
@@ -44,6 +44,7 @@ const routes = [
   { path: "/profile", element: <Profile /> },
   { path: "/docdaisy", element: <DocDaisy /> },
   { path: "/patient-auth", element: <PatientAuth /> },
+  { path: "/landing", element: <Navigate to="/landing/index.html" replace /> },
   { path: "/admin/bookings", element: <AdminBookings /> },
   { path: "/terms-of-service", element: <TermsOfService /> },
   { path: "/cookie-policy", element: <CookiePolicy /> },

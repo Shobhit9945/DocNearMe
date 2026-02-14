@@ -29,6 +29,16 @@
   to = "/.netlify/functions/api/:splat"
 
 [[redirects]]
+  from = "/landing"
+  status = 200
+  to = "/landing/index.html"
+
+[[redirects]]
+  from = "/landing/"
+  status = 200
+  to = "/landing/index.html"
+
+[[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
