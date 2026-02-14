@@ -90,6 +90,32 @@
         color: inherit;
       }
 
+      a:focus-visible,
+      button:focus-visible {
+        outline: 3px solid #0b5fb1;
+        outline-offset: 3px;
+      }
+
+      .skip-link {
+        position: absolute;
+        left: 1rem;
+        top: -64px;
+        z-index: 40;
+        border-radius: 999px;
+        background: #ffffff;
+        border: 1px solid #a7c9ee;
+        color: var(--dnm-navy);
+        font-weight: 700;
+        padding: 0.5rem 0.9rem;
+        text-decoration: none;
+        box-shadow: 0 6px 22px rgba(0, 45, 85, 0.12);
+        transition: top 0.15s ease;
+      }
+
+      .skip-link:focus-visible {
+        top: 0.9rem;
+      }
+
       .page {
         min-height: 100vh;
       }
@@ -412,20 +438,21 @@
   </head>
   <body>
     <div class="page">
+      <a href="#main-content" class="skip-link">Skip to main content</a>
       <header class="topbar">
         <div class="container topbar-inner">
           <a class="brand" href="/" aria-label="DocNearMe Home">
             <img src="/applogo.png" alt="" />
             <span>DocNearMe</span>
           </a>
-          <div class="nav-cta">
+          <nav class="nav-cta" aria-label="Primary actions">
             <a class="btn btn-secondary" href="/clinics" data-keep-query>Explore Clinics</a>
             <a class="btn btn-primary" href="/appointment?view=booking" data-keep-query>Open App</a>
-          </div>
+          </nav>
         </div>
       </header>
 
-      <main class="container">
+      <main id="main-content" tabindex="-1" class="container">
         <section class="hero" aria-labelledby="landing-title">
           <div class="hero-grid">
             <article class="hero-card hero-main">

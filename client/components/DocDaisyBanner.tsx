@@ -16,11 +16,13 @@ export function DocDaisyBanner({ className, onClick, onClose, variant = "button"
     <div className={cn("relative w-full lg:max-w-[360px]", className)}>
       {onClose && (
         <button
+          type="button"
           onClick={(e) => {
             e.stopPropagation();
             onClose();
           }}
           className="absolute -top-2 -right-2 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-white text-slate-400 shadow-md transition-colors hover:text-slate-600"
+          aria-label={t("Close DocDaisy banner")}
         >
           <X className="h-3 w-3" />
         </button>

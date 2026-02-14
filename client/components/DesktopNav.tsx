@@ -25,7 +25,7 @@ export function DesktopNav() {
           <p className="text-lg font-semibold text-slate-900">{t("DocNearMe")}</p>
         </div>
       </div>
-      <nav className="space-y-2">
+      <nav className="space-y-2" aria-label={t("Primary navigation")}>
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = location.pathname === item.path;
@@ -39,8 +39,9 @@ export function DesktopNav() {
                   ? "bg-[#E5EEFF] text-[#1648CE] shadow-sm"
                   : "text-slate-500 hover:text-slate-800 hover:bg-slate-50"
               )}
+              aria-current={isActive ? "page" : undefined}
             >
-              <Icon className="w-5 h-5" />
+              <Icon className="w-5 h-5" aria-hidden="true" />
               {t(item.label)}
             </Link>
           );

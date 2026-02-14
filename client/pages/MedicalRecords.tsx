@@ -654,7 +654,13 @@ export default function MedicalRecords() {
                                 <Check className="h-4 w-4" />
                                 {isRenaming ? t("Saving...") : t("Save")}
                               </Button>
-                              <Button type="button" size="sm" variant="ghost" onClick={handleRenameCancel}>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="ghost"
+                                onClick={handleRenameCancel}
+                                aria-label={t("Cancel rename")}
+                              >
                                 <X className="h-4 w-4" />
                               </Button>
                             </div>
@@ -685,6 +691,7 @@ export default function MedicalRecords() {
                           variant="ghost"
                           className="text-slate-600 hover:text-[#1648CE] hover:bg-[#E8F3FF]"
                           onClick={() => handleRenameStart(record)}
+                          aria-label={t("Rename {record}", `Rename ${record.name}`).replace("{record}", record.name)}
                         >
                           <Pencil className="h-4 w-4" />
                         </Button>
@@ -695,6 +702,7 @@ export default function MedicalRecords() {
                         variant="ghost"
                         className="text-destructive hover:text-destructive hover:bg-destructive/10"
                         onClick={() => handleDelete(record.id)}
+                        aria-label={t("Delete {record}", `Delete ${record.name}`).replace("{record}", record.name)}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>

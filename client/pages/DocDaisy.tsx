@@ -275,8 +275,10 @@ const DocDaisy: React.FC = () => {
       <div className="flex flex-1 flex-col min-h-0">
         <header className="w-full bg-[#3A12DB] text-white py-2 px-4 font-extrabold text-xl flex items-center lg:px-10 lg:rounded-t-3xl lg:shadow-md">
           <button
+            type="button"
             onClick={() => navigate("/home")}
             className="mr-2 p-0.5 rounded-full hover:bg-[#2A0F9D] transition-colors"
+            aria-label={t("Back to home")}
           >
             <ChevronLeft className="w-6 h-6" />
           </button>
@@ -311,24 +313,26 @@ const DocDaisy: React.FC = () => {
             ) : (
               <>
                 <div className="flex-1 overflow-y-auto p-4 space-y-4 pt-6 pb-2 sm:p-6 sm:space-y-5">
-                  {messages.map((msg, i) => (
-                    <div
-                      key={i}
-                      className={`flex ${
-                        msg.sender === "user" ? "justify-end" : "justify-start"
-                      }`}
-                    >
+                  <div role="log" aria-live="polite" aria-label={t("Conversation messages")} className="space-y-4">
+                    {messages.map((msg, i) => (
                       <div
-                        className={`p-3 max-w-[85%] rounded-xl shadow-md transition-all duration-300 ease-in-out ${
-                          msg.sender === "user"
-                            ? "bg-[#3A12DB] text-white rounded-tr-sm"
-                            : "bg-white text-gray-800 border border-gray-200 rounded-tl-sm"
+                        key={i}
+                        className={`flex ${
+                          msg.sender === "user" ? "justify-end" : "justify-start"
                         }`}
                       >
-                        {msg.text}
+                        <div
+                          className={`p-3 max-w-[85%] rounded-xl shadow-md transition-all duration-300 ease-in-out ${
+                            msg.sender === "user"
+                              ? "bg-[#3A12DB] text-white rounded-tr-sm"
+                              : "bg-white text-gray-800 border border-gray-200 rounded-tl-sm"
+                          }`}
+                        >
+                          {msg.text}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
 
                   {isLoading && (
                     <div className="flex justify-start">
@@ -393,7 +397,11 @@ const DocDaisy: React.FC = () => {
                   )}
 
                   <div className="flex gap-3">
+                    <label htmlFor="docdaisy-message" className="sr-only">
+                      {t("Message DocDaisy")}
+                    </label>
                     <input
+                      id="docdaisy-message"
                       value={input}
                       onChange={(e) => {
                         setInput(e.target.value);
@@ -405,10 +413,12 @@ const DocDaisy: React.FC = () => {
                       disabled={isLoading}
                     />
                     <button
+                      type="button"
                       onClick={sendMessage}
                       disabled={isLoading || !input.trim()}
                       className="bg-[#3A12DB] hover:bg-[#2A0F9D] text-white p-3 rounded-xl shadow-md transition-all duration-200 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center"
                       title="Send Message"
+                      aria-label={t("Send message")}
                     >
                       <Send className="w-6 h-6" />
                     </button>

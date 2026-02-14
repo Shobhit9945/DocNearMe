@@ -1408,6 +1408,7 @@ export default function Appointment() {
               <h3 className="font-semibold text-slate-900">Add to Calendar</h3>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <button
+                  type="button"
                   onClick={handleAddToGoogleCalendar}
                   className="flex items-center justify-center gap-2 w-full bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-medium py-3 px-4 rounded-xl transition-colors"
                 >
@@ -1415,6 +1416,7 @@ export default function Appointment() {
                   Google Calendar
                 </button>
                 <button
+                  type="button"
                   onClick={handleDownloadICS}
                   className="flex items-center justify-center gap-2 w-full bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-medium py-3 px-4 rounded-xl transition-colors"
                 >
@@ -1426,6 +1428,7 @@ export default function Appointment() {
           </div>
 
           <button
+            type="button"
             onClick={() => {
               setView("upcoming");
               setStep("booking");
@@ -1461,8 +1464,10 @@ export default function Appointment() {
           <div className="max-w-7xl mx-auto flex flex-col gap-4 lg:flex-row lg:items-center">
             <div className="flex w-full justify-start lg:w-auto">
               <button
+                type="button"
                 onClick={() => navigate("/home")}
                 className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+                aria-label="Back to home"
               >
                 <ChevronLeft className="w-6 h-6 text-black" />
               </button>
@@ -1768,11 +1773,14 @@ export default function Appointment() {
                     <div className="grid grid-cols-2 gap-2 max-h-[220px] overflow-y-auto pr-1">
                       {actionSlots.map((slot) => (
                         <button
+                          type="button"
                           key={slot}
                           onClick={() => {
                             setActionSlot(slot);
                             if (actionError) setActionError(null);
                           }}
+                          aria-pressed={actionSlot === slot}
+                          aria-label={`Select new time ${slot}`}
                           className={cn(
                             "rounded-xl border px-3 py-2 text-sm font-semibold transition-all text-center",
                             actionSlot === slot
@@ -1923,12 +1931,14 @@ export default function Appointment() {
     <PageScaffold contentClassName="pb-28 lg:pb-12">
       <header className="bg-white px-4 pt-14 pb-6 border-b border-gray-100 shadow-sm lg:px-10 lg:rounded-t-3xl lg:border-none lg:shadow-none">
         <div className="max-w-7xl mx-auto flex items-center gap-4">
-          <button
-            onClick={() => setView("upcoming")}
-            className="p-2 rounded-full hover:bg-gray-100 transition-colors"
-          >
-            <ChevronLeft className="w-6 h-6 text-black" />
-          </button>
+              <button
+                type="button"
+                onClick={() => setView("upcoming")}
+                className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+                aria-label="Back to appointments"
+              >
+                <ChevronLeft className="w-6 h-6 text-black" />
+              </button>
           <div className="flex-1">
             <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold">
               Plan your visit
@@ -2086,9 +2096,11 @@ export default function Appointment() {
                   {doctorOptions.map((doctor) => (
                   <button
                     key={doctor.id}
+                    type="button"
                     onClick={() => {
                       setSelectedDoctorId(doctor.id);
                     }}
+                    aria-pressed={selectedDoctorId === doctor.id}
                     className={cn(
                       "w-full text-left rounded-2xl border p-4 transition-all",
                       selectedDoctorId === doctor.id
@@ -2194,10 +2206,13 @@ export default function Appointment() {
                   {timeSlots.map((slot) => (
                     <button
                       key={slot}
+                      type="button"
                       onClick={() => {
                         setSelectedSlot(slot);
                         if (fieldErrors.slot) clearFieldError("slot");
                       }}
+                      aria-pressed={selectedSlot === slot}
+                      aria-label={`Select time ${slot}`}
                       className={cn(
                         "rounded-xl border px-4 py-3 text-sm font-semibold transition-all text-center",
                         selectedSlot === slot

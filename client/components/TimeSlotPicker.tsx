@@ -1,4 +1,6 @@
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/lib/i18n";
+import { useId } from "react";
 
 interface TimeSlotPickerProps {
     slots: string[];
@@ -7,14 +9,22 @@ interface TimeSlotPickerProps {
 }
 
 export function TimeSlotPicker({ slots, selectedSlot, onSelect }: TimeSlotPickerProps) {
+    const { t } = useTranslation();
+    const headingId = useId();
+
     return (
         <div className="space-y-4">
-            <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wide">Select Time</h3>
-            <div className="grid grid-cols-3 gap-3">
+            <h3 id={headingId} className="text-sm font-bold text-slate-500 uppercase tracking-wide">
+                {t("Select Time")}
+            </h3>
+            <div className="grid grid-cols-3 gap-3" role="group" aria-labelledby={headingId}>
                 {slots.map((slot) => (
                     <button
                         key={slot}
+                        type="button"
                         onClick={() => onSelect(slot)}
+                        aria-pressed={selectedSlot === slot}
+                        aria-label={t("Select time {slot}", `Select time ${slot}`).replace("{slot}", slot)}
                         className={cn(
                             "rounded-full border px-4 py-3 text-sm font-bold transition-all text-center",
                             selectedSlot === slot
