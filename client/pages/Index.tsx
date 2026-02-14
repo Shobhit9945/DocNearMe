@@ -148,6 +148,7 @@ const Index: React.FC = () => {
   const [isResolvingAddress, setIsResolvingAddress] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+  const [pendingHighIntentAction, setPendingHighIntentAction] = useState<string | null>(null);
   const [showHowVisits, setShowHowVisits] = useState(false);
   const [howVisitStep, setHowVisitStep] = useState(0);
   const [carouselApi, setCarouselApi] = useState<CarouselApi | null>(null);
@@ -221,16 +222,18 @@ const Index: React.FC = () => {
     setManualLocationInput(manualLocation ?? "");
   }, [manualLocation]);
 
-  useEffect(() => {
-    const hasSeenPrompt = window.localStorage.getItem("dnm_login_prompted");
-    if (!hasSeenPrompt) {
-      setShowLoginPrompt(true);
-      window.localStorage.setItem("dnm_login_prompted", "true");
-    }
-  }, []);
+  const isAuthenticated = () => {
+    if (typeof window === "undefined") return false;
+    return Boolean(window.localStorage.getItem(TOKEN_KEY)?.trim());
+  };
 
-  const handleMedicalRecordsClick = async () => {
-    navigate("/medical-records");
+  const handleHighIntentAction = (label: string, path: string) => {
+    if (isAuthenticated()) {
+      navigate(path);
+      return;
+    }
+    setPendingHighIntentAction(label);
+    setShowLoginPrompt(true);
   };
 
   useEffect(() => {
@@ -292,7 +295,7 @@ const Index: React.FC = () => {
       className:
         "bg-[#0089FF] rounded-[20px] shadow-[2px_0_20px_0_rgba(24,57,107,0.05)] p-4 min-h-[120px] flex flex-col items-center justify-center gap-2 text-white hover:bg-[#0077E6] transition-colors",
       icon: <ClipboardList className="w-8 h-8" />,
-      onClick: () => navigate("/appointment?view=booking"),
+      onClick: () => handleHighIntentAction("Book Appointment", "/appointment?view=booking"),
       textClassName: "text-sm font-medium text-center",
     },
     {
@@ -300,7 +303,7 @@ const Index: React.FC = () => {
       className:
         "bg-[#0089FF] rounded-[20px] shadow-[2px_0_20px_0_rgba(24,57,107,0.05)] p-4 min-h-[120px] flex flex-col items-center justify-center gap-2 text-white/90 hover:bg-[#0077E6] transition-colors",
       icon: VIEW_APPOINTMENTS_ICON,
-      onClick: () => navigate("/appointment?view=upcoming"),
+      onClick: () => handleHighIntentAction("View Appointments", "/appointment?view=upcoming"),
       textClassName: "text-sm font-medium text-center",
     },
     {
@@ -308,7 +311,7 @@ const Index: React.FC = () => {
       className:
         "bg-[#0089FF] rounded-[20px] shadow-[2px_0_20px_0_rgba(24,57,107,0.05)] p-4 min-h-[120px] flex flex-col items-center justify-center gap-2 text-white/90 hover:bg-[#0077E6] transition-colors",
       icon: <Activity className="w-8 h-8" />,
-      onClick: () => void handleMedicalRecordsClick(),
+      onClick: () => handleHighIntentAction("Medical Records", "/medical-records"),
       textClassName: "text-sm font-medium text-center",
     },
     {
@@ -556,25 +559,36 @@ const Index: React.FC = () => {
 
       <Dialog
         open={showLoginPrompt}
-        onOpenChange={(open) => setShowLoginPrompt(open)}
+        onOpenChange={(open) => {
+          setShowLoginPrompt(open);
+          if (!open) {
+            setPendingHighIntentAction(null);
+          }
+        }}
       >
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>{t("Welcome to DocNearMe")}</DialogTitle>
+            <DialogTitle>{t("Sign in to continue")}</DialogTitle>
             <DialogDescription>
-              {t("Sign in to manage appointments, access records, and get updates.")}
+              {pendingHighIntentAction
+                ? t(`Sign in to continue with ${pendingHighIntentAction}.`)
+                : t("Sign in to manage appointments, access records, and get updates.")}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex-col gap-2 sm:flex-row sm:justify-end">
             <Button
               variant="outline"
-              onClick={() => setShowLoginPrompt(false)}
+              onClick={() => {
+                setShowLoginPrompt(false);
+                setPendingHighIntentAction(null);
+              }}
             >
-              {t("Maybe later")}
+              {t("Not now")}
             </Button>
             <Button
               onClick={() => {
                 setShowLoginPrompt(false);
+                setPendingHighIntentAction(null);
                 navigate("/patient-auth");
               }}
             >
@@ -693,7 +707,7 @@ const Index: React.FC = () => {
                     onClick={() => {
                       setShowHowVisits(false);
                       setHowVisitStep(0);
-                      navigate("/appointment?view=booking");
+                      handleHighIntentAction("Book Appointment", "/appointment?view=booking");
                     }}
                   >
                     {t("Start request")}
