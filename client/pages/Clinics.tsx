@@ -27,12 +27,14 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 
 const WOUND_CARE_TOOLTIP =
   "Minor injury treatment (cuts, burns, sprains, wound dressing) during clinic hours. Not ER care.";
+const CLINIC_IMAGE_FALLBACK = "/applogo.png";
 
 export default function Clinics() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [showFilters, setShowFilters] = useState(false);
   const [minRating, setMinRating] = useState(0);
+  const [brokenClinicImages, setBrokenClinicImages] = useState<Record<string, true>>({});
   const {
     currentLocation,
     locationError,
@@ -181,6 +183,21 @@ export default function Clinics() {
   const handleSpecializationChange = (specialization: string) => {
     setSearchParams({ specialization });
     setShowFilters(false);
+  };
+
+  const getClinicImageSrc = (clinicId: string, image?: string) => {
+    const normalized = typeof image === "string" ? image.trim() : "";
+    if (!normalized || brokenClinicImages[clinicId]) {
+      return CLINIC_IMAGE_FALLBACK;
+    }
+    return normalized;
+  };
+
+  const markClinicImageBroken = (clinicId: string) => {
+    setBrokenClinicImages((prev) => {
+      if (prev[clinicId]) return prev;
+      return { ...prev, [clinicId]: true };
+    });
   };
 
   if (isClinicsLoading) {
@@ -375,7 +392,14 @@ export default function Clinics() {
                     className="flex flex-col overflow-hidden rounded-[28px] border border-slate-100 bg-white shadow-[0_10px_35px_rgba(21,47,81,0.05)]"
                   >
                     <div className="h-40 w-full overflow-hidden">
-                      <img src={clinic.image} alt={clinic.name} className="h-full w-full object-cover" />
+                      <img
+                        src={getClinicImageSrc(clinic.id, clinic.image)}
+                        alt={clinic.name}
+                        className="h-full w-full object-cover"
+                        loading="lazy"
+                        referrerPolicy="no-referrer"
+                        onError={() => markClinicImageBroken(clinic.id)}
+                      />
                     </div>
                     <div className="flex flex-1 min-h-0 flex-col gap-4 p-5">
                       <div className="flex flex-wrap items-start justify-between gap-3">

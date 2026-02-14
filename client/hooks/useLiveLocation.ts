@@ -104,8 +104,10 @@ const getGoogleMapsAddress = async (lat: number, lon: number) => {
 
       return parseGeocodingResponse(data ?? {}, response.status);
     } catch (error) {
-      console.error(`Geocoding Attempt ${i + 1} failed:`, error);
-      if (i === 2) throw error;
+      if (i === 2) {
+        console.error("Geocoding failed after retries:", error);
+        throw error;
+      }
       await new Promise((res) => setTimeout(res, 1000 * Math.pow(2, i)));
     }
   }

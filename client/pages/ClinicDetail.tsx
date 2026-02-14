@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { BottomNav } from "@/components/BottomNav";
@@ -20,6 +20,7 @@ import type {
 
 const WOUND_CARE_TOOLTIP =
   "Minor injury treatment (cuts, burns, sprains, wound dressing) during clinic hours. Not ER care.";
+const CLINIC_IMAGE_FALLBACK = "/applogo.png";
 
 export default function ClinicDetail() {
   const { clinicId } = useParams<{ clinicId: string }>();
@@ -27,6 +28,7 @@ export default function ClinicDetail() {
   const { t, language } = useTranslation();
   const { data: clinicData, isLoading: isLoadingClinic } = useClinicProfile(clinicId);
   const clinic = clinicData?.clinic;
+  const [heroImageBroken, setHeroImageBroken] = useState(false);
   const { data: googlePlaceDetails } = useGooglePlaceDetails(clinic?.googlePlaceId);
 
   const { data: clinicDoctorsData } = useClinicDoctors(clinicId);
@@ -87,6 +89,10 @@ export default function ClinicDetail() {
     };
   }, [reviews]);
 
+  useEffect(() => {
+    setHeroImageBroken(false);
+  }, [clinic?.id]);
+
   if (!clinic && isLoadingClinic) {
     return (
       <PageScaffold contentClassName="pb-28 lg:pb-12">
@@ -120,6 +126,9 @@ export default function ClinicDetail() {
         clinic.location,
       )}&query_place_id=${encodeURIComponent(clinic.googlePlaceId)}`
     : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(clinic.location)}`;
+  const clinicImageSrc = heroImageBroken
+    ? CLINIC_IMAGE_FALLBACK
+    : clinic.image?.trim() || CLINIC_IMAGE_FALLBACK;
 
   return (
     <PageScaffold contentClassName="pb-28 lg:pb-12">
@@ -217,7 +226,14 @@ export default function ClinicDetail() {
             </div>
           </div>
           <div className="overflow-hidden rounded-3xl border border-slate-100 shadow-sm lg:w-[320px]">
-            <img src={clinic.image} alt={clinic.name} className="h-48 w-full object-cover" />
+            <img
+              src={clinicImageSrc}
+              alt={clinic.name}
+              className="h-48 w-full object-cover"
+              loading="lazy"
+              referrerPolicy="no-referrer"
+              onError={() => setHeroImageBroken(true)}
+            />
           </div>
         </div>
       </header>
