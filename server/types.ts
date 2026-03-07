@@ -151,6 +151,7 @@ export interface EmailOtp {
   purpose?: "signup" | "password_reset" | "profile_email_change";
   verifiedAt?: Date;
   usedAt?: Date;
+  attempts?: number;
 }
 
 export interface AuditLog {

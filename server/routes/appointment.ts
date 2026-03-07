@@ -67,6 +67,23 @@ const formatSlotLabel = (date: Date) =>
 
 const hashToken = (token: string) => crypto.createHash("sha256").update(token).digest("hex");
 
+/** Timing-safe comparison for token hashes to prevent side-channel leaks */
+const safeCompareHex = (a: string, b: string): boolean => {
+  const bufA = Buffer.from(a, "hex");
+  const bufB = Buffer.from(b, "hex");
+  if (bufA.length !== bufB.length) return false;
+  return crypto.timingSafeEqual(bufA, bufB);
+};
+
+/** Escape HTML special characters to prevent injection in email templates */
+const escapeHtml = (str: string): string =>
+  str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+
 const buildClinicNotificationEmail = (clinicId: string) =>
   process.env.CLINIC_NOTIFICATION_EMAIL ?? `clinic-${clinicId}@docnearme.local`;
 
@@ -679,6 +696,14 @@ export const handleRequestAppointment = async (req: Request, res: Response) => {
       const specializationLabel = record.specialization ?? "General";
       const dateTimeLabel = record.slot ? `${formattedDate} (${record.slot})` : formattedDate;
 
+      // Escape all user-supplied values before embedding in HTML email
+      const safePatientLabel = escapeHtml(patientLabel);
+      const safeClinicName = escapeHtml(clinicName);
+      const safeDoctorLabel = escapeHtml(doctorLabel);
+      const safeSpecializationLabel = escapeHtml(specializationLabel);
+      const safeDateTimeLabel = escapeHtml(dateTimeLabel);
+      const safeAppointmentId = escapeHtml(appointmentId);
+
       try {
         await sendEmail({
           to: emailAddress,
@@ -699,33 +724,33 @@ export const handleRequestAppointment = async (req: Request, res: Response) => {
           html: `
             <div style="font-family: Arial, sans-serif; line-height: 1.5;">
               <h2 style="margin-bottom: 12px;">Request received</h2>
-              <p>Hi ${patientLabel},</p>
+              <p>Hi ${safePatientLabel},</p>
               <p>We received your appointment request and sent it to the clinic for confirmation.</p>
               <table style="border-collapse: collapse; width: 100%; margin: 16px 0;">
                 <tbody>
                   <tr>
                     <td style="padding: 6px 0; color: #64748b; width: 140px;">Request ID</td>
-                    <td style="padding: 6px 0; font-weight: 600;">${appointmentId}</td>
+                    <td style="padding: 6px 0; font-weight: 600;">${safeAppointmentId}</td>
                   </tr>
                   <tr>
                     <td style="padding: 6px 0; color: #64748b;">Clinic</td>
-                    <td style="padding: 6px 0; font-weight: 600;">${clinicName}</td>
+                    <td style="padding: 6px 0; font-weight: 600;">${safeClinicName}</td>
                   </tr>
                   <tr>
                     <td style="padding: 6px 0; color: #64748b;">Patient</td>
-                    <td style="padding: 6px 0; font-weight: 600;">${patientLabel}</td>
+                    <td style="padding: 6px 0; font-weight: 600;">${safePatientLabel}</td>
                   </tr>
                   <tr>
                     <td style="padding: 6px 0; color: #64748b;">Doctor</td>
-                    <td style="padding: 6px 0; font-weight: 600;">${doctorLabel}</td>
+                    <td style="padding: 6px 0; font-weight: 600;">${safeDoctorLabel}</td>
                   </tr>
                   <tr>
                     <td style="padding: 6px 0; color: #64748b;">Specialization</td>
-                    <td style="padding: 6px 0; font-weight: 600;">${specializationLabel}</td>
+                    <td style="padding: 6px 0; font-weight: 600;">${safeSpecializationLabel}</td>
                   </tr>
                   <tr>
                     <td style="padding: 6px 0; color: #64748b;">Date/time</td>
-                    <td style="padding: 6px 0; font-weight: 600;">${dateTimeLabel}</td>
+                    <td style="padding: 6px 0; font-weight: 600;">${safeDateTimeLabel}</td>
                   </tr>
                 </tbody>
               </table>
@@ -1834,7 +1859,7 @@ export const handleConfirmAppointment = async (req: Request, res: Response) => {
       return res.status(401).json({ error: "Confirmation token expired." });
     }
 
-    if (hashToken(token) !== appointment.clinicConfirmationTokenHash) {
+    if (!safeCompareHex(hashToken(token), appointment.clinicConfirmationTokenHash)) {
       return res.status(401).json({ error: "Invalid confirmation token." });
     }
 
@@ -2053,7 +2078,7 @@ export const handleDeclineAppointment = async (req: Request, res: Response) => {
       return res.status(401).json({ error: "Confirmation token expired." });
     }
 
-    if (hashToken(token) !== appointment.clinicConfirmationTokenHash) {
+    if (!safeCompareHex(hashToken(token), appointment.clinicConfirmationTokenHash)) {
       return res.status(401).json({ error: "Invalid confirmation token." });
     }
 

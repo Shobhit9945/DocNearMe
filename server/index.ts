@@ -1,6 +1,8 @@
 import "dotenv/config";
 import express, { Express } from "express";
 import cors from "cors";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
 import { handleDemo } from "./routes/demo";
 import { handleAvailability } from "./routes/availability";
 import {
@@ -134,9 +136,79 @@ export async function createServer(): Promise<Express> {
   const app = express();
   assertSecurityConfig();
 
-  // Middleware
-  const allowedOrigins = [
-    process.env.VOICE_WEBHOOK_BASE_URL, 
+  const isDev = process.env.NODE_ENV !== "production";
+
+  // ── Security headers via Helmet ──
+  app.use(
+    helmet({
+      contentSecurityPolicy: isDev
+        ? false
+        : {
+            directives: {
+              defaultSrc: ["'self'"],
+              scriptSrc: ["'self'", "https://cloud.umami.is", "https://www.google.com", "https://www.gstatic.com"],
+              styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+              fontSrc: ["'self'", "https://fonts.gstatic.com"],
+              imgSrc: ["'self'", "data:", "blob:", "https:"],
+              connectSrc: ["'self'", "https://cloud.umami.is", "https://maps.googleapis.com", "https://www.google.com"],
+              frameSrc: ["'self'", "https://www.google.com"],
+              objectSrc: ["'none'"],
+              baseUri: ["'self'"],
+              formAction: ["'self'"],
+            },
+          },
+      crossOriginEmbedderPolicy: false,
+      crossOriginResourcePolicy: { policy: "cross-origin" },
+    }),
+  );
+
+  // ── Rate limiters ──
+  const globalLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 300,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: "Too many requests, please try again later.", detail: "rate_limited" },
+  });
+
+  const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 20,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: "Too many authentication attempts, please try again later.", detail: "rate_limited" },
+  });
+
+  const otpLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: "Too many OTP requests, please try again later.", detail: "rate_limited" },
+  });
+
+  const otpVerifyLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 15,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: "Too many verification attempts, please try again later.", detail: "rate_limited" },
+  });
+
+  const adminLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 30,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: "Too many admin requests, please try again later.", detail: "rate_limited" },
+  });
+
+  // Apply global rate limiter to all /api routes
+  app.use("/api/", globalLimiter);
+
+  // ── CORS ──
+  const allowedOrigins: string[] = [
+    process.env.VOICE_WEBHOOK_BASE_URL,
     "https://docnearme.jp",
     "https://www.docnearme.jp",
     "https://clinic.docnearme.jp",
@@ -147,13 +219,17 @@ export async function createServer(): Promise<Express> {
     "https://www.clinic.docnearme.app",
     "https://admin.docnearme.app",
     "https://clinics.docnearme.app",
-    "http://localhost:5173", 
-    "http://localhost:3000",
-    "http://0.0.0.0:3000",
-    "http://127.0.0.1:3000"
-  ];
+  ].filter(Boolean) as string[];
+  // Only allow localhost origins in development
+  if (isDev) {
+    allowedOrigins.push(
+      "http://localhost:5173",
+      "http://localhost:3000",
+      "http://0.0.0.0:3000",
+      "http://127.0.0.1:3000",
+    );
+  }
   const allowedOriginSet = new Set(allowedOrigins);
-  const isDev = process.env.NODE_ENV !== "production";
   const isDevOrigin = (origin: string) =>
     /^https?:\/\/(localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\])(?::\d+)?$/i.test(origin);
   app.use(
@@ -204,8 +280,7 @@ export async function createServer(): Promise<Express> {
   app.patch("/api/appointments/:id/cancel", requireAuth, handleCancelAppointment);
   app.post("/api/appointments/:id/confirm", handleConfirmAppointment);
   app.post("/api/appointments/:id/decline", handleDeclineAppointment);
-  app.get("/api/appointments/:id/confirm", handleConfirmAppointment);
-  app.get("/api/appointments/:id/decline", handleDeclineAppointment);
+  // GET state-changing routes removed for security — confirm/decline require POST
   app.get("/api/appointments", requireAdminAuth, handleListAppointments);
   app.get("/api/appointments/me", requireAuth, handleListAppointmentsForUser);
   app.get("/api/clinic/appointments", requireClinicAuth, handleListAppointmentsForClinic);
@@ -224,9 +299,9 @@ export async function createServer(): Promise<Express> {
   app.patch("/api/clinic/me", requireClinicAuth, handlePatchClinicMe);
   app.post("/api/clinic/me/closures", requireClinicAuth, handleAddClinicClosure);
   app.delete("/api/clinic/me/closures/:closureId", requireClinicAuth, handleDeleteClinicClosure);
-  app.post("/api/auth/signup", handleSignup);
-  app.post("/api/auth/login", handleLogin);
-  app.post("/api/auth/check-email", handleCheckEmail);
+  app.post("/api/auth/signup", authLimiter, handleSignup);
+  app.post("/api/auth/login", authLimiter, handleLogin);
+  app.post("/api/auth/check-email", authLimiter, handleCheckEmail);
   app.get("/api/auth/request-otp", (_req, res) => {
     res.status(405).json({
       success: false,
@@ -245,24 +320,24 @@ export async function createServer(): Promise<Express> {
       message: "Use POST /api/auth/verify-phone-otp to verify a phone code.",
     });
   });
-  app.post("/api/auth/request-otp", handleRequestOtp);
-  app.post("/api/auth/verify-otp", handleVerifyOtp);
-  app.post("/api/auth/request-phone-otp", handleRequestPhoneOtp);
-  app.post("/api/auth/verify-phone-otp", handleVerifyPhoneOtp);
-  app.post("/api/auth/request-password-reset", handleRequestPasswordReset);
-  app.post("/api/auth/reset-password", handleResetPassword);
+  app.post("/api/auth/request-otp", otpLimiter, handleRequestOtp);
+  app.post("/api/auth/verify-otp", otpVerifyLimiter, handleVerifyOtp);
+  app.post("/api/auth/request-phone-otp", otpLimiter, handleRequestPhoneOtp);
+  app.post("/api/auth/verify-phone-otp", otpVerifyLimiter, handleVerifyPhoneOtp);
+  app.post("/api/auth/request-password-reset", otpLimiter, handleRequestPasswordReset);
+  app.post("/api/auth/reset-password", otpVerifyLimiter, handleResetPassword);
   app.get("/api/profile", requireAuth, handleGetProfile);
-  app.post("/api/profile/email-change/request", requireAuth, handleRequestProfileEmailChangeOtp);
-  app.post("/api/profile/email-change/verify", requireAuth, handleVerifyProfileEmailChangeOtp);
-  app.post("/api/profile/phone-change/request", requireAuth, handleRequestProfilePhoneChangeOtp);
-  app.post("/api/profile/phone-change/verify", requireAuth, handleVerifyProfilePhoneChangeOtp);
+  app.post("/api/profile/email-change/request", requireAuth, otpLimiter, handleRequestProfileEmailChangeOtp);
+  app.post("/api/profile/email-change/verify", requireAuth, otpVerifyLimiter, handleVerifyProfileEmailChangeOtp);
+  app.post("/api/profile/phone-change/request", requireAuth, otpLimiter, handleRequestProfilePhoneChangeOtp);
+  app.post("/api/profile/phone-change/verify", requireAuth, otpVerifyLimiter, handleVerifyProfilePhoneChangeOtp);
   app.put("/api/profile", requireAuth, handleUpdateProfile);
-  app.post("/api/clinic-auth/login", handleClinicLogin);
+  app.post("/api/clinic-auth/login", authLimiter, handleClinicLogin);
   app.get("/api/clinic-credentials", requireAdminAuth, handleClinicCredentials);
-  app.get("/api/admin/auth-check", requireAdminAuth, handleAdminAuthCheck);
-  app.get("/api/admin/clinics", requireAdminAuth, handleAdminClinicList);
-  app.post("/api/admin/clinics", requireAdminAuth, handleAdminCreateClinic);
-  app.get("/api/admin/logs", requireAdminAuth, handleAdminAuditLogs);
+  app.get("/api/admin/auth-check", adminLimiter, requireAdminAuth, handleAdminAuthCheck);
+  app.get("/api/admin/clinics", adminLimiter, requireAdminAuth, handleAdminClinicList);
+  app.post("/api/admin/clinics", adminLimiter, requireAdminAuth, handleAdminCreateClinic);
+  app.get("/api/admin/logs", adminLimiter, requireAdminAuth, handleAdminAuditLogs);
   app.get("/api/clinics", handleClinicList);
   app.get("/api/clinics/doctors", handleClinicDoctorsAll);
   app.get("/api/clinics/:clinicId", handleClinicProfile);
@@ -289,9 +364,9 @@ export async function createServer(): Promise<Express> {
   app.post("/api/voice/appointment", handleVoiceAppointment);
   app.post("/api/voice/appointment/response", handleVoiceAppointmentResponse);
   app.get("/api/clinics/:clinicId/reviews", handleListClinicReviews);
-  app.post("/api/clinics/:clinicId/reviews", handleCreateClinicReview);
-  app.patch("/api/clinics/:clinicId/reviews/:reviewId", handleUpdateClinicReview);
-  app.delete("/api/clinics/:clinicId/reviews/:reviewId", handleDeleteClinicReview);
+  app.post("/api/clinics/:clinicId/reviews", requireAuth, handleCreateClinicReview);
+  app.patch("/api/clinics/:clinicId/reviews/:reviewId", requireAuth, handleUpdateClinicReview);
+  app.delete("/api/clinics/:clinicId/reviews/:reviewId", requireAuth, handleDeleteClinicReview);
   app.post("/api/translate", handleTranslate);
   app.get("/api/google-maps/geocode", handleGeocode);
   app.get("/api/google-maps/places/autocomplete", handlePlaceAutocomplete);

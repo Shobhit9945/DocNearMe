@@ -27,6 +27,8 @@ import { sendEmail } from "../services/mailer";
 import { checkPhoneVerification, requestPhoneVerification } from "../services/twilio";
 import { getAuditRequestMeta, logAuditEvent } from "../services/audit-log";
 
+const MAX_OTP_ATTEMPTS = 5;
+
 const emailSchema = z.string().trim().toLowerCase().email().max(254);
 const passwordSchema = z.string().min(8).max(128);
 const nameSchema = z.string().trim().min(2).max(80);
@@ -493,8 +495,20 @@ export const handleVerifyOtp: RequestHandler = async (req, res, next) => {
       } satisfies OtpResponse);
     }
 
+    if ((otpRecord.attempts ?? 0) >= MAX_OTP_ATTEMPTS) {
+      return res.status(429).json({
+        success: false,
+        message: "Too many failed attempts. Please request a new verification code.",
+      } satisfies OtpResponse);
+    }
+
     const otpOk = await verifyOtp(payload.otp, otpRecord.otpHash);
     if (!otpOk) {
+      const otps = await getEmailOtpsCollection();
+      await otps.updateOne(
+        { _id: otpRecord._id },
+        { $inc: { attempts: 1 } as any },
+      );
       return res.status(400).json({
         success: false,
         message: "Invalid verification code.",
@@ -849,8 +863,20 @@ export const handleResetPassword: RequestHandler = async (req, res, next) => {
       } satisfies ResetPasswordResponse);
     }
 
+    if ((otpRecord.attempts ?? 0) >= MAX_OTP_ATTEMPTS) {
+      return res.status(429).json({
+        success: false,
+        message: "Too many failed attempts. Please request a new reset code.",
+      } satisfies ResetPasswordResponse);
+    }
+
     const otpOk = await verifyOtp(payload.otp, otpRecord.otpHash);
     if (!otpOk) {
+      const otps = await getEmailOtpsCollection();
+      await otps.updateOne(
+        { _id: otpRecord._id },
+        { $inc: { attempts: 1 } as any },
+      );
       return res.status(400).json({
         success: false,
         message: "Invalid reset code.",

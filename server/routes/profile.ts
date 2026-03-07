@@ -6,6 +6,8 @@ import { getEmailOtpsCollection, getPatientsCollection } from "../db";
 import { buildOtpEmail, generateOtpCode, getOtpTtlMinutes, hashOtp, verifyOtp } from "../services/otp";
 import { sendEmail } from "../services/mailer";
 import { checkPhoneVerification, requestPhoneVerification, sendPhoneSecurityAlert } from "../services/twilio";
+
+const MAX_OTP_ATTEMPTS = 5;
 import type {
   OtpResponse,
   PatientProfile,
@@ -356,8 +358,20 @@ export const handleVerifyProfileEmailChangeOtp: RequestHandler = async (req, res
       } satisfies ProfileEmailChangeVerifyResponse);
     }
 
+    if ((otpRecord.attempts ?? 0) >= MAX_OTP_ATTEMPTS) {
+      return res.status(429).json({
+        success: false,
+        message: "Too many failed attempts. Please request a new verification code.",
+      } satisfies ProfileEmailChangeVerifyResponse);
+    }
+
     const otpOk = await verifyOtp(payload.otp, otpRecord.otpHash);
     if (!otpOk) {
+      const otps = await getEmailOtpsCollection();
+      await otps.updateOne(
+        { _id: otpRecord._id },
+        { $inc: { attempts: 1 } as any },
+      );
       return res.status(400).json({
         success: false,
         message: "Invalid verification code.",
