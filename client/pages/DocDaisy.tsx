@@ -249,11 +249,10 @@ const DocDaisy: React.FC = () => {
     setSuggestedClinic(null);
     setSuggestedClinicId(null);
     try { localStorage.removeItem(STORAGE_KEY); } catch {}
-    setMessages((prev) => [
-      ...prev,
+    setMessages([
       {
         sender: "bot",
-        text: "Okay, let's start fresh. Describe your symptoms or ask about clinics and doctors.",
+        text: defaultGreeting,
       },
     ]);
   };
@@ -364,7 +363,7 @@ const DocDaisy: React.FC = () => {
   return (
     <PageScaffold contentClassName="pb-0 lg:pr-0">
       <div className="flex flex-1 flex-col min-h-0">
-        <header className="w-full bg-[#3A12DB] text-white py-2 px-4 font-extrabold text-xl flex items-center lg:px-10 lg:rounded-t-3xl lg:shadow-md">
+        <header className="relative z-30 w-full bg-[#3A12DB] text-white py-2 px-4 font-extrabold text-xl flex items-center lg:px-10 lg:rounded-t-3xl lg:shadow-md">
           <button
             type="button"
             onClick={() => navigate("/home")}
