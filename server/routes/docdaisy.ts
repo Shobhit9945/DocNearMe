@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getClinicDoctorsCollection } from "../db";
+import { getClinicDoctorsCollection, getClinicInfoCollection } from "../db";
 
 interface ChatMessage {
   sender: "user" | "bot";
@@ -15,13 +15,31 @@ type MessageLike = {
   message?: string;
 };
 
+// Intake fields the AI should systematically cover during symptom assessment
+const INTAKE_FIELDS = [
+  "duration",
+  "severity",
+  "associated",
+  "redflags",
+  "triggers",
+  "medications",
+] as const;
+
+type IntakeField = (typeof INTAKE_FIELDS)[number];
+
 const router = Router();
-// Default to a widely available model; allow override via env
-const OPENAI_MODEL = process.env.OPENAI_MODEL ?? "gpt-4o-mini";
+// Use a stronger model for conclusions where accuracy matters most
+const OPENAI_MODEL_FOLLOWUP =
+  process.env.OPENAI_MODEL_FOLLOWUP ?? process.env.OPENAI_MODEL ?? "gpt-4o-mini";
+const OPENAI_MODEL_CONCLUSION =
+  process.env.OPENAI_MODEL_CONCLUSION ?? process.env.OPENAI_MODEL ?? "gpt-4o";
 const OPENAI_BASE_URL = (process.env.OPENAI_BASE_URL ?? "https://api.openai.com")
   .replace(/\/$/, "");
 
 const getOpenAIKey = () => process.env.OPENAI_API_KEY;
+
+const SAFETY_DISCLAIMER =
+  "I am an AI assistant, not a licensed medical professional. My responses are for informational and navigation purposes only \u2014 they do not constitute medical advice, diagnosis, or treatment. Always consult a qualified healthcare provider for medical concerns. In an emergency, call your local emergency number immediately.";
 
 const buildConversationTranscript = (messages: ChatMessage[]) =>
   messages
@@ -150,41 +168,6 @@ const callOpenAI = async (body: Record<string, unknown>) => {
   return response.json();
 };
 
-const checkReplyRelevance = async (question: string, reply: string) => {
-  const payload = {
-    model: OPENAI_MODEL,
-    messages: [
-      {
-        role: "system" as const,
-        content:
-          "You are a medical intake relevance checker. Decide whether the user reply answers the last question or provides clinically relevant context. Accept multi-part answers (e.g., duration + cause) and synonyms. Only mark irrelevant if it does not answer the question or add symptom context. If irrelevant, request a concise clarification. Return JSON only.",
-      },
-      {
-        role: "user" as const,
-        content: `Last question: ${question}\nUser reply: ${reply}\n\nReturn JSON: {"relevant": boolean, "redirect": string}`,
-      },
-    ],
-    temperature: 0,
-    response_format: { type: "json_object" as const },
-  };
-
-  const completion = await callOpenAI(payload);
-  const rawContent = extractOpenAIText(completion);
-  if (typeof rawContent !== "string") {
-    return { relevant: true, redirect: "" };
-  }
-
-  try {
-    const parsed = JSON.parse(rawContent) as { relevant?: boolean; redirect?: string };
-    return {
-      relevant: Boolean(parsed?.relevant ?? true),
-      redirect: typeof parsed?.redirect === "string" ? parsed.redirect.trim() : "",
-    };
-  } catch {
-    return { relevant: true, redirect: "" };
-  }
-};
-
 const extractOpenAIText = (payload: unknown) => {
   if (!payload || typeof payload !== "object") return "";
 
@@ -215,37 +198,133 @@ const isInAppSpecialization = (value: string, available: string[]) => {
   return available.some((spec) => spec.toLowerCase() === normalized);
 };
 
-const detectResponseLanguage = async (text: string) => {
-  const sample = text.trim();
-  if (!sample) return "English";
-
-  const payload = {
-    model: OPENAI_MODEL,
-    messages: [
-      {
-        role: "system" as const,
-        content:
-          "You are a language detector. Identify the primary language of the user's message, even if it's romanized (e.g., Hindi in Latin script). Return JSON only.",
-      },
-      {
-        role: "user" as const,
-        content: `Message:\n${sample}\n\nReturn JSON: {"language":"<English name>","iso":"<ISO 639-1 or 639-3>"}`,
-      },
-    ],
-    temperature: 0,
-    response_format: { type: "json_object" as const },
-  };
-
+const getClinicAndDoctorContext = async () => {
   try {
-    const completion = await callOpenAI(payload);
-    const rawContent = extractOpenAIText(completion);
-    if (typeof rawContent !== "string") return "English";
-    const parsed = JSON.parse(rawContent) as { language?: string };
-    return (parsed?.language || "English").trim() || "English";
+    const [clinicInfoCol, doctorsCol] = await Promise.all([
+      getClinicInfoCollection(),
+      getClinicDoctorsCollection(),
+    ]);
+    const [clinics, doctors] = await Promise.all([
+      clinicInfoCol.find({}).toArray(),
+      doctorsCol.find({}).toArray(),
+    ]);
+
+    const clinicSummaries = (clinics as any[]).map((c) => ({
+      name: c.name,
+      clinicId: c.clinicId,
+      type: c.type,
+      location: c.location,
+      distance: c.distance,
+      specializations: c.specializations,
+      rating: c.rating,
+      phone: c.phone,
+      nextAvailability: c.nextAvailability,
+    }));
+
+    const doctorSummaries = (doctors as any[]).map((d) => ({
+      name: d.name,
+      clinicId: d.clinicId,
+      specialization: d.specialization,
+      languages: d.languages,
+      rating: d.rating,
+      nextAvailable: d.nextAvailable,
+    }));
+
+    return { clinics: clinicSummaries, doctors: doctorSummaries };
   } catch (error) {
-    console.warn("[DocDaisy] Language detection failed, defaulting to English.", error);
-    return "English";
+    console.warn("[DocDaisy] Failed to load clinic/doctor data.", error);
+    return { clinics: [], doctors: [] };
   }
+};
+
+const buildFollowupSystemPrompt = (
+  availableSpecs: string,
+  clinicContext: string,
+  coveredFieldsList: string[]
+) => {
+  const uncoveredFields = INTAKE_FIELDS.filter(
+    (f) => !coveredFieldsList.includes(f)
+  );
+  const uncoveredLabel =
+    uncoveredFields.length > 0
+      ? `Fields still to ask about: ${uncoveredFields.join(", ")}.`
+      : "All key intake fields have been covered.";
+
+  return `You are DocDaisy, a warm, concise, and professional medical navigator AI. You help patients describe symptoms, find the right specialist or clinic, and answer questions about clinics and doctors in the network.
+
+SAFETY: ${SAFETY_DISCLAIMER}
+
+RULES:
+1. Ask ONE short follow-up question at a time (under 35 words).
+2. Be systematic: cover duration/onset, severity, associated symptoms, red-flag symptoms, triggers, and current medications/conditions. ${uncoveredLabel}
+3. Detect the language the user is writing in and reply ONLY in that same language. Do not switch languages.
+4. Use plain text only. No markdown, no bullet points.
+
+EMERGENCY DETECTION:
+If the user describes chest pain with shortness of breath, sudden severe headache ("worst headache of my life"), signs of stroke (facial drooping, arm weakness, speech difficulty), heavy uncontrolled bleeding, loss of consciousness, severe allergic reaction (anaphylaxis), suicidal ideation, or any immediately life-threatening symptoms — set "emergency" to true and provide an urgent message directing them to call emergency services immediately.
+
+CLINIC / DOCTOR QUERIES:
+The user may ask about specific clinics or doctors (e.g., "Does X clinic have a cardiologist?", "Who is the nearest ENT?", "What clinics are near me?"). Use the clinic and doctor data below to answer accurately. If asked about the nearest specialist, reference the distance field. Set "queryType" to "clinic_query" for these questions instead of "symptom".
+
+RELEVANCE:
+If the user's last message does not answer your question or provide symptom/clinic context, set "relevant" to false and ask them to clarify.
+
+READY TO CONCLUDE:
+After gathering enough information (typically 3-6 exchanges depending on complexity), set "readyToConclude" to true. For simple, clear cases you may conclude sooner. For complex or ambiguous cases, ask more questions.
+
+Available specializations in the app: ${availableSpecs}
+
+Clinic and doctor data:
+${clinicContext}
+
+Return a JSON object with this exact schema:
+{
+  "reply": "<your follow-up question or clinic answer>",
+  "relevant": <boolean>,
+  "readyToConclude": <boolean>,
+  "emergency": <boolean>,
+  "emergencyMessage": "<urgent message if emergency, otherwise null>",
+  "coveredFields": [<list of intake fields covered so far from: "duration", "severity", "associated", "redflags", "triggers", "medications">],
+  "queryType": "<symptom | clinic_query>"
+}`;
+};
+
+const buildConclusionSystemPrompt = (
+  availableSpecs: string,
+  clinicContext: string
+) => {
+  return `You are DocDaisy, a medical navigator AI. Review the full conversation and provide a conclusion.
+
+SAFETY: ${SAFETY_DISCLAIMER}
+
+RULES:
+1. Write the summary in second person (e.g., "Based on what you shared, you have..."). Avoid third-person phrasing.
+2. Keep the summary under 50 words.
+3. Prefer General Physician or Internal Medicine for common, early, or mild symptoms unless red flags clearly suggest a specialty.
+4. Choose from the in-app specialization list when possible.
+5. If no in-app specialization fits, set specialization to "Unsure" and explain which specialization is needed.
+6. Detect the language of the conversation and write the summary ONLY in that language.
+
+CLINIC SUGGESTIONS:
+After recommending a specialization, if there are matching clinics in the data, suggest the best match (closest or highest-rated) by setting suggestedClinic and suggestedClinicId.
+
+EMERGENCY DETECTION:
+If the conversation reveals any life-threatening symptoms, set "emergency" to true.
+
+Available specializations in the app: ${availableSpecs}
+
+Clinic and doctor data:
+${clinicContext}
+
+Return a JSON object with this exact schema:
+{
+  "summary": "<conclusion text>",
+  "specialization": "<best specialization or 'Unsure'>",
+  "suggestedClinic": "<clinic name or null>",
+  "suggestedClinicId": "<clinicId or null>",
+  "emergency": <boolean>,
+  "emergencyMessage": "<urgent message if emergency, otherwise null>"
+}`;
 };
 
 const getAvailableSpecializations = async () => {
@@ -314,42 +393,15 @@ router.post("/respond", async (req, res) => {
       : fallbackText
         ? [{ sender: "user", text: String(fallbackText) }]
         : [];
-  const lastUserText = [...messages]
-    .reverse()
-    .find((msg) => msg.sender === "user")?.text;
-  const lastBotText = [...messages]
-    .reverse()
-    .find((msg) => msg.sender === "bot")?.text;
 
-  let isRelevant = true;
-  if (lastUserText && lastBotText) {
-    const relevance = await checkReplyRelevance(lastBotText, lastUserText);
-    isRelevant = relevance.relevant;
-    if (!relevance.relevant) {
-      return res.json({
-        reply:
-          relevance.redirect ||
-          "Please answer the last question with symptom details so I can help.",
-        specialization: null,
-        relevant: false,
-        mode: "followup",
-      });
-    }
-  }
+  // Extract client-provided state for intake tracking and conclusion readiness
+  const clientCoveredFields: string[] = Array.isArray(payload?.coveredFields)
+    ? payload.coveredFields.filter((f: unknown) => typeof f === "string")
+    : [];
+  const clientReadyToConclude = payload?.readyToConclude === true;
 
-  const userTurns = messages.filter((msg) => msg.sender === "user").length;
-  const relevantTurns =
-    typeof payload?.relevantTurns === "number" && Number.isFinite(payload.relevantTurns)
-      ? Math.max(0, Math.floor(payload.relevantTurns))
-      : null;
-  const inferredMode =
-    relevantTurns !== null
-      ? relevantTurns + (isRelevant ? 1 : 0) >= 5
-        ? "conclusion"
-        : "followup"
-      : userTurns >= 5
-        ? "conclusion"
-        : "followup";
+  // Determine mode: prefer explicit client mode, fall back to readyToConclude signal
+  const inferredMode = clientReadyToConclude ? "conclusion" : "followup";
   const mode = rawMode ?? inferredMode;
 
   if (!mode || (mode !== "followup" && mode !== "conclusion")) {
@@ -372,102 +424,163 @@ router.post("/respond", async (req, res) => {
   }
 
   try {
-    const availableSpecializations = await getAvailableSpecializations();
-    const conversation = buildConversationTranscript(messages);
+    // Fetch specializations + clinic/doctor context in parallel (one DB round-trip)
+    const [availableSpecializations, clinicDoctorData] = await Promise.all([
+      getAvailableSpecializations(),
+      getClinicAndDoctorContext(),
+    ]);
+
     const availableSpecializationsLabel =
       availableSpecializations.length > 0
         ? availableSpecializations.join(", ")
         : "None configured";
 
-    const lastUserMessage = [...messages]
-      .reverse()
-      .find((msg) => msg.sender === "user")?.text ?? "";
-    const requiredLanguage = await detectResponseLanguage(lastUserMessage);
+    const clinicContext = JSON.stringify(clinicDoctorData);
+    const conversation = buildConversationTranscript(messages);
+    const lastUserMessage =
+      [...messages].reverse().find((msg) => msg.sender === "user")?.text ?? "";
 
+    // ---- Follow-up mode: single consolidated AI call (replaces 3 separate calls) ----
     if (mode === "followup") {
-      const payload = {
-        model: OPENAI_MODEL,
+      const systemPrompt = buildFollowupSystemPrompt(
+        availableSpecializationsLabel,
+        clinicContext,
+        clientCoveredFields
+      );
+
+      const apiPayload = {
+        model: OPENAI_MODEL_FOLLOWUP,
         messages: [
-          {
-            role: "system" as const,
-            content:
-              `You are DocDaisy, a warm and concise medical navigator. Ask only one short follow-up question at a time (under 35 words). Be systematic: prioritize duration/onset, severity, key associated symptoms, red-flag symptoms, triggers, and current meds/conditions—ask the next missing item. Keep asking until you have at least 5 user answers. Respond using plain text only. You MUST reply ONLY in ${requiredLanguage} and do not switch languages.`,
-          },
+          { role: "system" as const, content: systemPrompt },
           {
             role: "user" as const,
-            content: `Conversation so far:\n${conversation}\n\nUser's most recent message (reply only in ${requiredLanguage}):\n${lastUserMessage}\n\nAvailable specializations in the app:\n${availableSpecializationsLabel}\n\nAsk the next clarifying question.`,
+            content: `Conversation so far:\n${conversation}\n\nUser's most recent message:\n${lastUserMessage}\n\nRespond in the same language the user is writing in.`,
           },
         ],
         temperature: 0.2,
+        response_format: { type: "json_object" as const },
       };
 
-      const completion = await callOpenAI(payload);
-      const reply =
-        extractOpenAIText(completion) || "I couldn't generate a response. Please try again.";
+      const completion = await callOpenAI(apiPayload);
+      const rawContent = extractOpenAIText(completion);
 
-      return res.json({ reply: typeof reply === "string" ? reply.trim() : reply, relevant: true, mode });
+      if (typeof rawContent !== "string") {
+        throw new Error("Unexpected OpenAI response format");
+      }
+
+      const parsed = JSON.parse(rawContent) as {
+        reply?: string;
+        relevant?: boolean;
+        readyToConclude?: boolean;
+        emergency?: boolean;
+        emergencyMessage?: string;
+        coveredFields?: string[];
+        queryType?: string;
+      };
+
+      const reply = (parsed.reply ?? "").trim();
+      const isRelevant = parsed.relevant !== false;
+      const isEmergency = parsed.emergency === true;
+      const emergencyMessage =
+        typeof parsed.emergencyMessage === "string"
+          ? parsed.emergencyMessage.trim()
+          : null;
+      const coveredFields = Array.isArray(parsed.coveredFields)
+        ? parsed.coveredFields
+        : clientCoveredFields;
+      const readyToConclude = parsed.readyToConclude === true;
+      const queryType = parsed.queryType ?? "symptom";
+
+      return res.json({
+        reply: reply || "I couldn't generate a response. Please try again.",
+        relevant: isRelevant,
+        mode: "followup",
+        readyToConclude,
+        emergency: isEmergency,
+        emergencyMessage: isEmergency ? emergencyMessage : null,
+        coveredFields,
+        queryType,
+      });
     }
 
-    const schema = {
-      name: "docdaisy_recommendation",
-      schema: {
-        type: "object",
-        additionalProperties: false,
-        properties: {
-          summary: {
-            type: "string",
-            description:
-              "A brief conclusion (under 35 words) summarizing the symptoms and the direction for the patient.",
-          },
-          specialization: {
-            type: "string",
-            description:
-              "The single best medical specialization for the case (e.g. Gastroenterology, Neurology, Orthopedics, Psychiatry).",
-          },
-        },
-        required: ["summary", "specialization"],
-      },
-    } as const;
+    // ---- Conclusion mode: uses stronger model (gpt-4o) for accuracy ----
+    const systemPrompt = buildConclusionSystemPrompt(
+      availableSpecializationsLabel,
+      clinicContext
+    );
 
-      const payload = {
-      model: OPENAI_MODEL,
+    const apiPayload = {
+      model: OPENAI_MODEL_CONCLUSION,
       messages: [
-        {
-          role: "system" as const,
-          content:
-            `You are DocDaisy, a medical navigator. Review the conversation and return a JSON object with a short summary and the single best specialization. Write the summary in second person (e.g., 'Based on what you shared, you have...') and avoid third-person phrasing like 'the user has'. Prefer General Physician or Internal Medicine for common, early, or mild symptoms unless red flags clearly suggest a specialty. Choose from the in-app list when possible. If the list is empty or no in-app specialization fits, set specialization to Unsure and clearly say which specialization is needed but not available in the app. You MUST write the summary ONLY in ${requiredLanguage} and do not switch languages.`,
-        },
+        { role: "system" as const, content: systemPrompt },
         {
           role: "user" as const,
-          content: `Conversation history:\n${conversation}\n\nUser's most recent message (reply only in ${requiredLanguage}):\n${lastUserMessage}\n\nAvailable specializations in the app:\n${availableSpecializationsLabel}\n\nReturn only the JSON object conforming to the schema.`,
+          content: `Full conversation:\n${conversation}\n\nUser's most recent message:\n${lastUserMessage}\n\nRespond in the same language the user has been writing in.`,
         },
       ],
       temperature: 0.2,
-      // json_object format keeps responses parseable while staying compatible with chat completions
       response_format: { type: "json_object" as const },
     };
 
-    const completion = await callOpenAI(payload);
+    const completion = await callOpenAI(apiPayload);
     const rawContent = extractOpenAIText(completion);
 
     if (typeof rawContent !== "string") {
       throw new Error("Unexpected OpenAI response format");
     }
 
-    const parsed = JSON.parse(rawContent);
+    const parsed = JSON.parse(rawContent) as {
+      summary?: string;
+      specialization?: string;
+      suggestedClinic?: string | null;
+      suggestedClinicId?: string | null;
+      emergency?: boolean;
+      emergencyMessage?: string | null;
+    };
 
     const specialization = String(parsed.specialization ?? "").trim();
     const summary = String(parsed.summary ?? "").trim();
-    if (specialization && specialization !== "Unsure" && !isInAppSpecialization(specialization, availableSpecializations)) {
+    const suggestedClinic =
+      typeof parsed.suggestedClinic === "string"
+        ? parsed.suggestedClinic.trim()
+        : null;
+    const suggestedClinicId =
+      typeof parsed.suggestedClinicId === "string"
+        ? parsed.suggestedClinicId.trim()
+        : null;
+    const isEmergency = parsed.emergency === true;
+    const emergencyMessage =
+      typeof parsed.emergencyMessage === "string"
+        ? parsed.emergencyMessage.trim()
+        : null;
+
+    if (
+      specialization &&
+      specialization !== "Unsure" &&
+      !isInAppSpecialization(specialization, availableSpecializations)
+    ) {
       return res.json({
         reply: `${summary} The recommended specialization is ${specialization}, but a clinic offering that service isn't currently available in the app. Please try elsewhere.`,
         specialization: "Unsure",
         relevant: true,
-        mode,
+        mode: "conclusion",
+        suggestedClinic: null,
+        suggestedClinicId: null,
+        emergency: isEmergency,
+        emergencyMessage: isEmergency ? emergencyMessage : null,
       });
     }
 
-    return res.json({ reply: summary, specialization, relevant: true, mode });
+    return res.json({
+      reply: summary,
+      specialization,
+      relevant: true,
+      mode: "conclusion",
+      suggestedClinic,
+      suggestedClinicId,
+      emergency: isEmergency,
+      emergencyMessage: isEmergency ? emergencyMessage : null,
+    });
   } catch (error) {
     console.error("DocDaisy OpenAI error", error);
     return res.status(500).json({

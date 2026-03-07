@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Send, Loader2, ChevronLeft } from "lucide-react";
+import { Send, Loader2, ChevronLeft, AlertTriangle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { PageScaffold } from "@/components/PageScaffold";
 import { useTranslation } from "@/lib/i18n";
 import { getSpecializationLabel, resolveSpecializationId } from "@/lib/specializations";
+import { cn } from "@/lib/utils";
 
 // ---------- Types ----------
 type ChatMessage = {
@@ -12,6 +13,31 @@ type ChatMessage = {
 };
 
 type Mode = "followup" | "conclusion";
+
+type DocDaisyResponse = {
+  reply: string;
+  specialization?: string | null;
+  relevant?: boolean;
+  mode?: Mode;
+  readyToConclude?: boolean;
+  emergency?: boolean;
+  emergencyMessage?: string | null;
+  coveredFields?: string[];
+  queryType?: string;
+  suggestedClinic?: string | null;
+  suggestedClinicId?: string | null;
+};
+
+const STORAGE_KEY = "docnearme_docdaisy_session";
+
+const INTAKE_LABELS: [string, string][] = [
+  ["duration", "Duration"],
+  ["severity", "Severity"],
+  ["associated", "Related symptoms"],
+  ["redflags", "Red flags"],
+  ["triggers", "Triggers"],
+  ["medications", "Medications"],
+];
 
 // ---------- Helpers ----------
 const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
@@ -25,13 +51,14 @@ const encodeHeaderValue = (value: string) => {
   }
 };
 
-// Call DocDaisy via the backend
+// Call DocDaisy via the backend (single consolidated AI call)
 async function askDocDaisyWithRetry(
   mode: Mode,
   conversation: ChatMessage[],
-  relevantTurns: number,
+  coveredFields: string[],
+  readyToConclude: boolean,
   retries = 3
-): Promise<{ reply: string; specialization?: string | null; relevant?: boolean; mode?: Mode }> {
+): Promise<DocDaisyResponse> {
   let lastError: Error | null = null;
   const lastUserMessage =
     [...conversation].reverse().find((msg) => msg.sender === "user")?.text ?? "";
@@ -65,7 +92,8 @@ async function askDocDaisyWithRetry(
           conversationHistory: conversation,
           history: conversation,
           message: lastUserMessage,
-          relevantTurns,
+          coveredFields,
+          readyToConclude,
         }),
       });
 
@@ -90,6 +118,13 @@ async function askDocDaisyWithRetry(
         specialization: data?.specialization ?? null,
         relevant: data?.relevant ?? true,
         mode: data?.mode ?? mode,
+        readyToConclude: data?.readyToConclude ?? false,
+        emergency: data?.emergency ?? false,
+        emergencyMessage: data?.emergencyMessage ?? null,
+        coveredFields: data?.coveredFields ?? coveredFields,
+        queryType: data?.queryType ?? "symptom",
+        suggestedClinic: data?.suggestedClinic ?? null,
+        suggestedClinicId: data?.suggestedClinicId ?? null,
       };
     } catch (err) {
       lastError = err instanceof Error ? err : new Error("Unknown DocDaisy error");
@@ -109,34 +144,61 @@ const DocDaisy: React.FC = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
 
+  const defaultGreeting = t(
+    "Hello! I'm DocDaisy, your AI health navigator. Describe your symptoms, or ask me about clinics and doctors in our network.\n\n\u26a0\ufe0f Note: I'm an AI assistant \u2014 my responses don't replace professional medical advice."
+  );
+
   const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      sender: "bot",
-      text: t("Hello! I'm DocDaisy, your AI Assistant. Please describe your main symptom so I can ask a few follow-up questions."),
-    },
+    { sender: "bot", text: defaultGreeting },
   ]);
   const [input, setInput] = useState("");
   const [inputError, setInputError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [relevantTurns, setRelevantTurns] = useState(0);
 
-  // State to hold the AI's final recommended specialization
-  const [recommendedSpecialization, setRecommendedSpecialization] = useState<
-    string | null
-  >(null);
+  // AI-driven state (replaces fixed turn counting)
+  const [coveredFields, setCoveredFields] = useState<string[]>([]);
+  const [readyToConclude, setReadyToConclude] = useState(false);
+  const [emergency, setEmergency] = useState(false);
+  const [emergencyMessage, setEmergencyMessage] = useState<string | null>(null);
+
+  // Specialization recommendation state
+  const [recommendedSpecialization, setRecommendedSpecialization] = useState<string | null>(null);
   const [lastConclusionReply, setLastConclusionReply] = useState<string | null>(null);
   const [lastConclusionUnavailable, setLastConclusionUnavailable] = useState(false);
+  const [suggestedClinic, setSuggestedClinic] = useState<string | null>(null);
+  const [suggestedClinicId, setSuggestedClinicId] = useState<string | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
+  // Restore conversation from localStorage on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const session = JSON.parse(saved);
+        if (Array.isArray(session.messages) && session.messages.length > 1) {
+          setMessages(session.messages);
+          setCoveredFields(session.coveredFields ?? []);
+          setReadyToConclude(session.readyToConclude ?? false);
+          if (session.recommendedSpecialization) {
+            setRecommendedSpecialization(session.recommendedSpecialization);
+          }
+          if (session.suggestedClinic) setSuggestedClinic(session.suggestedClinic);
+          if (session.suggestedClinicId) setSuggestedClinicId(session.suggestedClinicId);
+        }
+      }
+    } catch { /* ignore corrupt storage */ }
+  }, []);
+
+  // Update greeting text when language changes
   useEffect(() => {
     setMessages((prev) => {
       if (prev.length === 0) return prev;
       const [first, ...rest] = prev;
       if (first.sender !== "bot") return prev;
       const updatedText = t(
-        "Hello! I'm DocDaisy, your AI Assistant. Please describe your main symptom so I can ask a few follow-up questions."
+        "Hello! I'm DocDaisy, your AI health navigator. Describe your symptoms, or ask me about clinics and doctors in our network.\n\n\u26a0\ufe0f Note: I'm an AI assistant \u2014 my responses don't replace professional medical advice."
       );
       if (first.text === updatedText) return prev;
       return [{ ...first, text: updatedText }, ...rest];
@@ -147,6 +209,25 @@ const DocDaisy: React.FC = () => {
     const token = localStorage.getItem("docnearme_patient_token");
     setIsAuthenticated(Boolean(token));
   }, []);
+
+  // Persist conversation to localStorage
+  useEffect(() => {
+    if (messages.length > 1) {
+      try {
+        localStorage.setItem(
+          STORAGE_KEY,
+          JSON.stringify({
+            messages,
+            coveredFields,
+            readyToConclude,
+            recommendedSpecialization,
+            suggestedClinic,
+            suggestedClinicId,
+          })
+        );
+      } catch { /* storage full — non-critical */ }
+    }
+  }, [messages, coveredFields, readyToConclude, recommendedSpecialization, suggestedClinic, suggestedClinicId]);
 
   // Scroll to the latest message whenever messages update
   useEffect(() => {
@@ -161,12 +242,18 @@ const DocDaisy: React.FC = () => {
     setRecommendedSpecialization(null);
     setLastConclusionReply(null);
     setLastConclusionUnavailable(false);
+    setCoveredFields([]);
+    setReadyToConclude(false);
+    setEmergency(false);
+    setEmergencyMessage(null);
+    setSuggestedClinic(null);
+    setSuggestedClinicId(null);
+    try { localStorage.removeItem(STORAGE_KEY); } catch {}
     setMessages((prev) => [
       ...prev,
       {
         sender: "bot",
-        text:
-          "Okay, let's reassess together. Share any changes or add more details so I can refine the recommendation.",
+        text: "Okay, let's start fresh. Describe your symptoms or ask about clinics and doctors.",
       },
     ]);
   };
@@ -204,43 +291,47 @@ const DocDaisy: React.FC = () => {
     setRecommendedSpecialization(null);
     setLastConclusionReply(null);
     setLastConclusionUnavailable(false);
+    setSuggestedClinic(null);
+    setSuggestedClinicId(null);
 
     try {
-      const shouldConclude = relevantTurns + 1 >= 5;
+      // Use AI-determined readyToConclude instead of fixed turn count
+      const mode: Mode = readyToConclude ? "conclusion" : "followup";
 
-      let finalBotReply = "";
-      let specialization: string | null | undefined = null;
+      const response = await askDocDaisyWithRetry(
+        mode,
+        updatedConversation,
+        coveredFields,
+        readyToConclude
+      );
 
-      if (shouldConclude) {
-        const { reply, specialization: spec, relevant } = await askDocDaisyWithRetry(
-          "conclusion",
-          updatedConversation,
-          relevantTurns
-        );
-        finalBotReply = reply;
-        specialization = spec;
-        setLastConclusionReply(reply);
-        setLastConclusionUnavailable(spec === "Unsure");
-        if (relevant !== false) {
-          setRelevantTurns((prev) => prev + 1);
-        }
+      // Update AI-driven state
+      if (response.coveredFields) setCoveredFields(response.coveredFields);
+      if (response.readyToConclude !== undefined) setReadyToConclude(response.readyToConclude);
+
+      // Handle emergency detection
+      if (response.emergency) {
+        setEmergency(true);
+        setEmergencyMessage(response.emergencyMessage ?? null);
       } else {
-        const { reply, relevant } = await askDocDaisyWithRetry(
-          "followup",
-          updatedConversation,
-          relevantTurns
-        );
-        finalBotReply = reply;
-        if (relevant !== false) {
-          setRelevantTurns((prev) => prev + 1);
-        }
+        setEmergency(false);
+        setEmergencyMessage(null);
       }
 
-      setMessages((prev) => [...prev, { sender: "bot", text: finalBotReply }]);
+      setMessages((prev) => [...prev, { sender: "bot", text: response.reply }]);
 
-      if (specialization && specialization !== "Unsure") {
-        const safeSpecialization = resolveSpecializationId(specialization);
-        setRecommendedSpecialization(safeSpecialization);
+      // Handle conclusion with specialization
+      if (mode === "conclusion" || response.mode === "conclusion") {
+        setLastConclusionReply(response.reply);
+        const spec = response.specialization;
+        setLastConclusionUnavailable(spec === "Unsure");
+        if (response.suggestedClinic) setSuggestedClinic(response.suggestedClinic);
+        if (response.suggestedClinicId) setSuggestedClinicId(response.suggestedClinicId);
+
+        if (spec && spec !== "Unsure") {
+          const safeSpecialization = resolveSpecializationId(spec);
+          setRecommendedSpecialization(safeSpecialization);
+        }
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
@@ -313,6 +404,17 @@ const DocDaisy: React.FC = () => {
             ) : (
               <>
                 <div className="flex-1 overflow-y-auto p-4 space-y-4 pt-6 pb-2 sm:p-6 sm:space-y-5">
+                  {/* Emergency alert */}
+                  {emergency && emergencyMessage && (
+                    <div className="p-4 bg-red-50 border-2 border-red-400 rounded-xl">
+                      <p className="text-red-700 font-bold text-sm flex items-center gap-2">
+                        <AlertTriangle className="w-5 h-5 flex-shrink-0" />
+                        Emergency Alert
+                      </p>
+                      <p className="text-red-600 text-sm mt-1">{emergencyMessage}</p>
+                    </div>
+                  )}
+
                   <div role="log" aria-live="polite" aria-label={t("Conversation messages")} className="space-y-4">
                     {messages.map((msg, i) => (
                       <div
@@ -365,6 +467,14 @@ const DocDaisy: React.FC = () => {
                             <Send className="w-5 h-5 mr-2" />
                             Search clinics for {recommendedLabel}
                           </button>
+                          {suggestedClinic && suggestedClinicId && (
+                            <button
+                              onClick={() => navigate(`/clinics/${suggestedClinicId}`)}
+                              className="flex-1 bg-emerald-600 text-white text-base font-bold py-3 rounded-lg shadow-md hover:bg-emerald-700 transition-colors"
+                            >
+                              View {suggestedClinic}
+                            </button>
+                          )}
                           <button
                             onClick={handleReevaluation}
                             className="flex-1 border border-[#3A12DB] text-[#3A12DB] text-base font-semibold py-3 rounded-lg hover:bg-[#F2EEFF] transition-colors"
@@ -393,6 +503,26 @@ const DocDaisy: React.FC = () => {
                       >
                         Re-evaluate with DocDaisy
                       </button>
+                    </div>
+                  )}
+
+                  {/* Intake progress indicator */}
+                  {coveredFields.length > 0 && !recommendedSpecialization && (
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs text-slate-500">Progress:</span>
+                      {INTAKE_LABELS.map(([key, label]) => (
+                        <span
+                          key={key}
+                          className={cn(
+                            "text-xs px-2 py-0.5 rounded-full transition-colors",
+                            coveredFields.includes(key)
+                              ? "bg-green-100 text-green-700"
+                              : "bg-slate-100 text-slate-400"
+                          )}
+                        >
+                          {label}
+                        </span>
+                      ))}
                     </div>
                   )}
 
@@ -477,10 +607,29 @@ const DocDaisy: React.FC = () => {
                       </div>
                     </>
                   ) : (
-                    <p className="text-sm text-slate-600 mt-3">
-                      Share a few more details and we'll surface the perfect
-                      specialization for you.
-                    </p>
+                    <>
+                      <p className="text-sm text-slate-600 mt-3">
+                        Share a few more details and we'll surface the perfect
+                        specialization for you.
+                      </p>
+                      {coveredFields.length > 0 && (
+                        <div className="mt-3 flex flex-wrap gap-1">
+                          {INTAKE_LABELS.map(([key, label]) => (
+                            <span
+                              key={key}
+                              className={cn(
+                                "text-[10px] px-1.5 py-0.5 rounded-full",
+                                coveredFields.includes(key)
+                                  ? "bg-green-100 text-green-700"
+                                  : "bg-slate-100 text-slate-400"
+                              )}
+                            >
+                              {label}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
                 <div className="rounded-2xl border border-white/60 bg-white/60 p-6 text-sm text-slate-600">
@@ -491,6 +640,7 @@ const DocDaisy: React.FC = () => {
                     <li>Mention duration and intensity of symptoms.</li>
                     <li>Call out recent travel or medication changes.</li>
                     <li>Include any existing diagnoses for better context.</li>
+                    <li>Ask about specific clinics or nearest specialists.</li>
                   </ul>
                 </div>
               </>
