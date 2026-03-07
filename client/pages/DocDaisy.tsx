@@ -344,7 +344,7 @@ const DocDaisy: React.FC = () => {
           sender: "bot",
           text: isMissingPayload
             ? "I couldn't receive your message on the server. Please refresh and try again. If this persists, the deployment may be dropping the request body."
-            : "Sorry, I’m having trouble connecting right now. Please try again in a moment.",
+            : `Sorry, I'm having trouble connecting right now. Please try again in a moment. (${message})`,
         },
       ]);
     } finally {

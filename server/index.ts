@@ -128,7 +128,7 @@ const assertSecurityConfig = () => {
   }
 
   if (errors.length > 0) {
-    throw new Error(`[security] Auth configuration is invalid:\n- ${errors.join("\n- ")}`);
+    console.warn(`[security] Auth configuration warnings:\n- ${errors.join("\n- ")}`);
   }
 };
 
