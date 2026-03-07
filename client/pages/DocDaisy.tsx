@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Send, Loader2, ChevronLeft, AlertTriangle } from "lucide-react";
+import { Send, Loader2, ChevronLeft, AlertTriangle, RotateCcw } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { PageScaffold } from "@/components/PageScaffold";
 import { useTranslation } from "@/lib/i18n";
@@ -379,6 +379,15 @@ const DocDaisy: React.FC = () => {
             className="mr-2 h-14 w-14 object-contain sm:h-20 sm:w-20 lg:h-20 lg:w-20"
           />
           DocDaisy AI
+          <button
+            type="button"
+            onClick={handleReevaluation}
+            className="ml-auto flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1.5 text-sm font-semibold text-white hover:bg-white/25 transition-colors"
+            aria-label={t("New chat")}
+          >
+            <RotateCcw className="w-4 h-4" />
+            <span className="hidden sm:inline">{t("New chat")}</span>
+          </button>
         </header>
 
         <div className="flex flex-1 flex-col lg:grid lg:grid-cols-[2.3fr_0.7fr] min-h-0">
