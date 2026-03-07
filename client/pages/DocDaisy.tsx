@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Send, Loader2, ChevronLeft, AlertTriangle, RotateCcw } from "lucide-react";
+import { Send, Loader2, ChevronLeft, AlertTriangle, RotateCcw, MapPin } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { PageScaffold } from "@/components/PageScaffold";
 import { useTranslation } from "@/lib/i18n";
@@ -94,6 +94,7 @@ async function askDocDaisyWithRetry(
           message: lastUserMessage,
           coveredFields,
           readyToConclude,
+          uiLanguage,
         }),
       });
 
@@ -142,7 +143,7 @@ async function askDocDaisyWithRetry(
 // ---------- Component ----------
 const DocDaisy: React.FC = () => {
   const navigate = useNavigate();
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
 
   const defaultGreeting = t(
     "Hello! I'm DocDaisy, your AI health navigator. Describe your symptoms, or ask me about clinics and doctors in our network.\n\n\u26a0\ufe0f Note: I'm an AI assistant \u2014 my responses don't replace professional medical advice."
@@ -301,7 +302,8 @@ const DocDaisy: React.FC = () => {
         mode,
         updatedConversation,
         coveredFields,
-        readyToConclude
+        readyToConclude,
+        language
       );
 
       // Update AI-driven state
@@ -450,6 +452,34 @@ const DocDaisy: React.FC = () => {
                       </div>
                     ))}
                   </div>
+
+                  {/* Inline specialization widget */}
+                  {recommendedSpecialization && (
+                    <div className="flex justify-start">
+                      <div className="w-full max-w-[85%] p-4 bg-gradient-to-r from-[#E5DEFF] to-[#F4F1FF] rounded-xl border border-[#3A12DB]/30 shadow-md space-y-3">
+                        <p className="text-sm font-semibold text-[#002D55]">
+                          Based on your symptoms, we recommend seeing a{" "}
+                          <span className="font-extrabold text-[#3A12DB]">{recommendedLabel}</span>{" "}
+                          specialist.
+                        </p>
+                        <button
+                          onClick={handleSearchClick}
+                          className="w-full flex items-center justify-center gap-2 bg-[#3A12DB] text-white font-bold py-3 px-4 rounded-lg shadow-[0_4px_10px_0_rgba(58,18,219,0.3)] hover:bg-[#2A0F9D] transition-colors"
+                        >
+                          <MapPin className="w-5 h-5" />
+                          {t("View nearby")} {recommendedLabel} {t("clinics")}
+                        </button>
+                        {suggestedClinic && suggestedClinicId && (
+                          <button
+                            onClick={() => navigate(`/clinics/${suggestedClinicId}`)}
+                            className="w-full flex items-center justify-center gap-2 bg-emerald-600 text-white font-bold py-3 px-4 rounded-lg shadow-md hover:bg-emerald-700 transition-colors"
+                          >
+                            View {suggestedClinic}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
 
                   {isLoading && (
                     <div className="flex justify-start">

@@ -237,11 +237,32 @@ const getClinicAndDoctorContext = async () => {
   }
 };
 
+const LANGUAGE_NAMES: Record<string, string> = {
+  en: "English",
+  ja: "Japanese",
+  id: "Indonesian",
+  my: "Burmese",
+  bn: "Bangla",
+  ar: "Arabic",
+  hi: "Hindi",
+  fil: "Filipino",
+  th: "Thai",
+  zh: "Chinese",
+  ko: "Korean",
+  "es-MX": "Spanish",
+  vi: "Vietnamese",
+};
+
+const resolveLanguageName = (code: string): string =>
+  LANGUAGE_NAMES[code] ?? LANGUAGE_NAMES.en ?? "English";
+
 const buildFollowupSystemPrompt = (
   availableSpecs: string,
   clinicContext: string,
-  coveredFieldsList: string[]
+  coveredFieldsList: string[],
+  uiLanguage: string = "en"
 ) => {
+  const langName = resolveLanguageName(uiLanguage);
   const uncoveredFields = INTAKE_FIELDS.filter(
     (f) => !coveredFieldsList.includes(f)
   );
@@ -257,7 +278,7 @@ SAFETY: ${SAFETY_DISCLAIMER}
 RULES:
 1. Ask ONE short follow-up question at a time (under 35 words).
 2. Be systematic: cover duration/onset, severity, associated symptoms, red-flag symptoms, triggers, and current medications/conditions. ${uncoveredLabel}
-3. Detect the language the user is writing in and reply ONLY in that same language. Do not switch languages.
+3. You MUST reply in ${langName}. The user's interface language is ${langName} — always match it, even if earlier messages were in a different language.
 4. Use plain text only. No markdown, no bullet points.
 
 EMERGENCY DETECTION:
@@ -299,8 +320,10 @@ Return a JSON object with this exact schema:
 
 const buildConclusionSystemPrompt = (
   availableSpecs: string,
-  clinicContext: string
+  clinicContext: string,
+  uiLanguage: string = "en"
 ) => {
+  const langName = resolveLanguageName(uiLanguage);
   return `You are DocDaisy, a medical navigator AI. Review the full conversation and provide a conclusion.
 
 SAFETY: ${SAFETY_DISCLAIMER}
@@ -311,7 +334,7 @@ RULES:
 3. Prefer General Physician or Internal Medicine for common, early, or mild symptoms unless red flags clearly suggest a specialty.
 4. Choose from the in-app specialization list when possible.
 5. If no in-app specialization fits, set specialization to "Unsure" and explain which specialization is needed.
-6. Detect the language of the conversation and write the summary ONLY in that language.
+6. You MUST write the summary in ${langName}. The user's interface language is ${langName} — always match it, even if earlier messages were in a different language.
 
 CLINIC SUGGESTIONS:
 After recommending a specialization, if there are matching clinics in the data, suggest the best match (closest or highest-rated) by setting suggestedClinic and suggestedClinicId.
@@ -407,6 +430,7 @@ router.post("/respond", async (req, res) => {
     ? payload.coveredFields.filter((f: unknown) => typeof f === "string")
     : [];
   const clientReadyToConclude = payload?.readyToConclude === true;
+  const clientUiLanguage = typeof payload?.uiLanguage === "string" ? payload.uiLanguage : "en";
 
   // Determine mode: prefer explicit client mode, fall back to readyToConclude signal
   const inferredMode = clientReadyToConclude ? "conclusion" : "followup";
@@ -453,7 +477,8 @@ router.post("/respond", async (req, res) => {
       const systemPrompt = buildFollowupSystemPrompt(
         availableSpecializationsLabel,
         clinicContext,
-        clientCoveredFields
+        clientCoveredFields,
+        clientUiLanguage
       );
 
       const apiPayload = {
@@ -462,7 +487,7 @@ router.post("/respond", async (req, res) => {
           { role: "system" as const, content: systemPrompt },
           {
             role: "user" as const,
-            content: `Conversation so far:\n${conversation}\n\nUser's most recent message:\n${lastUserMessage}\n\nRespond in the same language the user is writing in.`,
+            content: `Conversation so far:\n${conversation}\n\nUser's most recent message:\n${lastUserMessage}\n\nIMPORTANT: Respond in ${resolveLanguageName(clientUiLanguage)} only.`,
           },
         ],
         temperature: 0.2,
@@ -514,7 +539,8 @@ router.post("/respond", async (req, res) => {
     // ---- Conclusion mode: uses stronger model (gpt-4o) for accuracy ----
     const systemPrompt = buildConclusionSystemPrompt(
       availableSpecializationsLabel,
-      clinicContext
+      clinicContext,
+      clientUiLanguage
     );
 
     const apiPayload = {
@@ -523,7 +549,7 @@ router.post("/respond", async (req, res) => {
         { role: "system" as const, content: systemPrompt },
         {
           role: "user" as const,
-          content: `Full conversation:\n${conversation}\n\nUser's most recent message:\n${lastUserMessage}\n\nRespond in the same language the user has been writing in.`,
+          content: `Full conversation:\n${conversation}\n\nUser's most recent message:\n${lastUserMessage}\n\nIMPORTANT: Respond in ${resolveLanguageName(clientUiLanguage)} only.`,
         },
       ],
       temperature: 0.2,
