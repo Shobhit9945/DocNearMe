@@ -261,7 +261,15 @@ RULES:
 4. Use plain text only. No markdown, no bullet points.
 
 EMERGENCY DETECTION:
-If the user describes chest pain with shortness of breath, sudden severe headache ("worst headache of my life"), signs of stroke (facial drooping, arm weakness, speech difficulty), heavy uncontrolled bleeding, loss of consciousness, severe allergic reaction (anaphylaxis), suicidal ideation, or any immediately life-threatening symptoms — set "emergency" to true and provide an urgent message directing them to call emergency services immediately.
+Do NOT trigger an emergency based on a single symptom like "chest pain" or "headache" alone. An emergency requires MULTIPLE concurrent severe indicators described together in the same message, for example:
+- Chest pain COMBINED WITH shortness of breath, radiating arm/jaw pain, AND sweating
+- Sudden worst-ever headache COMBINED WITH vision loss, confusion, or neck stiffness
+- Signs of stroke: facial drooping AND arm weakness AND speech difficulty together
+- Heavy uncontrolled bleeding that won't stop
+- Loss of consciousness or unresponsiveness
+- Severe allergic reaction with throat swelling AND difficulty breathing
+- Explicit suicidal intent with a plan
+If only one symptom is mentioned (even a serious one), ask follow-up questions first to assess severity before concluding it's an emergency. Set "emergency" to true ONLY when the described combination clearly indicates an immediate life threat. When in doubt, keep asking — do not jump to emergency.
 
 CLINIC / DOCTOR QUERIES:
 The user may ask about specific clinics or doctors (e.g., "Does X clinic have a cardiologist?", "Who is the nearest ENT?", "What clinics are near me?"). Use the clinic and doctor data below to answer accurately. If asked about the nearest specialist, reference the distance field. Set "queryType" to "clinic_query" for these questions instead of "symptom".
@@ -309,7 +317,7 @@ CLINIC SUGGESTIONS:
 After recommending a specialization, if there are matching clinics in the data, suggest the best match (closest or highest-rated) by setting suggestedClinic and suggestedClinicId.
 
 EMERGENCY DETECTION:
-If the conversation reveals any life-threatening symptoms, set "emergency" to true.
+Set "emergency" to true ONLY if the full conversation clearly reveals MULTIPLE concurrent life-threatening indicators (e.g., chest pain + shortness of breath + sweating, or stroke signs together). A single symptom alone is never enough to trigger emergency. When in doubt, do not set emergency.
 
 Available specializations in the app: ${availableSpecs}
 

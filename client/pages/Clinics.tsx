@@ -499,18 +499,20 @@ export default function Clinics() {
                           >
                             {t("View clinic")}
                           </button>
-                          <button
-                            onClick={() =>
-                              navigate(
-                                `/appointment?view=booking&clinic=${clinic.id}&specialization=${encodeURIComponent(
-                                  selectedSpecialization
-                                )}`
-                              )
-                            }
-                            className="inline-flex w-full items-center justify-center rounded-2xl bg-[#1648CE] px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-[#1648CE]/30 transition-colors hover:bg-[#0F3499] sm:w-36"
-                          >
-                            {t("Book appointment")}
-                          </button>
+                          {clinic.bookingEnabled !== false && (
+                            <button
+                              onClick={() =>
+                                navigate(
+                                  `/appointment?view=booking&clinic=${clinic.id}&specialization=${encodeURIComponent(
+                                    selectedSpecialization
+                                  )}`
+                                )
+                              }
+                              className="inline-flex w-full items-center justify-center rounded-2xl bg-[#1648CE] px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-[#1648CE]/30 transition-colors hover:bg-[#0F3499] sm:w-36"
+                            >
+                              {t("Book appointment")}
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>

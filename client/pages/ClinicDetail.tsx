@@ -255,19 +255,26 @@ export default function ClinicDetail() {
             <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-semibold text-[#002D55]">{t("Doctors by specialization")}</h2>
-                <button
-                  type="button"
-                  onClick={() =>
-                    navigate(
-                      `/appointment?view=booking&clinic=${clinic.id}&specialization=${encodeURIComponent(
-                        clinic.specializations[0] ?? "",
-                      )}`,
-                    )
-                  }
-                  className="rounded-full bg-[#1648CE] px-4 py-2 text-xs font-semibold text-white shadow-md shadow-[#1648CE]/20"
-                >
-                  {t("Book appointment")}
-                </button>
+                {clinic.bookingEnabled !== false && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      navigate(
+                        `/appointment?view=booking&clinic=${clinic.id}&specialization=${encodeURIComponent(
+                          clinic.specializations[0] ?? "",
+                        )}`,
+                      )
+                    }
+                    className="rounded-full bg-[#1648CE] px-4 py-2 text-xs font-semibold text-white shadow-md shadow-[#1648CE]/20"
+                  >
+                    {t("Book appointment")}
+                  </button>
+                )}
+                {clinic.bookingEnabled === false && (
+                  <span className="rounded-full bg-slate-100 px-4 py-2 text-xs font-medium text-slate-500">
+                    {t("Booking not available")}
+                  </span>
+                )}
               </div>
               <div className="mt-6 space-y-6">
                 {Object.entries(doctorsBySpecialization).map(([specialization, doctors]) => (

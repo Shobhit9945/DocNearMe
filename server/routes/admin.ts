@@ -70,6 +70,7 @@ const clinicSchema = z.object({
   notification_email_enabled: z.boolean().optional(),
   notification_phone_enabled: z.boolean().optional(),
   notification_line_enabled: z.boolean().optional(),
+  bookingEnabled: z.boolean().optional(),
   hours: clinicHoursSchema.optional(),
   bookingClosures: z
     .array(

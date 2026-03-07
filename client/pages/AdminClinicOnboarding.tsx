@@ -74,6 +74,7 @@ export default function AdminClinicOnboarding() {
     specializations: [],
     nextAvailability: "",
     immediateWoundCare: false,
+    bookingEnabled: true,
     googlePlaceId: "",
     phone: "",
     email: "",
@@ -909,6 +910,41 @@ export default function AdminClinicOnboarding() {
                   </div>
                 ))
               )}
+            </div>
+          </section>
+
+          <section className="rounded-2xl bg-white p-6 shadow">
+            <h2 className="text-lg font-semibold text-slate-900">Booking System</h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Choose whether this clinic accepts appointment bookings through DocNearMe, or only wants their details listed.
+            </p>
+            <div className="mt-4 flex flex-col gap-3">
+              <label className="flex items-center gap-3 rounded-lg border border-slate-200 p-4 cursor-pointer hover:bg-slate-50 transition-colors">
+                <input
+                  type="radio"
+                  name="bookingEnabled"
+                  checked={clinic.bookingEnabled !== false}
+                  onChange={() => handleClinicChange("bookingEnabled", true)}
+                  className="h-4 w-4 text-[#3A12DB]"
+                />
+                <div>
+                  <p className="text-sm font-medium text-slate-900">Enable booking</p>
+                  <p className="text-xs text-slate-500">Patients can book appointments directly through the app.</p>
+                </div>
+              </label>
+              <label className="flex items-center gap-3 rounded-lg border border-slate-200 p-4 cursor-pointer hover:bg-slate-50 transition-colors">
+                <input
+                  type="radio"
+                  name="bookingEnabled"
+                  checked={clinic.bookingEnabled === false}
+                  onChange={() => handleClinicChange("bookingEnabled", false)}
+                  className="h-4 w-4 text-[#3A12DB]"
+                />
+                <div>
+                  <p className="text-sm font-medium text-slate-900">Listing only</p>
+                  <p className="text-xs text-slate-500">Clinic details are visible but patients cannot book through the app.</p>
+                </div>
+              </label>
             </div>
           </section>
 

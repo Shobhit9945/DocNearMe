@@ -292,6 +292,7 @@ export interface ClinicInfo {
   location: string;
   image: string;
   immediateWoundCare?: boolean;
+  bookingEnabled?: boolean;
   specializations: string[];
   nextAvailability: string;
   googlePlaceId?: string;

@@ -580,6 +580,7 @@ export interface ClinicProfile {
   specializations: string[];
   nextAvailability: string;
   immediateWoundCare: boolean;
+  bookingEnabled?: boolean;
   googlePlaceId?: string;
   phone?: string;
   email?: string;
@@ -637,6 +638,7 @@ export interface ClinicProfileUpdateRequest {
   image?: string;
   nextAvailability?: string;
   immediateWoundCare?: boolean;
+  bookingEnabled?: boolean;
   hours?: ClinicHours;
   bookingClosures?: ClinicBookingClosure[];
   pricing?: ClinicPricing;

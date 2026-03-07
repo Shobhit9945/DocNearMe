@@ -412,6 +412,13 @@ const DocDaisy: React.FC = () => {
                         Emergency Alert
                       </p>
                       <p className="text-red-600 text-sm mt-1">{emergencyMessage}</p>
+                      <a
+                        href="tel:119"
+                        className="mt-3 inline-flex items-center justify-center gap-2 rounded-lg bg-red-600 px-5 py-2.5 text-sm font-bold text-white shadow-md hover:bg-red-700 transition-colors"
+                      >
+                        <AlertTriangle className="w-4 h-4" />
+                        Call 119 (Emergency)
+                      </a>
                     </div>
                   )}
 

@@ -34,6 +34,7 @@ export default function ClinicInfo() {
   const [notificationEmail, setNotificationEmail] = useState("");
   const [notificationPhoneEnabled, setNotificationPhoneEnabled] = useState(false);
   const [immediateWoundCare, setImmediateWoundCare] = useState(false);
+  const [bookingEnabled, setBookingEnabled] = useState(true);
   const [image, setImage] = useState("");
   const [weekdayStart, setWeekdayStart] = useState("09:00");
   const [weekdayEnd, setWeekdayEnd] = useState("18:00");
@@ -93,6 +94,7 @@ export default function ClinicInfo() {
     setNotificationEmail(nextClinic.email ?? "");
     setNotificationPhoneEnabled(Boolean(nextClinic.notificationPhoneEnabled));
     setImmediateWoundCare(Boolean(nextClinic.immediateWoundCare));
+    setBookingEnabled(nextClinic.bookingEnabled !== false);
     setImage(nextClinic.image ?? "");
     const normalizedHours = normalizeClinicHours(nextClinic.hours);
     setWeekdayStart(normalizedHours.weekdays.start);
@@ -187,6 +189,7 @@ export default function ClinicInfo() {
         email: trimmedNotificationEmail || undefined,
         googlePlaceId: clinic?.googlePlaceId,
         immediateWoundCare,
+        bookingEnabled,
         notificationEmailEnabled: true,
         notificationLineEnabled: false,
       };
@@ -540,6 +543,22 @@ export default function ClinicInfo() {
             />
             <span>{t("Show this label for minor injury care during clinic hours.")}</span>
           </label>
+        </div>
+        <div>
+          <label className="text-sm font-medium text-gray-700 block mb-2">{t("Appointment Booking")}</label>
+          <label className="flex items-center gap-2 text-sm text-slate-600">
+            <input
+              type="checkbox"
+              checked={bookingEnabled}
+              onChange={(event) => setBookingEnabled(event.target.checked)}
+              disabled={!isEditingBasic}
+              className="h-4 w-4 rounded border-slate-300 text-[#3A12DB]"
+            />
+            <span>{t("Allow patients to book appointments through the app.")}</span>
+          </label>
+          {!bookingEnabled && (
+            <p className="text-xs text-amber-600 mt-1">{t("Booking is disabled. Your clinic details will still be visible to patients.")}</p>
+          )}
         </div>
         <div className="flex gap-2">
           {isEditingBasic ? (
