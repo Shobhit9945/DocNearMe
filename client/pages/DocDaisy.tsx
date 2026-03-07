@@ -57,6 +57,7 @@ async function askDocDaisyWithRetry(
   conversation: ChatMessage[],
   coveredFields: string[],
   readyToConclude: boolean,
+  uiLanguage: string = "en",
   retries = 3
 ): Promise<DocDaisyResponse> {
   let lastError: Error | null = null;
