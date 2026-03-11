@@ -568,6 +568,13 @@ export interface ClinicDoctor {
   availability?: ClinicDoctorAvailabilitySlot[];
 }
 
+export interface CustomLabel {
+  id: string;
+  name: string;
+  description?: string;
+  createdAt: string;
+}
+
 export interface ClinicProfile {
   id: string;
   name: string;
@@ -577,6 +584,7 @@ export interface ClinicProfile {
   distance: string;
   location: string;
   image: string;
+  description?: string;
   specializations: string[];
   nextAvailability: string;
   immediateWoundCare: boolean;
@@ -595,6 +603,7 @@ export interface ClinicProfile {
   pricing?: ClinicPricing;
   photos?: ClinicPhoto[];
   doctors?: ClinicDoctor[];
+  customLabelIds?: string[];
 }
 
 export interface ClinicListResponse {
@@ -636,6 +645,7 @@ export interface ClinicProfileUpdateRequest {
   email?: string;
   googlePlaceId?: string;
   image?: string;
+  description?: string;
   nextAvailability?: string;
   immediateWoundCare?: boolean;
   bookingEnabled?: boolean;
@@ -649,6 +659,7 @@ export interface ClinicProfileUpdateRequest {
   notification_email_enabled?: boolean;
   notification_phone_enabled?: boolean;
   notification_line_enabled?: boolean;
+  customLabelIds?: string[];
 }
 
 export interface ClinicDoctorsUpdateRequest {
@@ -695,6 +706,36 @@ export interface AdminCreateClinicResponse {
   clinicName: string;
   adminUserId: string;
   adminPassword: string;
+}
+
+export interface AdminClinicListResponse {
+  clinics: ClinicProfile[];
+}
+
+export interface AdminClinicAccountItem {
+  clinicId: string;
+  userId: string;
+  createdAt: string;
+}
+
+export interface AdminClinicAccountsResponse {
+  accounts: AdminClinicAccountItem[];
+}
+
+export interface AdminDeleteClinicResponse {
+  ok: boolean;
+  clinicId: string;
+}
+
+export interface AdminUpdateClinicResponse {
+  ok: boolean;
+  clinic: ClinicProfile;
+}
+
+export interface AdminResetPasswordResponse {
+  ok: boolean;
+  userId: string;
+  newPassword: string;
 }
 
 export type AuditActorRole = "patient" | "clinic" | "admin" | "system";
@@ -828,4 +869,30 @@ export interface ClinicReviewUpdateResponse {
 
 export interface ClinicReviewDeleteResponse {
   success: boolean;
+}
+
+export interface AdminCustomLabelListResponse {
+  labels: CustomLabel[];
+}
+
+export interface AdminCreateCustomLabelRequest {
+  name: string;
+  description?: string;
+}
+
+export interface AdminCreateCustomLabelResponse {
+  label: CustomLabel;
+}
+
+export interface AdminUpdateCustomLabelRequest {
+  name?: string;
+  description?: string;
+}
+
+export interface AdminUpdateCustomLabelResponse {
+  label: CustomLabel;
+}
+
+export interface AdminDeleteCustomLabelResponse {
+  ok: boolean;
 }

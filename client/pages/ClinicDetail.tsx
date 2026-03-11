@@ -11,11 +11,12 @@ import { formatAvailabilityForLanguage } from "@/lib/time-format";
 import { GoogleReviews } from "@/components/GoogleReviews";
 import { useGooglePlaceDetails } from "@/hooks/useGooglePlaceDetails";
 import { TranslatedText } from "@/components/TranslatedText";
-import { CalendarClock, Info, MapPin, Star, Users } from "lucide-react";
+import { CalendarClock, Info, MapPin, Phone, Mail, Star, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type {
   ClinicReviewListResponse,
+  CustomLabel,
 } from "@shared/api";
 
 const WOUND_CARE_TOOLTIP =
@@ -29,6 +30,7 @@ export default function ClinicDetail() {
   const { data: clinicData, isLoading: isLoadingClinic } = useClinicProfile(clinicId);
   const clinic = clinicData?.clinic;
   const [heroImageBroken, setHeroImageBroken] = useState(false);
+  const [allLabels, setAllLabels] = useState<CustomLabel[]>([]);
   const { data: googlePlaceDetails } = useGooglePlaceDetails(clinic?.googlePlaceId);
 
   const { data: clinicDoctorsData } = useClinicDoctors(clinicId);
@@ -92,6 +94,13 @@ export default function ClinicDetail() {
   useEffect(() => {
     setHeroImageBroken(false);
   }, [clinic?.id]);
+
+  useEffect(() => {
+    fetch("/api/labels")
+      .then((res) => (res.ok ? res.json() : { labels: [] }))
+      .then((data) => setAllLabels(data.labels ?? []))
+      .catch(() => {});
+  }, []);
 
   if (!clinic && isLoadingClinic) {
     return (
@@ -179,6 +188,45 @@ export default function ClinicDetail() {
                 </Tooltip>
               </div>
             )}
+            {/* Custom labels */}
+            {(clinic.customLabelIds ?? []).length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {(clinic.customLabelIds ?? []).map((id) => {
+                  const label = allLabels.find((l) => l.id === id);
+                  if (!label) return null;
+                  return (
+                    <Badge key={id} variant="outline" className="border-blue-200 bg-blue-50 text-blue-700">
+                      {label.name}
+                    </Badge>
+                  );
+                })}
+              </div>
+            )}
+            {/* Description */}
+            {clinic.description && (
+              <p className="mt-2 text-sm text-slate-600">
+                <TranslatedText text={clinic.description} />
+              </p>
+            )}
+            {/* Contact buttons */}
+            <div className="mt-3 flex flex-wrap gap-2">
+              {clinic.phone && (
+                <a
+                  href={`tel:${clinic.phone}`}
+                  className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-100 transition-colors"
+                >
+                  <Phone className="h-4 w-4" /> {t("Call")}
+                </a>
+              )}
+              {clinic.email && (
+                <a
+                  href={`mailto:${clinic.email}`}
+                  className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-100 transition-colors"
+                >
+                  <Mail className="h-4 w-4" /> {t("Email")}
+                </a>
+              )}
+            </div>
             <div className="flex flex-wrap items-center gap-4 text-sm text-slate-500">
               {ratingAverages ? (
                 <div className="grid gap-2 sm:grid-cols-2">

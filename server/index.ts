@@ -81,13 +81,14 @@ import {
   handleClinicProfile,
   handleAddClinicClosure,
   handleDeleteClinicClosure,
+  handleListCustomLabels,
   handlePatchClinicMe,
   handleUpdateClinicDoctors,
   handleUpdateClinicProfile,
 } from "./routes/clinic";
 import { requireClinicAuth } from "./middleware/clinic-auth";
 import { requireAdminAuth } from "./middleware/admin-auth";
-import { handleAdminAuthCheck, handleAdminAuditLogs, handleAdminClinicList, handleAdminCreateClinic } from "./routes/admin";
+import { handleAdminAuthCheck, handleAdminAuditLogs, handleAdminClinicAccounts, handleAdminClinicList, handleAdminCreateClinic, handleAdminCreateCustomLabel, handleAdminDeleteClinic, handleAdminDeleteCustomLabel, handleAdminListCustomLabels, handleAdminResetClinicPassword, handleAdminUpdateClinic, handleAdminUpdateCustomLabel } from "./routes/admin";
 import {
   handleGetProfile,
   handleRequestProfileEmailChangeOtp,
@@ -334,11 +335,20 @@ export async function createServer(): Promise<Express> {
   app.put("/api/profile", requireAuth, handleUpdateProfile);
   app.post("/api/clinic-auth/login", authLimiter, handleClinicLogin);
   app.get("/api/clinic-credentials", requireAdminAuth, handleClinicCredentials);
-  app.get("/api/admin/auth-check", adminLimiter, requireAdminAuth, handleAdminAuthCheck);
+  app.post("/api/admin/auth-check", adminLimiter, handleAdminAuthCheck);
   app.get("/api/admin/clinics", adminLimiter, requireAdminAuth, handleAdminClinicList);
   app.post("/api/admin/clinics", adminLimiter, requireAdminAuth, handleAdminCreateClinic);
+  app.patch("/api/admin/clinics/:id", adminLimiter, requireAdminAuth, handleAdminUpdateClinic);
+  app.delete("/api/admin/clinics/:id", adminLimiter, requireAdminAuth, handleAdminDeleteClinic);
+  app.get("/api/admin/accounts", adminLimiter, requireAdminAuth, handleAdminClinicAccounts);
+  app.post("/api/admin/clinics/:id/reset-password", adminLimiter, requireAdminAuth, handleAdminResetClinicPassword);
   app.get("/api/admin/logs", adminLimiter, requireAdminAuth, handleAdminAuditLogs);
+  app.get("/api/admin/labels", adminLimiter, requireAdminAuth, handleAdminListCustomLabels);
+  app.post("/api/admin/labels", adminLimiter, requireAdminAuth, handleAdminCreateCustomLabel);
+  app.patch("/api/admin/labels/:labelId", adminLimiter, requireAdminAuth, handleAdminUpdateCustomLabel);
+  app.delete("/api/admin/labels/:labelId", adminLimiter, requireAdminAuth, handleAdminDeleteCustomLabel);
   app.get("/api/clinics", handleClinicList);
+  app.get("/api/labels", handleListCustomLabels);
   app.get("/api/clinics/doctors", handleClinicDoctorsAll);
   app.get("/api/clinics/:clinicId", handleClinicProfile);
   app.get("/api/clinics/:clinicId/intake-form", handleGetClinicIntakeForm);

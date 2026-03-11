@@ -291,6 +291,7 @@ export interface ClinicInfo {
   distance: string;
   location: string;
   image: string;
+  description?: string;
   immediateWoundCare?: boolean;
   bookingEnabled?: boolean;
   specializations: string[];
@@ -334,6 +335,16 @@ export interface ClinicInfo {
     label: string;
     url: string;
   }[];
+  customLabelIds?: string[];
+  updatedAt?: Date;
+}
+
+export interface CustomLabel {
+  _id?: unknown;
+  labelId: string;
+  name: string;
+  description?: string;
+  createdAt: Date;
   updatedAt?: Date;
 }
 

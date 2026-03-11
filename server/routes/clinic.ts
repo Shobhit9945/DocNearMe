@@ -8,6 +8,7 @@ import {
   getClinicDoctorsCollection,
   getClinicInfoCollection,
   getAppointmentsCollection,
+  getCustomLabelsCollection,
 } from "../db";
 import {
   applyBookingClosuresToSlots,
@@ -50,11 +51,13 @@ const clinicUpdateSchema = z.object({
   location: z.string().trim().min(2).max(200).optional(),
   phone: z.string().trim().min(3).max(40).optional(),
   email: z.string().trim().email().optional(),
+  description: z.string().trim().max(2000).optional(),
   googlePlaceId: z.string().trim().min(2).max(120).optional(),
   image: z.string().trim().min(5).optional(),
   nextAvailability: z.string().trim().min(2).max(80).optional(),
   immediateWoundCare: z.boolean().optional(),
   bookingEnabled: z.boolean().optional(),
+  customLabelIds: z.array(z.string().trim().min(1).max(80)).optional(),
   notificationEmailEnabled: z.boolean().optional(),
   notificationPhoneEnabled: z.boolean().optional(),
   notificationLineEnabled: z.boolean().optional(),
@@ -239,6 +242,7 @@ export const buildClinicProfile = (clinic: any, specializations?: string[], next
   distance: clinic.distance,
   location: clinic.location,
   image: clinic.image,
+  description: clinic.description ?? "",
   specializations: specializations ?? [],
   nextAvailability: nextAvailability ?? clinic.nextAvailability,
   immediateWoundCare: Boolean(clinic.immediateWoundCare),
@@ -256,6 +260,7 @@ export const buildClinicProfile = (clinic: any, specializations?: string[], next
   bookingClosures: clinic.bookingClosures,
   pricing: clinic.pricing,
   photos: clinic.photos,
+  customLabelIds: clinic.customLabelIds ?? [],
 });
 
 const buildDoctor = (doctor: any) => {
@@ -765,6 +770,23 @@ export const handleUpdateClinicDoctors: RequestHandler = async (req, res, next) 
       doctors: refreshed.map(buildDoctor),
     };
     return res.json(response);
+  } catch (error) {
+    return next(error);
+  }
+};
+
+export const handleListCustomLabels: RequestHandler = async (_req, res, next) => {
+  try {
+    const labels = await getCustomLabelsCollection();
+    const list = await labels.find({}).toArray();
+    return res.json({
+      labels: list.map((l: any) => ({
+        id: l.labelId,
+        name: l.name,
+        description: l.description ?? "",
+        createdAt: l.createdAt?.toISOString?.() ?? l.createdAt,
+      })),
+    });
   } catch (error) {
     return next(error);
   }

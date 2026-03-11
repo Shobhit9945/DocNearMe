@@ -3,6 +3,8 @@ import type { AdminCreateClinicRequest, AdminCreateClinicResponse, ClinicDoctor,
 import { useAddressSearch } from "@/hooks/useAddressSearch";
 import { supportedLanguages } from "@/lib/translations";
 import { AdminAuditLogsPanel } from "@/components/admin/AdminAuditLogsPanel";
+import { AdminClinicList } from "@/components/admin/AdminClinicList";
+import { AdminLabelsPanel } from "@/components/admin/AdminLabelsPanel";
 import {
   Select,
   SelectContent,
@@ -61,6 +63,7 @@ export default function AdminClinicOnboarding() {
   const [isChecking, setIsChecking] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [submitSuccess, setSubmitSuccess] = useState<AdminCreateClinicResponse | null>(null);
+  const [activeTab, setActiveTab] = useState<"clinics" | "onboard" | "logs" | "labels">("clinics");
 
   const [clinic, setClinic] = useState<ClinicProfile>({
     id: "",
@@ -146,6 +149,7 @@ export default function AdminClinicOnboarding() {
     setIsChecking(true);
     setAuthError("");
     fetch("/api/admin/auth-check", {
+      method: "POST",
       headers: { Authorization: buildAuthHeader(credentials.username, credentials.password) },
     })
       .then((response) => {
@@ -564,14 +568,71 @@ export default function AdminClinicOnboarding() {
     <div className="min-h-screen bg-slate-50 px-4 py-8">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
         <header className="rounded-2xl bg-white px-6 py-5 shadow">
-          <h1 className="text-2xl font-semibold text-slate-900">Clinic onboarding</h1>
+          <h1 className="text-2xl font-semibold text-slate-900">Admin Dashboard</h1>
           <p className="mt-1 text-sm text-slate-500">
-            Add a new clinic, create its admin login, and register doctors in one flow.
+            Manage clinics, onboard new ones, and view audit logs.
           </p>
+          <nav className="mt-4 flex gap-1 rounded-lg bg-slate-100 p-1">
+            <button
+              type="button"
+              onClick={() => setActiveTab("clinics")}
+              className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition ${
+                activeTab === "clinics"
+                  ? "bg-white text-slate-900 shadow-sm"
+                  : "text-slate-500 hover:text-slate-700"
+              }`}
+            >
+              Clinics
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("onboard")}
+              className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition ${
+                activeTab === "onboard"
+                  ? "bg-white text-slate-900 shadow-sm"
+                  : "text-slate-500 hover:text-slate-700"
+              }`}
+            >
+              Onboard New Clinic
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("labels")}
+              className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition ${
+                activeTab === "labels"
+                  ? "bg-white text-slate-900 shadow-sm"
+                  : "text-slate-500 hover:text-slate-700"
+              }`}
+            >
+              Labels
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("logs")}
+              className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition ${
+                activeTab === "logs"
+                  ? "bg-white text-slate-900 shadow-sm"
+                  : "text-slate-500 hover:text-slate-700"
+              }`}
+            >
+              Audit Logs
+            </button>
+          </nav>
         </header>
 
-        <AdminAuditLogsPanel username={credentials.username} password={credentials.password} />
+        {activeTab === "clinics" && (
+          <AdminClinicList username={credentials.username} password={credentials.password} />
+        )}
 
+        {activeTab === "labels" && (
+          <AdminLabelsPanel username={credentials.username} password={credentials.password} />
+        )}
+
+        {activeTab === "logs" && (
+          <AdminAuditLogsPanel username={credentials.username} password={credentials.password} />
+        )}
+
+        {activeTab === "onboard" && (
         <form onSubmit={handleSubmitClinic} className="space-y-6">
           <section className="rounded-2xl bg-white p-6 shadow">
             <h2 className="text-lg font-semibold text-slate-900">Clinic basics</h2>
@@ -1226,6 +1287,7 @@ export default function AdminClinicOnboarding() {
             Create clinic
           </button>
         </form>
+        )}
       </div>
     </div>
   );

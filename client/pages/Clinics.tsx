@@ -24,6 +24,7 @@ import { TranslatedText } from "@/components/TranslatedText";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import type { CustomLabel } from "@shared/api";
 
 const WOUND_CARE_TOOLTIP =
   "Minor injury treatment (cuts, burns, sprains, wound dressing) during clinic hours. Not ER care.";
@@ -48,6 +49,8 @@ export default function Clinics() {
   const [isEditingLocation, setIsEditingLocation] = useState(false);
   const [manualLocationInput, setManualLocationInput] = useState(manualLocation ?? "");
   const [manualLocationError, setManualLocationError] = useState("");
+  const [allLabels, setAllLabels] = useState<CustomLabel[]>([]);
+  const [selectedLabelIds, setSelectedLabelIds] = useState<string[]>([]);
   const [isResolvingAddress, setIsResolvingAddress] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const {
@@ -115,10 +118,14 @@ export default function Clinics() {
                 return normalized.toLowerCase() === selectedSpecialization.toLowerCase();
               });
         const ratingMatch = clinic.rating >= minRating;
+        const labelMatch =
+          selectedLabelIds.length === 0
+            ? true
+            : selectedLabelIds.every((id) => (clinic.customLabelIds ?? []).includes(id));
 
-        return specializationMatch && ratingMatch;
+        return specializationMatch && ratingMatch && labelMatch;
       }),
-    [clinicsData?.clinics, selectedSpecialization, minRating]
+    [clinicsData?.clinics, selectedSpecialization, minRating, selectedLabelIds]
   );
 
   const selectedLabel =
@@ -140,6 +147,13 @@ export default function Clinics() {
   useEffect(() => {
     setManualLocationInput(manualLocation ?? "");
   }, [manualLocation]);
+
+  useEffect(() => {
+    fetch("/api/labels")
+      .then((res) => (res.ok ? res.json() : { labels: [] }))
+      .then((data) => setAllLabels(data.labels ?? []))
+      .catch(() => {});
+  }, []);
 
   const handleManualLocationSave = async () => {
     const trimmed = manualLocationInput.trim();
@@ -378,6 +392,35 @@ export default function Clinics() {
                   </div>
                   <p className="text-xs text-slate-500">{t("Drag to prioritise higher-rated doctors.")}</p>
                 </div>
+
+                {allLabels.length > 0 && (
+                  <div className="space-y-2 sm:col-span-2">
+                    <label className="text-sm font-semibold text-slate-700">{t("Labels")}</label>
+                    <div className="flex flex-wrap gap-2">
+                      {allLabels.map((label) => {
+                        const isActive = selectedLabelIds.includes(label.id);
+                        return (
+                          <button
+                            key={label.id}
+                            type="button"
+                            onClick={() =>
+                              setSelectedLabelIds((prev) =>
+                                isActive ? prev.filter((id) => id !== label.id) : [...prev, label.id],
+                              )
+                            }
+                            className={`rounded-full px-3 py-1.5 text-xs font-medium border transition-colors ${
+                              isActive
+                                ? "bg-[#F1EDFF] border-[#3A12DB] text-[#3A12DB]"
+                                : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+                            }`}
+                          >
+                            {isActive ? "✓ " : ""}{label.name}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 

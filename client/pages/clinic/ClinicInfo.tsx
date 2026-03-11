@@ -8,7 +8,7 @@ import { useTranslation } from "@/lib/i18n";
 import { useAddressSearch } from "@/hooks/useAddressSearch";
 import { normalizeClinicHours } from "@/lib/scheduling";
 import { phoneCountryOptions } from "@/lib/phone-countries";
-import type { ClinicBookingClosure, ClinicProfile, ClinicProfileUpdateRequest } from "@shared/api";
+import type { ClinicBookingClosure, ClinicProfile, ClinicProfileUpdateRequest, CustomLabel } from "@shared/api";
 
 const DAYS_OF_WEEK = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
@@ -34,6 +34,8 @@ export default function ClinicInfo() {
   const [notificationEmail, setNotificationEmail] = useState("");
   const [notificationPhoneEnabled, setNotificationPhoneEnabled] = useState(false);
   const [immediateWoundCare, setImmediateWoundCare] = useState(false);
+  const [customLabelIds, setCustomLabelIds] = useState<string[]>([]);
+  const [allLabels, setAllLabels] = useState<CustomLabel[]>([]);
   const [bookingEnabled, setBookingEnabled] = useState(true);
   const [image, setImage] = useState("");
   const [weekdayStart, setWeekdayStart] = useState("09:00");
@@ -94,6 +96,7 @@ export default function ClinicInfo() {
     setNotificationEmail(nextClinic.email ?? "");
     setNotificationPhoneEnabled(Boolean(nextClinic.notificationPhoneEnabled));
     setImmediateWoundCare(Boolean(nextClinic.immediateWoundCare));
+    setCustomLabelIds(nextClinic.customLabelIds ?? []);
     setBookingEnabled(nextClinic.bookingEnabled !== false);
     setImage(nextClinic.image ?? "");
     const normalizedHours = normalizeClinicHours(nextClinic.hours);
@@ -156,6 +159,13 @@ export default function ClinicInfo() {
     void loadClinic();
   }, []);
 
+  useEffect(() => {
+    fetch("/api/labels")
+      .then((res) => (res.ok ? res.json() : { labels: [] }))
+      .then((data) => setAllLabels(data.labels ?? []))
+      .catch(() => {});
+  }, []);
+
   const handleBasicSave = async () => {
     const trimmedName = name.trim();
     const trimmedLocation = location.trim() || locationInput.trim();
@@ -189,6 +199,7 @@ export default function ClinicInfo() {
         email: trimmedNotificationEmail || undefined,
         googlePlaceId: clinic?.googlePlaceId,
         immediateWoundCare,
+        customLabelIds,
         bookingEnabled,
         notificationEmailEnabled: true,
         notificationLineEnabled: false,
@@ -544,6 +555,36 @@ export default function ClinicInfo() {
             <span>{t("Show this label for minor injury care during clinic hours.")}</span>
           </label>
         </div>
+        {allLabels.length > 0 && (
+          <div>
+            <label className="text-sm font-medium text-gray-700 block mb-2">{t("Custom Labels")}</label>
+            <p className="text-xs text-slate-500 mb-2">{t("Toggle labels that apply to your clinic.")}</p>
+            <div className="flex flex-wrap gap-2">
+              {allLabels.map((label) => {
+                const isActive = customLabelIds.includes(label.id);
+                return (
+                  <button
+                    key={label.id}
+                    type="button"
+                    disabled={!isEditingBasic}
+                    onClick={() =>
+                      setCustomLabelIds((prev) =>
+                        isActive ? prev.filter((id) => id !== label.id) : [...prev, label.id],
+                      )
+                    }
+                    className={`rounded-full px-3 py-1 text-xs font-medium border transition-colors disabled:opacity-60 ${
+                      isActive
+                        ? "bg-blue-100 border-blue-300 text-blue-700"
+                        : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
+                    }`}
+                  >
+                    {isActive ? "✓ " : ""}{label.name}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
         <div>
           <label className="text-sm font-medium text-gray-700 block mb-2">{t("Appointment Booking")}</label>
           <label className="flex items-center gap-2 text-sm text-slate-600">
