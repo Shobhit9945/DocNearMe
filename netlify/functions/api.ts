@@ -38,8 +38,11 @@ const resolveHttpMethod = (event: NetlifyEvent, context: any) => {
 
   if (explicitMethod) return explicitMethod;
 
-  // As a last resort, infer POST when a body is present; otherwise default to GET.
-  return event.body ? "POST" : "GET";
+  // As a last resort, infer POST when a body or Authorization header is present;
+  // otherwise default to GET.
+  if (event.body) return "POST";
+  if (event.headers?.["authorization"] || event.headers?.["Authorization"]) return "POST";
+  return "GET";
 };
 
 export const handler = async (event: NetlifyEvent, context: any) => {

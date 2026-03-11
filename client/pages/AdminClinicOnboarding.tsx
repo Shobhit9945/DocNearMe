@@ -150,7 +150,11 @@ export default function AdminClinicOnboarding() {
     setAuthError("");
     fetch("/api/admin/auth-check", {
       method: "POST",
-      headers: { Authorization: buildAuthHeader(credentials.username, credentials.password) },
+      headers: {
+        Authorization: buildAuthHeader(credentials.username, credentials.password),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({}),
     })
       .then((response) => {
         if (!response.ok) {
