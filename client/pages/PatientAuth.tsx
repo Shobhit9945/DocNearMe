@@ -22,7 +22,6 @@ import type {
   RequestPasswordResetRequest,
   ResetPasswordRequest,
   ResetPasswordResponse,
-  SignupPhotoPayload,
   VerifyOtpRequest,
   VerifyPhoneOtpRequest,
 } from "@shared/api";
@@ -50,7 +49,6 @@ const PatientAuth = () => {
     visaType: "",
     phone: "",
     phoneProofToken: "",
-    photo: null as SignupPhotoPayload | null,
     consentAccepted: false,
   });
   const [loginData, setLoginData] = useState({ email: "", password: "" });
@@ -74,7 +72,13 @@ const PatientAuth = () => {
   const [phoneOtpSent, setPhoneOtpSent] = useState(false);
   const [checkEmailLoading, setCheckEmailLoading] = useState(false);
   const [emailAvailable, setEmailAvailable] = useState(false);
-  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [loginOtpStep, setLoginOtpStep] = useState<"credentials" | "otp">("credentials");
+  const [loginOtpValue, setLoginOtpValue] = useState("");
+  const [loginOtpCooldown, setLoginOtpCooldown] = useState(0);
+  const [loginOtpLoading, setLoginOtpLoading] = useState(false);
+  const [loginOtpSent, setLoginOtpSent] = useState(false);
+  const [loginPendingToken, setLoginPendingToken] = useState<string | null>(null);
+  const [loginPendingUser, setLoginPendingUser] = useState<AuthResponse["user"] | null>(null);
   const [resetOpen, setResetOpen] = useState(false);
   const [resetData, setResetData] = useState({ email: "", otp: "", password: "" });
   const [resetOtpCooldown, setResetOtpCooldown] = useState(0);
@@ -149,8 +153,23 @@ const PatientAuth = () => {
   }, [phoneOtpCooldown]);
 
   useEffect(() => {
+    if (loginOtpCooldown <= 0) return;
+    const interval = window.setInterval(() => {
+      setLoginOtpCooldown((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => window.clearInterval(interval);
+  }, [loginOtpCooldown]);
+
+  useEffect(() => {
     if (activeTab === "signup") {
       resetSignupFlow();
+      setStatus(initialStatus);
+    } else {
+      setLoginOtpStep("credentials");
+      setLoginPendingToken(null);
+      setLoginPendingUser(null);
+      setLoginOtpValue("");
+      setLoginOtpSent(false);
       setStatus(initialStatus);
     }
   }, [activeTab]);
@@ -264,6 +283,18 @@ const PatientAuth = () => {
         return;
       }
 
+      if (endpoint === "/api/auth/login") {
+        // Hold token until OTP is verified
+        setLoginPendingToken(data.token);
+        setLoginPendingUser(data.user);
+        setLoginOtpValue("");
+        setLoginOtpStep("otp");
+        requestLoginOtp(loginData.email).catch((err) => {
+          setError(err instanceof Error ? err.message : "Failed to send verification code.");
+        });
+        return;
+      }
+
       localStorage.setItem(TOKEN_KEY, data.token);
       localStorage.setItem("docnearme_user_name", data.user.name);
       localStorage.setItem("docnearme_user_email", data.user.email);
@@ -272,7 +303,7 @@ const PatientAuth = () => {
 
       // Redirect after a short delay
       setTimeout(() => {
-        navigate(endpoint === "/api/auth/signup" ? "/" : "/profile");
+        navigate("/");
       }, 1000);
     } catch (error) {
       setError(error instanceof Error ? error.message : "Network error. Please try again.");
@@ -334,36 +365,71 @@ const PatientAuth = () => {
     }
   };
 
-  const handlePhotoChange = (file: File | null) => {
-    if (!file) return;
-    if (!file.type.startsWith("image/")) {
-      setError("Please upload an image file for your profile photo.");
+  const requestLoginOtp = async (email: string) => {
+    if (loginOtpCooldown > 0) {
+      setError(`Please wait ${formatCountdown(loginOtpCooldown)} before requesting another code.`);
       return;
     }
-    if (file.size > 5 * 1024 * 1024) {
-      setError("Profile photos must be under 5MB.");
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const dataUrl = typeof reader.result === "string" ? reader.result : "";
-      if (!dataUrl) {
-        setError("Unable to read the selected photo. Please try another image.");
+    setLoginOtpLoading(true);
+    setStatus(initialStatus);
+    try {
+      const payload: RequestOtpRequest = { email };
+      const response = await fetch("/api/auth/request-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = (await response.json()) as OtpResponse;
+      if (!response.ok || !data.success) {
+        setError(data.message || "Failed to send verification code.");
         return;
       }
-      setSignupData((prev) => ({
-        ...prev,
-        photo: {
-          dataUrl,
-          fileName: file.name,
-          fileType: file.type,
-          size: file.size,
-        },
-      }));
-      setPhotoPreview(dataUrl);
-    };
-    reader.readAsDataURL(file);
+      setLoginOtpValue("");
+      setLoginOtpSent(true);
+      setLoginOtpCooldown(60);
+      setSuccess(data.message);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Network error. Please try again.");
+    } finally {
+      setLoginOtpLoading(false);
+    }
+  };
+
+  const verifyLoginOtp = async () => {
+    if (!loginOtpValue || loginOtpValue.length < 6) {
+      setError("Please enter the 6-digit verification code.");
+      return;
+    }
+    if (!loginPendingToken || !loginPendingUser) {
+      setError("Session expired. Please sign in again.");
+      setLoginOtpStep("credentials");
+      return;
+    }
+    setLoginOtpLoading(true);
+    setStatus(initialStatus);
+    try {
+      const payload: VerifyOtpRequest = { email: loginData.email, otp: loginOtpValue };
+      const response = await fetch("/api/auth/verify-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = (await response.json()) as OtpResponse;
+      if (!response.ok || !data.success) {
+        setError(data.message || "Verification failed.");
+        return;
+      }
+      localStorage.setItem(TOKEN_KEY, loginPendingToken);
+      localStorage.setItem("docnearme_user_name", loginPendingUser.name);
+      localStorage.setItem("docnearme_user_email", loginPendingUser.email);
+      setUser(loginPendingUser);
+      setSuccess(`Welcome back, ${loginPendingUser.name}!`);
+      setTimeout(() => { navigate("/profile"); }, 1000);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Network error. Please try again.");
+    } finally {
+      setLoginOtpLoading(false);
+    }
   };
 
   const requestOtp = async () => {
@@ -661,37 +727,98 @@ const PatientAuth = () => {
               </TabsList>
 
               <TabsContent value="login" className="mt-6 space-y-4">
-                <form
-                  className="space-y-4"
-                  onSubmit={(event) => {
-                    event.preventDefault();
-                    handleSubmit("/api/auth/login", loginData);
-                  }}
-                >
-                  <div className="space-y-2">
-                    <Label htmlFor="login-email">Email</Label>
-                    <Input
-                      id="login-email"
-                      type="email"
-                      placeholder="patient@email.com"
-                      value={loginData.email}
-                      onChange={(event) => setLoginData((prev) => ({ ...prev, email: event.target.value }))}
-                    />
+                {loginOtpStep === "credentials" && (
+                  <>
+                    <form
+                      className="space-y-4"
+                      onSubmit={(event) => {
+                        event.preventDefault();
+                        handleSubmit("/api/auth/login", loginData);
+                      }}
+                    >
+                      <div className="space-y-2">
+                        <Label htmlFor="login-email">Email</Label>
+                        <Input
+                          id="login-email"
+                          type="email"
+                          placeholder="patient@email.com"
+                          value={loginData.email}
+                          onChange={(event) => setLoginData((prev) => ({ ...prev, email: event.target.value }))}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="login-password">Password</Label>
+                        <Input
+                          id="login-password"
+                          type="password"
+                          placeholder="Enter your password"
+                          value={loginData.password}
+                          onChange={(event) => setLoginData((prev) => ({ ...prev, password: event.target.value }))}
+                        />
+                      </div>
+                      <Button className="w-full" disabled={isSubmitting} type="submit">
+                        {isSubmitting ? "Signing in..." : "Sign in"}
+                      </Button>
+                    </form>
+                  </>
+                )}
+
+                {loginOtpStep === "otp" && (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-semibold text-slate-900">Verify your identity</p>
+                        <p className="text-xs text-slate-500">{loginData.email}</p>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="link"
+                        className="px-0 text-[#0089FF]"
+                        onClick={() => {
+                          setLoginOtpStep("credentials");
+                          setLoginPendingToken(null);
+                          setLoginPendingUser(null);
+                          setLoginOtpValue("");
+                        }}
+                      >
+                        Back to login
+                      </Button>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Verification code</Label>
+                      <InputOTP maxLength={6} value={loginOtpValue} onChange={setLoginOtpValue}>
+                        <InputOTPGroup>
+                          {Array.from({ length: 6 }).map((_, index) => (
+                            <InputOTPSlot key={index} index={index} />
+                          ))}
+                        </InputOTPGroup>
+                      </InputOTP>
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          disabled={loginOtpLoading || (loginOtpSent && loginOtpCooldown > 0)}
+                          onClick={() => requestLoginOtp(loginData.email)}
+                        >
+                          {loginOtpLoading
+                            ? "Sending..."
+                            : loginOtpCooldown > 0
+                              ? `Resend in ${formatCountdown(loginOtpCooldown)}`
+                              : "Resend OTP"}
+                        </Button>
+                        <Button
+                          type="button"
+                          disabled={loginOtpLoading || loginOtpValue.length < 6}
+                          onClick={verifyLoginOtp}
+                        >
+                          {loginOtpLoading ? "Verifying..." : "Verify & Sign in"}
+                        </Button>
+                      </div>
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="login-password">Password</Label>
-                    <Input
-                      id="login-password"
-                      type="password"
-                      placeholder="Enter your password"
-                      value={loginData.password}
-                      onChange={(event) => setLoginData((prev) => ({ ...prev, password: event.target.value }))}
-                    />
-                  </div>
-                  <Button className="w-full" disabled={isSubmitting} type="submit">
-                    {isSubmitting ? "Signing in..." : "Sign in"}
-                  </Button>
-                </form>
+                )}
+
+                {loginOtpStep === "credentials" && (
                 <div className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-slate-50/80 p-4">
                   <div className="flex items-center justify-between">
                     <div>
@@ -778,6 +905,7 @@ const PatientAuth = () => {
                     </div>
                   )}
                 </div>
+                )}
               </TabsContent>
 
               <TabsContent value="signup" className="mt-6 space-y-4">
@@ -1132,60 +1260,6 @@ const PatientAuth = () => {
                         <p className="text-xs text-slate-500">
                           This helps clinics prepare registration paperwork ahead of your visit.
                         </p>
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Profile photo (optional)</Label>
-                        <div className="space-y-3 rounded-lg border border-dashed border-slate-200 p-4">
-                          <div className="flex flex-wrap gap-2">
-                            <Button asChild type="button" variant="secondary">
-                              <label htmlFor="signup-photo-upload">Upload from gallery</label>
-                            </Button>
-                            <Button asChild type="button" variant="secondary">
-                              <label htmlFor="signup-photo-selfie">Take selfie</label>
-                            </Button>
-                            <input
-                              id="signup-photo-upload"
-                              type="file"
-                              accept="image/*"
-                              className="hidden"
-                              onChange={(event) => handlePhotoChange(event.target.files?.[0] ?? null)}
-                            />
-                            <input
-                              id="signup-photo-selfie"
-                              type="file"
-                              accept="image/*"
-                              capture="user"
-                              className="hidden"
-                              onChange={(event) => handlePhotoChange(event.target.files?.[0] ?? null)}
-                            />
-                          </div>
-                          {photoPreview ? (
-                            <div className="flex flex-wrap items-center gap-4">
-                              <img
-                                src={photoPreview}
-                                alt="Profile preview"
-                                className="h-20 w-20 rounded-lg object-cover"
-                              />
-                              <div className="text-xs text-slate-500">
-                                <p className="font-semibold text-slate-700">{signupData.photo?.fileName}</p>
-                                <p>{signupData.photo?.fileType}</p>
-                              </div>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                className="text-slate-500"
-                                onClick={() => {
-                                  setSignupData((prev) => ({ ...prev, photo: null }));
-                                  setPhotoPreview(null);
-                                }}
-                              >
-                                Remove
-                              </Button>
-                            </div>
-                          ) : (
-                            <p className="text-xs text-slate-500">Optional. Max size 5MB.</p>
-                          )}
-                        </div>
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="signup-password">Password</Label>

@@ -30,6 +30,7 @@ import {
   handleUpdateClinicIntakeForm,
 } from "./routes/intake";
 import docDaisyRouter from "./routes/docdaisy";
+import documentTranslateRouter from "./routes/document-translate";
 import healthRouter from "./routes/health";
 import {
   handleLogin,
@@ -383,6 +384,7 @@ export async function createServer(): Promise<Express> {
   app.get("/api/google-maps/places/autocomplete", handlePlaceAutocomplete);
   app.get("/api/google-maps/places/details", handlePlaceDetails);
   app.use("/api/docdaisy", docDaisyRouter);
+  app.use("/api/clinic/documents", requireClinicAuth, documentTranslateRouter);
   app.use("/api/health", healthRouter);
 
   app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {

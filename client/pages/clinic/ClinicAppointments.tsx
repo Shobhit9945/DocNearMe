@@ -10,6 +10,7 @@ import { useTranslation } from "@/lib/i18n";
 import { getSpecializationLabel } from "@/lib/specializations";
 import { formatSlotForLanguage } from "@/lib/time-format";
 import { TranslatedText } from "@/components/TranslatedText";
+import { TranslatedDocumentViewer } from "@/components/TranslatedDocumentViewer";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import type {
   AppointmentListResponse,
@@ -646,20 +647,28 @@ export default function ClinicAppointments() {
               <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 space-y-2">
                 <p className="text-xs uppercase tracking-wide text-slate-500">{t("Shared medical document")}</p>
                 {patientDetails.sharedRecord ? (
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                      <p className="font-medium">
-                        <TranslatedText text={patientDetails.sharedRecord.name} inline />
-                      </p>
-                      <p className="text-xs text-slate-500">
-                        {patientDetails.sharedRecord.type} ·{" "}
-                        {Math.round(patientDetails.sharedRecord.size / 1024)} KB
-                      </p>
+                  <>
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <p className="font-medium">
+                          <TranslatedText text={patientDetails.sharedRecord.name} inline />
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          {patientDetails.sharedRecord.type} ·{" "}
+                          {Math.round(patientDetails.sharedRecord.size / 1024)} KB
+                        </p>
+                      </div>
+                      <Button type="button" variant="outline" onClick={() => handleDownloadSharedRecord(patientDetails.sharedRecord)}>
+                        {t("Download document")}
+                      </Button>
                     </div>
-                    <Button type="button" variant="outline" onClick={() => handleDownloadSharedRecord(patientDetails.sharedRecord)}>
-                      {t("Download document")}
-                    </Button>
-                  </div>
+                    {patientDetailsAppointmentId && (
+                      <TranslatedDocumentViewer
+                        record={patientDetails.sharedRecord}
+                        appointmentId={patientDetailsAppointmentId}
+                      />
+                    )}
+                  </>
                 ) : (
                   <p className="text-sm text-slate-500">{t("No document shared.")}</p>
                 )}
