@@ -5,6 +5,7 @@ import { PageScaffold } from "@/components/PageScaffold";
 import { useTranslation } from "@/lib/i18n";
 import { getSpecializationLabel, resolveSpecializationId } from "@/lib/specializations";
 import { cn } from "@/lib/utils";
+import { ClinicRecommendationWidget } from "@/components/ClinicRecommendationWidget";
 
 // ---------- Types ----------
 type ChatMessage = {
@@ -478,6 +479,7 @@ const DocDaisy: React.FC = () => {
                             View {suggestedClinic}
                           </button>
                         )}
+                        <ClinicRecommendationWidget specialization={recommendedSpecialization} />
                       </div>
                     </div>
                   )}
@@ -651,6 +653,7 @@ const DocDaisy: React.FC = () => {
                           Request re-evaluation
                         </button>
                       </div>
+                      <ClinicRecommendationWidget specialization={recommendedSpecialization} />
                     </>
                   ) : (
                     <>
