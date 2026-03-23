@@ -219,7 +219,6 @@ export async function createServer(): Promise<Express> {
     "https://www.docnearme.app",
     "https://clinic.docnearme.app",
     "https://www.clinic.docnearme.app",
-    "https://admin.docnearme.jp",
     "https://admin.docnearme.app",
     "https://clinics.docnearme.app",
   ].filter(Boolean) as string[];
