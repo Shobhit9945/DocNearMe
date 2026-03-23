@@ -16,7 +16,7 @@ function formatDate(date: string) {
     minute: "2-digit",
   });
 }
-
+// This page is for clinic admins to view all appointments across their clinics. It can be extended with filtering and management features as needed.
 export default function AdminBookings() {
   const { data, isLoading } = useQuery<AppointmentListResponse>({
     queryKey: ["admin-appointments"],
