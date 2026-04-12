@@ -417,6 +417,7 @@ export interface ProfilePhoneChangeVerifyResponse extends OtpResponse {
 export interface RequestOtpRequest {
   email: string;
   captchaProofToken?: string;
+  purpose?: "signup" | "login";
 }
 
 export interface CheckEmailRequest {
@@ -433,6 +434,7 @@ export interface CheckEmailResponse {
 export interface VerifyOtpRequest {
   email: string;
   otp: string;
+  purpose?: "signup" | "login";
 }
 
 export interface OtpResponse {

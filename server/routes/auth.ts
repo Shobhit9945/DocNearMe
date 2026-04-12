@@ -75,9 +75,12 @@ const loginSchema = z.object({
   password: passwordSchema,
 });
 
+const otpPurposeSchema = z.enum(["signup", "login"]);
+
 const requestOtpSchema = z.object({
   email: emailSchema,
-  captchaProofToken: z.string().trim().min(1),
+  captchaProofToken: z.string().trim().min(1).optional(),
+  purpose: otpPurposeSchema.optional(),
 });
 
 const requestPasswordResetSchema = z.object({
@@ -92,6 +95,7 @@ const checkEmailSchema = z.object({
 const verifyOtpSchema = z.object({
   email: emailSchema,
   otp: z.string().trim().length(6),
+  purpose: otpPurposeSchema.optional(),
 });
 
 const requestPhoneOtpSchema = z.object({
@@ -317,7 +321,13 @@ const verifyRecaptcha = async (token: string, remoteIp?: string) => {
   return { success: true };
 };
 
-const getLatestOtp = async (email: string, purpose: "signup" | "password_reset") => {
+type AuthOtpPurpose = "signup" | "login";
+type EmailOtpPurpose = NonNullable<EmailOtp["purpose"]>;
+
+const resolveAuthOtpPurpose = (payload: { captchaProofToken?: string; purpose?: AuthOtpPurpose }): AuthOtpPurpose =>
+  payload.purpose ?? (payload.captchaProofToken ? "signup" : "login");
+
+const getLatestOtp = async (email: string, purpose: EmailOtpPurpose) => {
   const otps = await getEmailOtpsCollection();
   const query =
     purpose === "signup"
@@ -327,14 +337,37 @@ const getLatestOtp = async (email: string, purpose: "signup" | "password_reset")
   return list[0] ?? null;
 };
 
+const getLatestAuthOtp = async (email: string, purpose?: AuthOtpPurpose) => {
+  if (purpose) {
+    return getLatestOtp(email, purpose);
+  }
+
+  const otps = await getEmailOtpsCollection();
+  const list = await otps
+    .find({
+      email,
+      $or: [{ purpose: "login" }, { purpose: "signup" }, { purpose: { $exists: false } }],
+    })
+    .sort({ createdAt: -1 })
+    .toArray();
+  return list[0] ?? null;
+};
+
 export const handleRequestOtp: RequestHandler = async (req, res, next) => {
   try {
-    const parsed = requestOtpSchema.safeParse(parseRequestBody(req.body));
+    const rawBody = parseRequestBody(req.body);
+    const parsed = requestOtpSchema.safeParse(rawBody);
     if (!parsed.success) {
+      const requestedPurpose =
+        rawBody && typeof rawBody === "object"
+          ? resolveAuthOtpPurpose(rawBody as RequestOtpRequest)
+          : "login";
       const hasCaptchaIssue = parsed.error.issues.some(issue => issue.path.includes("captchaProofToken"));
       const hasEmailIssue = parsed.error.issues.some(issue => issue.path.includes("email"));
       const message = hasCaptchaIssue
-        ? "Captcha verification expired. Please check your email again."
+        ? requestedPurpose === "signup"
+          ? "Captcha verification expired. Please check your email again."
+          : "Invalid request. Please try again."
         : hasEmailIssue
           ? "Invalid email address."
           : "Invalid request. Please try again.";
@@ -345,31 +378,44 @@ export const handleRequestOtp: RequestHandler = async (req, res, next) => {
     }
     const payload = parsed.data as RequestOtpRequest;
     const normalizedEmail = payload.email.toLowerCase();
-    const emailValidation = await validateEmailForSignup(normalizedEmail);
-    if (!emailValidation.valid) {
-      return res.status(400).json({
-        success: false,
-        message: emailValidation.message ?? "Invalid email address.",
-      } satisfies OtpResponse);
-    }
-    const captchaProofValid = verifyCaptchaProof(payload.captchaProofToken, normalizedEmail);
-    if (!captchaProofValid) {
-      return res.status(400).json({
-        success: false,
-        message: "Captcha verification expired. Please check your email again.",
-      } satisfies OtpResponse);
-    }
-
+    const purpose = resolveAuthOtpPurpose(payload);
     const patients = await getPatientsCollection();
-    const existing = await patients.findOne({ email: normalizedEmail });
-    if (existing) {
-      return res.status(409).json({
-        success: false,
-        message: "An account with that email already exists.",
-      } satisfies OtpResponse);
+
+    if (purpose === "signup") {
+      const emailValidation = await validateEmailForSignup(normalizedEmail);
+      if (!emailValidation.valid) {
+        return res.status(400).json({
+          success: false,
+          message: emailValidation.message ?? "Invalid email address.",
+        } satisfies OtpResponse);
+      }
+      const captchaProofValid =
+        Boolean(payload.captchaProofToken) && verifyCaptchaProof(payload.captchaProofToken, normalizedEmail);
+      if (!captchaProofValid) {
+        return res.status(400).json({
+          success: false,
+          message: "Captcha verification expired. Please check your email again.",
+        } satisfies OtpResponse);
+      }
+
+      const existing = await patients.findOne({ email: normalizedEmail });
+      if (existing) {
+        return res.status(409).json({
+          success: false,
+          message: "An account with that email already exists.",
+        } satisfies OtpResponse);
+      }
+    } else {
+      const existing = await patients.findOne({ email: normalizedEmail });
+      if (!existing) {
+        return res.status(404).json({
+          success: false,
+          message: "No account found for that email.",
+        } satisfies OtpResponse);
+      }
     }
 
-    const recentOtp = await getLatestOtp(normalizedEmail, "signup");
+    const recentOtp = await getLatestOtp(normalizedEmail, purpose);
     if (recentOtp && Date.now() - recentOtp.createdAt.getTime() < 60 * 1000) {
       return res.status(429).json({
         success: false,
@@ -387,7 +433,7 @@ export const handleRequestOtp: RequestHandler = async (req, res, next) => {
       otpHash,
       createdAt: new Date(),
       expiresAt,
-      purpose: "signup",
+      purpose,
     };
     await otps.insertOne(record);
 
@@ -472,7 +518,7 @@ export const handleVerifyOtp: RequestHandler = async (req, res, next) => {
   try {
     const payload = verifyOtpSchema.parse(parseRequestBody(req.body)) as VerifyOtpRequest;
     const normalizedEmail = payload.email.toLowerCase();
-    const otpRecord = await getLatestOtp(normalizedEmail, "signup");
+    const otpRecord = await getLatestAuthOtp(normalizedEmail, payload.purpose);
 
     if (!otpRecord) {
       return res.status(400).json({
@@ -516,11 +562,13 @@ export const handleVerifyOtp: RequestHandler = async (req, res, next) => {
     }
 
     const otps = await getEmailOtpsCollection();
+    const usedAt = otpRecord.purpose === "login" ? new Date() : undefined;
     await otps.updateOne(
       { _id: otpRecord._id },
       {
         $set: {
           verifiedAt: new Date(),
+          ...(usedAt ? { usedAt } : {}),
         },
       },
     );

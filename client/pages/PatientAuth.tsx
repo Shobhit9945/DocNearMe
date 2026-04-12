@@ -373,7 +373,7 @@ const PatientAuth = () => {
     setLoginOtpLoading(true);
     setStatus(initialStatus);
     try {
-      const payload: RequestOtpRequest = { email };
+      const payload: RequestOtpRequest = { email, purpose: "login" };
       const response = await fetch("/api/auth/request-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -408,7 +408,7 @@ const PatientAuth = () => {
     setLoginOtpLoading(true);
     setStatus(initialStatus);
     try {
-      const payload: VerifyOtpRequest = { email: loginData.email, otp: loginOtpValue };
+      const payload: VerifyOtpRequest = { email: loginData.email, otp: loginOtpValue, purpose: "login" };
       const response = await fetch("/api/auth/verify-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -453,7 +453,7 @@ const PatientAuth = () => {
     setStatus(initialStatus);
 
     try {
-      const payload: RequestOtpRequest = { email: signupData.email, captchaProofToken };
+      const payload: RequestOtpRequest = { email: signupData.email, captchaProofToken, purpose: "signup" };
       const response = await fetch("/api/auth/request-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -489,7 +489,7 @@ const PatientAuth = () => {
     setStatus(initialStatus);
 
     try {
-      const payload: VerifyOtpRequest = { email: signupData.email, otp: otpValue };
+      const payload: VerifyOtpRequest = { email: signupData.email, otp: otpValue, purpose: "signup" };
       const response = await fetch("/api/auth/verify-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

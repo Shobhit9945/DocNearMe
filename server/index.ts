@@ -336,6 +336,7 @@ export async function createServer(): Promise<Express> {
   app.put("/api/profile", requireAuth, handleUpdateProfile);
   app.post("/api/clinic-auth/login", authLimiter, handleClinicLogin);
   app.get("/api/clinic-credentials", requireAdminAuth, handleClinicCredentials);
+  app.get("/api/admin/auth-check", adminLimiter, handleAdminAuthCheck);
   app.post("/api/admin/auth-check", adminLimiter, handleAdminAuthCheck);
   app.get("/api/admin/clinics", adminLimiter, requireAdminAuth, handleAdminClinicList);
   app.post("/api/admin/clinics", adminLimiter, requireAdminAuth, handleAdminCreateClinic);
