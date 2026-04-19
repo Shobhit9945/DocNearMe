@@ -277,6 +277,21 @@ const queueElevenLabsCall = async (
     logger.info("[clinic-call] elevenlabs call initiated", {
       clinicId: clinic.clinicId,
       appointmentId,
+      responseSummary: {
+        conversationId:
+          typeof data.conversation_id === "string"
+            ? data.conversation_id
+            : typeof data.conversationId === "string"
+              ? data.conversationId
+              : undefined,
+        callSid:
+          typeof data.call_sid === "string"
+            ? data.call_sid
+            : typeof data.callSid === "string"
+              ? data.callSid
+              : undefined,
+        status: typeof data.status === "string" ? data.status : undefined,
+      },
     });
     return { queued: true };
   } catch (error) {
