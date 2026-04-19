@@ -125,34 +125,6 @@ const formatAppointmentDateTime = (preferredStart?: string, slot?: string) => {
   return slot ? `${localized} (${slot})` : localized;
 };
 
-const buildElevenLabsPrompt = (context: {
-  clinicName: string;
-  patientName: string;
-  requestedDateTime: string;
-  specialization: string;
-  doctorName: string;
-  notes: string;
-  appointmentId: string;
-  finalizeUrl: string;
-}) => [
-  "You are DocDaisy, a Japanese clinic call assistant.",
-  "Do not invent or guess any appointment details.",
-  "Only use the information provided in the dynamic variables.",
-  "If any detail is missing, say that it is not available and ask the clinic to confirm it.",
-  "Your job is to ask the clinic to confirm one of the following outcomes: confirm, decline, request additional information, or reschedule.",
-  "When the clinic gives a final answer, send the final outcome to the finalize_url before ending the call.",
-  "The final outcome must be one of: confirm, decline, info_requested, reschedule.",
-  "After sending the final outcome, summarize it clearly and end the call politely.",
-  `Clinic name: ${context.clinicName}`,
-  `Patient name: ${context.patientName}`,
-  `Requested date and time: ${context.requestedDateTime}`,
-  `Specialization: ${context.specialization}`,
-  `Doctor name: ${context.doctorName}`,
-  `Notes: ${context.notes}`,
-  `Appointment ID: ${context.appointmentId}`,
-  `Finalize URL: ${context.finalizeUrl}`,
-].join("\n");
-
 const queueElevenLabsCall = async (
   clinic: ClinicInfo,
   appointment: Appointment,
@@ -213,28 +185,6 @@ const queueElevenLabsCall = async (
         notes,
         locale: "ja-JP",
         decision_options: ["confirm", "decline", "request_additional_information", "reschedule"],
-      },
-      conversation_config_override: {
-        agent: {
-          language: "ja",
-          first_message:
-            "もしもし、DocDaisyです。予約の確認をお願いします。内容をお伝えしますので、確認・却下・追加情報・日程変更のいずれかでお返事ください。",
-          prompt: {
-            prompt: buildElevenLabsPrompt({
-              clinicName,
-              patientName: appointment.patientName ?? "patient",
-              requestedDateTime,
-              specialization,
-              doctorName,
-              notes,
-              appointmentId,
-              finalizeUrl,
-            }),
-          },
-        },
-        conversation: {
-          text_only: false,
-        },
       },
     },
   };
