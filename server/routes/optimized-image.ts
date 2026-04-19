@@ -1,6 +1,5 @@
 import crypto from "crypto";
 import { RequestHandler } from "express";
-import sharp from "sharp";
 import { getOptimizedImagesCollection } from "../db";
 
 const MAX_SOURCE_IMAGE_BYTES = 12 * 1024 * 1024;
@@ -32,6 +31,22 @@ const isAllowedRemoteImageUrl = (value: string) => {
 };
 
 const hashUrl = (url: string) => crypto.createHash("sha256").update(url).digest("hex");
+
+let warnedSharpUnavailable = false;
+
+const convertToAvif = async (input: Buffer): Promise<Buffer | null> => {
+  try {
+    const sharpModule = await import("sharp");
+    const sharp = sharpModule.default;
+    return await sharp(input).rotate().avif({ quality: DEFAULT_AVIF_QUALITY, effort: 6 }).toBuffer();
+  } catch (error) {
+    if (!warnedSharpUnavailable) {
+      warnedSharpUnavailable = true;
+      console.warn("sharp is unavailable in this runtime; serving original clinic images without AVIF conversion", error);
+    }
+    return null;
+  }
+};
 
 export const handleOptimizedImage: RequestHandler = async (req, res) => {
   const sourceUrl = typeof req.query.src === "string" ? req.query.src.trim() : "";
@@ -79,7 +94,14 @@ export const handleOptimizedImage: RequestHandler = async (req, res) => {
       return res.status(413).json({ error: "Image is too large to optimize." });
     }
 
-    const avifBuffer = await sharp(Buffer.from(bytes)).rotate().avif({ quality: DEFAULT_AVIF_QUALITY, effort: 6 }).toBuffer();
+    const originalBuffer = Buffer.from(bytes);
+    const avifBuffer = await convertToAvif(originalBuffer);
+    if (!avifBuffer) {
+      res.setHeader("Content-Type", contentType || "application/octet-stream");
+      res.setHeader("Cache-Control", "public, max-age=3600");
+      res.setHeader("X-DocNearMe-Image-Cache", "bypass");
+      return res.send(originalBuffer);
+    }
     const now = new Date();
     const existingEntry = await cache.findOne({ sourceUrlHash });
     if (existingEntry) {
