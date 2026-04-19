@@ -44,11 +44,20 @@ const getElevenLabsApiKey = () => process.env.ELEVENLABS_API_KEY ?? "";
 
 const getElevenLabsAgentId = () => process.env.ELEVENLABS_AGENT_ID ?? "";
 
+const normalizePhoneNumberResourceId = (value?: string) => {
+  const trimmed = (value ?? "").trim();
+  if (!trimmed) return "";
+  // TWILIO_CALLER_ID is usually an E.164 number (+81...), which is not a valid ElevenLabs phone-number resource id.
+  if (/^\+\d{7,15}$/.test(trimmed)) return "";
+  return trimmed;
+};
+
 const getElevenLabsAgentPhoneNumberId = () =>
-  process.env.ELEVENLABS_AGENT_PHONE_NUMBER_ID ??
-  process.env.ELEVENLABS_PHONE_NUMBER_ID ??
-  process.env.ELEVENLABS_TWILIO_PHONE_NUMBER_ID ??
-  "PNa4444a07b55bb8f46d305bf8b334a67a";
+  normalizePhoneNumberResourceId(process.env.ELEVENLABS_AGENT_PHONE_NUMBER_ID) ||
+  normalizePhoneNumberResourceId(process.env.ELEVENLABS_PHONE_NUMBER_ID) ||
+  normalizePhoneNumberResourceId(process.env.ELEVENLABS_TWILIO_PHONE_NUMBER_ID) ||
+  normalizePhoneNumberResourceId(process.env.TWILIO_CALLER_ID) ||
+  "phnum_1401kpj8xgsjfehv0rrvbpy96j2w";
 
 const getElevenLabsOutboundUrl =
   () => process.env.ELEVENLABS_OUTBOUND_CALL_URL ?? "https://api.elevenlabs.io/v1/convai/twilio/outbound-call";
@@ -61,6 +70,21 @@ const extractElevenLabsReason = (
 ) => {
   if (typeof parsedBody?.detail === "string" && parsedBody.detail.trim()) {
     return parsedBody.detail;
+  }
+
+  if (parsedBody?.detail && typeof parsedBody.detail === "object") {
+    const detailObject = parsedBody.detail as Record<string, unknown>;
+    const detailMessage =
+      typeof detailObject.message === "string" && detailObject.message.trim()
+        ? detailObject.message.trim()
+        : "";
+    const detailCode =
+      typeof detailObject.code === "string" && detailObject.code.trim()
+        ? detailObject.code.trim()
+        : "";
+    if (detailMessage) {
+      return detailCode ? `${detailMessage} (${detailCode})` : detailMessage;
+    }
   }
 
   if (Array.isArray(parsedBody?.detail) && parsedBody.detail.length > 0) {
