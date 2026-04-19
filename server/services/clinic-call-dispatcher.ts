@@ -53,6 +53,45 @@ const getElevenLabsAgentPhoneNumberId = () =>
 const getElevenLabsOutboundUrl =
   () => process.env.ELEVENLABS_OUTBOUND_CALL_URL ?? "https://api.elevenlabs.io/v1/convai/twilio/outbound-call";
 
+const extractElevenLabsReason = (
+  parsedBody: Record<string, unknown>,
+  rawBody: string,
+  status: number,
+  statusText: string,
+) => {
+  if (typeof parsedBody?.detail === "string" && parsedBody.detail.trim()) {
+    return parsedBody.detail;
+  }
+
+  if (Array.isArray(parsedBody?.detail) && parsedBody.detail.length > 0) {
+    const first = parsedBody.detail[0];
+    if (typeof first === "string" && first.trim()) {
+      return first;
+    }
+    if (first && typeof first === "object") {
+      const candidate = (first as Record<string, unknown>).msg;
+      if (typeof candidate === "string" && candidate.trim()) {
+        return candidate;
+      }
+    }
+  }
+
+  if (typeof parsedBody?.message === "string" && parsedBody.message.trim()) {
+    return parsedBody.message;
+  }
+
+  if (typeof parsedBody?.error === "string" && parsedBody.error.trim()) {
+    return parsedBody.error;
+  }
+
+  const compactRawBody = rawBody.trim();
+  if (compactRawBody) {
+    return compactRawBody.slice(0, 240);
+  }
+
+  return `elevenlabs_http_${status}_${statusText || "error"}`;
+};
+
 const formatAppointmentDateTime = (preferredStart?: string, slot?: string) => {
   const dateValue = preferredStart ?? "";
   if (!dateValue) return slot ? `- ${slot}` : "-";
@@ -113,7 +152,8 @@ const queueElevenLabsCall = async (
   };
 
   try {
-    const response = await fetch(getElevenLabsOutboundUrl(), {
+    const outboundUrl = getElevenLabsOutboundUrl();
+    const response = await fetch(outboundUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -122,14 +162,27 @@ const queueElevenLabsCall = async (
       body: JSON.stringify(payload),
     });
 
-    const data = await response.json().catch(() => ({}));
+    const rawBody = await response.text();
+    const data = rawBody
+      ? ((() => {
+          try {
+            return JSON.parse(rawBody) as Record<string, unknown>;
+          } catch {
+            return {} as Record<string, unknown>;
+          }
+        })())
+      : ({} as Record<string, unknown>);
+
     if (!response.ok) {
-      const reason =
-        typeof data?.detail === "string"
-          ? data.detail
-          : typeof data?.message === "string"
-            ? data.message
-            : "elevenlabs_call_failed";
+      const reason = extractElevenLabsReason(data, rawBody, response.status, response.statusText);
+      logger.warn("[clinic-call] elevenlabs outbound rejected", {
+        clinicId: clinic.clinicId,
+        appointmentId,
+        status: response.status,
+        statusText: response.statusText,
+        outboundUrl,
+        reason,
+      });
       return { queued: false, reason };
     }
 
