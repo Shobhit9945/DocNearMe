@@ -473,7 +473,12 @@ export const handleVoiceAppointmentOutcome: RequestHandler = async (req: Request
     const providedWebhookSecretRaw = String(
       req.get("x-docnearme-webhook-secret") ?? req.get("x-clinic-webhook-secret") ?? "",
     );
-    const expectedWebhookSecretRaw = String(process.env.ELEVENLABS_OUTCOME_WEBHOOK_SECRET ?? "");
+    const expectedWebhookSecretRaw = String(
+      process.env.ELEVENLABS_OUTCOME_WEBHOOK_SECRET ??
+        process.env.DOCNEARME_WEBHOOK_SECRET ??
+        process.env.ELEVENLABS_WEBHOOK_SECRET ??
+        "",
+    );
     const providedWebhookSecret = normalizeSecret(providedWebhookSecretRaw);
     const expectedWebhookSecret = normalizeSecret(expectedWebhookSecretRaw);
     const tokenValid = Boolean(appointmentId) && verifyVoiceToken(appointmentId, token);
@@ -481,7 +486,7 @@ export const handleVoiceAppointmentOutcome: RequestHandler = async (req: Request
       Boolean(appointmentId) &&
       Boolean(expectedWebhookSecret) &&
       Boolean(providedWebhookSecret) &&
-      providedWebhookSecret === expectedWebhookSecret;
+      providedWebhookSecret.toLowerCase() === expectedWebhookSecret.toLowerCase();
 
     if (!appointmentId || (!tokenValid && !webhookSecretValid)) {
       console.warn("[clinic-call] invalid voice outcome token", {
@@ -494,6 +499,7 @@ export const handleVoiceAppointmentOutcome: RequestHandler = async (req: Request
         hasExpectedWebhookSecret: Boolean(expectedWebhookSecret),
         providedWebhookSecretLength: providedWebhookSecret.length,
         expectedWebhookSecretLength: expectedWebhookSecret.length,
+        payloadKeys: Object.keys(payload),
       });
       return res.status(401).json({ error: "Invalid voice token." });
     }
