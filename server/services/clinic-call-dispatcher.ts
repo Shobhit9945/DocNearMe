@@ -1,7 +1,7 @@
 import { ObjectId } from "mongodb";
 import { getAppointmentsCollection, getClinicInfoCollection } from "../db";
 import type { Appointment, ClinicInfo } from "../types";
-import { sendClinicBookingNotificationCall } from "./twilio-voice";
+import { buildVoiceToken, sendClinicBookingNotificationCall } from "./twilio-voice";
 import { getResolvedCallSettings } from "./call-settings";
 
 type Logger = Pick<Console, "info" | "warn" | "error">;
@@ -125,6 +125,34 @@ const formatAppointmentDateTime = (preferredStart?: string, slot?: string) => {
   return slot ? `${localized} (${slot})` : localized;
 };
 
+const buildElevenLabsPrompt = (context: {
+  clinicName: string;
+  patientName: string;
+  requestedDateTime: string;
+  specialization: string;
+  doctorName: string;
+  notes: string;
+  appointmentId: string;
+  finalizeUrl: string;
+}) => [
+  "You are DocDaisy, a Japanese clinic call assistant.",
+  "Do not invent or guess any appointment details.",
+  "Only use the information provided in the dynamic variables.",
+  "If any detail is missing, say that it is not available and ask the clinic to confirm it.",
+  "Your job is to ask the clinic to confirm one of the following outcomes: confirm, decline, request additional information, or reschedule.",
+  "When the clinic gives a final answer, send the final outcome to the finalize_url before ending the call.",
+  "The final outcome must be one of: confirm, decline, info_requested, reschedule.",
+  "After sending the final outcome, summarize it clearly and end the call politely.",
+  `Clinic name: ${context.clinicName}`,
+  `Patient name: ${context.patientName}`,
+  `Requested date and time: ${context.requestedDateTime}`,
+  `Specialization: ${context.specialization}`,
+  `Doctor name: ${context.doctorName}`,
+  `Notes: ${context.notes}`,
+  `Appointment ID: ${context.appointmentId}`,
+  `Finalize URL: ${context.finalizeUrl}`,
+].join("\n");
+
 const queueElevenLabsCall = async (
   clinic: ClinicInfo,
   appointment: Appointment,
@@ -160,18 +188,54 @@ const queueElevenLabsCall = async (
     appointment.slot,
   );
 
+  const clinicName = clinic.name ?? clinic.clinicId;
+  const specialization = appointment.specialization ?? "General";
+  const doctorName = appointment.doctorName ?? "Any available doctor";
+  const notes = appointment.notes ?? "";
+  const baseUrl = process.env.PUBLIC_BASE_URL ?? process.env.APP_BASE_URL ?? "https://docnearme.jp";
+  const finalizeUrl = `${baseUrl}/api/voice/appointment/outcome?appointmentId=${encodeURIComponent(appointmentId)}&token=${encodeURIComponent(buildVoiceToken(appointmentId))}`;
+
   const payload = {
     agent_id: agentId,
     agent_phone_number_id: agentPhoneNumberId,
     to_number: to,
-    metadata: {
-      source: "docnearme",
-      clinicId: clinic.clinicId,
-      appointmentId,
-      patientName: appointment.patientName ?? "patient",
-      requestedDateTime,
-      decisionOptions: ["confirm", "decline", "reschedule"],
-      locale: "ja-JP",
+    conversation_initiation_client_data: {
+      dynamic_variables: {
+        source: "docnearme",
+        clinic_id: clinic.clinicId,
+        clinic_name: clinicName,
+        appointment_id: appointmentId,
+        patient_name: appointment.patientName ?? "patient",
+        requested_date_time: requestedDateTime,
+        finalize_url: finalizeUrl,
+        specialization,
+        doctor_name: doctorName,
+        notes,
+        locale: "ja-JP",
+        decision_options: ["confirm", "decline", "request_additional_information", "reschedule"],
+      },
+      conversation_config_override: {
+        agent: {
+          language: "ja-JP",
+          first_message:
+            "もしもし、DocDaisyです。予約の確認をお願いします。内容をお伝えしますので、確認・却下・追加情報・日程変更のいずれかでお返事ください。",
+          prompt: {
+            prompt: buildElevenLabsPrompt({
+              clinicName,
+              patientName: appointment.patientName ?? "patient",
+              requestedDateTime,
+              specialization,
+              doctorName,
+              notes,
+              appointmentId,
+              finalizeUrl,
+            }),
+          },
+        },
+        conversation: {
+          text_only: false,
+        },
+      },
     },
   };
 

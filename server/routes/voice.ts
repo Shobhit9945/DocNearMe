@@ -5,6 +5,7 @@ import { getDateKey } from "../lib/scheduling";
 import type { AppointmentStatus, AuditAction } from "@shared/api";
 import { buildVoicePrompt, verifyVoiceToken } from "../services/twilio-voice";
 import { logAuditEvent } from "../services/audit-log";
+import { sendEmail } from "../services/mailer";
 
 const normalizeBaseUrl = (value: string) => {
   const trimmed = value.trim().replace(/\/$/, "");
@@ -217,6 +218,245 @@ const applyDecision = async (appointmentId: string, appointment: any, digit: str
   }
 
   return { ok: true, status: update.status as AppointmentStatus };
+};
+
+const updateAppointmentOutcome = async (
+  appointmentId: string,
+  appointment: any,
+  outcome: "confirm" | "decline" | "info_requested" | "reschedule",
+  payload: Record<string, unknown>,
+) => {
+  const appointments = await getAppointmentsCollection();
+  const now = new Date();
+  let update: Record<string, unknown> = { updatedAt: now };
+  let patientUpdate: Record<string, unknown> = { updatedAt: now };
+  let auditAction: AuditAction | null = null;
+
+  if (outcome === "confirm") {
+    auditAction = "appointment_confirmed";
+    const confirmedStart =
+      typeof payload.confirmedStart === "string" && payload.confirmedStart.trim()
+        ? payload.confirmedStart.trim()
+        : appointment.preferredStart ?? appointment.date;
+    const confirmedEnd =
+      typeof payload.confirmedEnd === "string" && payload.confirmedEnd.trim()
+        ? payload.confirmedEnd.trim()
+        : appointment.preferredEnd ??
+          new Date(new Date(confirmedStart).getTime() + 30 * 60 * 1000).toISOString();
+    const confirmedDate = new Date(confirmedStart);
+    const dateKey = getDateKey(confirmedDate);
+    const slot = appointment.slot ?? confirmedDate.toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    });
+
+    update = {
+      ...update,
+      status: "CONFIRMED",
+      confirmedStart,
+      confirmedEnd,
+      date: confirmedStart,
+      dateKey,
+      slot,
+      clinicMessage: null,
+      declineReason: null,
+      clinicConfirmationTokenHash: null,
+      tokenExpiresAt: null,
+    };
+    patientUpdate = {
+      ...patientUpdate,
+      status: "CONFIRMED" as AppointmentStatus,
+      confirmedStart,
+      confirmedEnd,
+      date: confirmedStart,
+      slot,
+    };
+  } else if (outcome === "decline") {
+    auditAction = "appointment_declined";
+    const declineReason = typeof payload.declineReason === "string" ? payload.declineReason.trim() : "Declined by clinic (voice)";
+    update = {
+      ...update,
+      status: "DECLINED",
+      declineReason,
+      clinicMessage: null,
+      clinicConfirmationTokenHash: null,
+      tokenExpiresAt: null,
+    };
+    patientUpdate = {
+      ...patientUpdate,
+      status: "DECLINED" as AppointmentStatus,
+      declineReason,
+    };
+  } else if (outcome === "info_requested") {
+    auditAction = "appointment_reschedule_requested";
+    const clinicMessage =
+      typeof payload.clinicMessage === "string" && payload.clinicMessage.trim()
+        ? payload.clinicMessage.trim()
+        : "Clinic requested additional information (voice)";
+    update = {
+      ...update,
+      status: "INFO_REQUESTED",
+      clinicMessage,
+      clinicConfirmationTokenHash: null,
+      tokenExpiresAt: null,
+    };
+    patientUpdate = {
+      ...patientUpdate,
+      status: "INFO_REQUESTED" as AppointmentStatus,
+      clinicMessage,
+    };
+  } else if (outcome === "reschedule") {
+    auditAction = "appointment_reschedule_requested";
+    const clinicMessage =
+      typeof payload.clinicMessage === "string" && payload.clinicMessage.trim()
+        ? payload.clinicMessage.trim()
+        : "Clinic requested reschedule (voice)";
+    update = {
+      ...update,
+      status: "RESCHEDULE_REQUESTED",
+      clinicMessage,
+      clinicConfirmationTokenHash: null,
+      tokenExpiresAt: null,
+    };
+    patientUpdate = {
+      ...patientUpdate,
+      status: "RESCHEDULE_REQUESTED" as AppointmentStatus,
+      clinicMessage,
+    };
+  }
+
+  await appointments.updateOne({ _id: resolveAppointmentLookup(appointmentId) } as any, { $set: update });
+  await updatePatientSummary(appointmentId, appointment.patientId, patientUpdate);
+
+  if (appointment.patientEmail) {
+    const patientName = appointment.patientName ?? "there";
+    const formattedDate = (() => {
+      const confirmedStart = typeof update.confirmedStart === "string" ? update.confirmedStart : appointment.preferredStart ?? appointment.date;
+      const parsed = new Date(confirmedStart);
+      return Number.isNaN(parsed.getTime()) ? confirmedStart : parsed.toLocaleString();
+    })();
+    const slot = typeof update.slot === "string" ? update.slot : appointment.slot ?? "";
+    try {
+      if (outcome === "confirm") {
+        await sendEmail({
+          to: appointment.patientEmail,
+          subject: "Your DocNearMe appointment is confirmed",
+          text: [
+            `Hi ${patientName},`,
+            "",
+            "Your appointment request has been confirmed by the clinic.",
+            `Appointment ID: ${appointmentId}`,
+            `Clinic: ${appointment.clinicId}`,
+            `Confirmed date: ${formattedDate}`,
+            `Confirmed time: ${slot}`,
+            "",
+            "Please arrive 10 minutes early and bring a photo ID and insurance card if applicable.",
+          ].join("\n"),
+        });
+      } else if (outcome === "decline") {
+        await sendEmail({
+          to: appointment.patientEmail,
+          subject: "Clinic could not confirm your appointment",
+          text: [
+            `Hi ${patientName},`,
+            "",
+            "The clinic was unable to confirm your requested time.",
+            typeof update.declineReason === "string" ? `Reason: ${update.declineReason}` : undefined,
+          ]
+            .filter(Boolean)
+            .join("\n"),
+        });
+      } else if (outcome === "info_requested") {
+        await sendEmail({
+          to: appointment.patientEmail,
+          subject: "Clinic needs more information",
+          text: [
+            `Hi ${patientName},`,
+            "",
+            "The clinic asked for additional information before confirming your appointment.",
+            typeof update.clinicMessage === "string" ? `Message: ${update.clinicMessage}` : undefined,
+          ]
+            .filter(Boolean)
+            .join("\n"),
+        });
+      } else if (outcome === "reschedule") {
+        await sendEmail({
+          to: appointment.patientEmail,
+          subject: "Clinic requested a reschedule",
+          text: [
+            `Hi ${patientName},`,
+            "",
+            "The clinic asked to reschedule your appointment.",
+            typeof update.clinicMessage === "string" ? `Message: ${update.clinicMessage}` : undefined,
+          ]
+            .filter(Boolean)
+            .join("\n"),
+        });
+      }
+    } catch (error) {
+      console.error("[clinic-call] failed to send appointment outcome email", error);
+    }
+  }
+
+  if (auditAction) {
+    await logAuditEvent({
+      action: auditAction,
+      actorRole: "clinic",
+      actorId: `${appointment.clinicId}:voice`,
+      actorLabel: appointment.clinicId,
+      clinicId: appointment.clinicId,
+      patientId: appointment.patientId,
+      appointmentId,
+      targetType: "appointment",
+      targetId: appointmentId,
+      details: {
+        previousStatus: appointment.status,
+        outcome,
+        via: "voice_call",
+      },
+      source: "voice",
+    });
+  }
+
+  return {
+    ok: true,
+    status: update.status as AppointmentStatus,
+  };
+};
+
+export const handleVoiceAppointmentOutcome: RequestHandler = async (req: Request, res: Response) => {
+  try {
+    const payload = (req.body && typeof req.body === "object" ? req.body : {}) as Record<string, unknown>;
+    const appointmentId = String(payload.appointmentId ?? req.query.appointmentId ?? "");
+    const token = String(payload.token ?? req.query.token ?? "");
+    const normalizedOutcome = String(payload.outcome ?? payload.decision ?? "").trim().toLowerCase();
+    const outcome =
+      normalizedOutcome === "request_additional_information" || normalizedOutcome === "additional_information"
+        ? "info_requested"
+        : normalizedOutcome;
+
+    if (!appointmentId || !verifyVoiceToken(appointmentId, token)) {
+      return res.status(401).json({ error: "Invalid voice token." });
+    }
+
+    const allowedOutcomes = new Set(["confirm", "decline", "info_requested", "reschedule"]);
+    if (!allowedOutcomes.has(outcome)) {
+      return res.status(400).json({ error: "Invalid outcome." });
+    }
+
+    const appointments = await getAppointmentsCollection();
+    const appointment = await appointments.findOne({ _id: resolveAppointmentLookup(appointmentId) });
+    if (!appointment) {
+      return res.status(404).json({ error: "Appointment not found." });
+    }
+
+    const result = await updateAppointmentOutcome(appointmentId, appointment, outcome as any, payload);
+    return res.json({ success: true, status: result.status });
+  } catch (error) {
+    console.error("[clinic-call] voice outcome error", error);
+    return res.status(500).json({ error: "Failed to record voice outcome." });
+  }
 };
 
 export const handleVoiceAppointment: RequestHandler = async (req: Request, res: Response) => {

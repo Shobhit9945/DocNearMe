@@ -49,7 +49,7 @@ const getVoiceWebhookSecret = () => {
 
 const getDefaultDialCode = () => process.env.CLINIC_DEFAULT_DIAL_CODE ?? "";
 
-const buildVoiceToken = (appointmentId: string) =>
+export const buildVoiceToken = (appointmentId: string) =>
   crypto.createHmac("sha256", getVoiceWebhookSecret()).update(appointmentId).digest("hex");
 
 

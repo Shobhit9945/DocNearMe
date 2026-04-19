@@ -3,6 +3,7 @@ import type { AuditAction, AuditActorRole, AuditEventSource } from "@shared/api"
 
 export type AppointmentStatus =
   | "PENDING_CLINIC"
+  | "INFO_REQUESTED"
   | "RESCHEDULE_REQUESTED"
   | "CONFIRMED"
   | "DECLINED"

@@ -10,6 +10,7 @@ export interface DemoResponse {
 
 export type AppointmentStatus =
   | "PENDING_CLINIC"
+  | "INFO_REQUESTED"
   | "RESCHEDULE_REQUESTED"
   | "CONFIRMED"
   | "DECLINED"

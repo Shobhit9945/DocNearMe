@@ -70,7 +70,7 @@ import {
   handleRenameVaultDoc,
   handleUpdateVaultPassword,
 } from "./routes/vault";
-import { handleVoiceAppointment, handleVoiceAppointmentResponse } from "./routes/voice";
+import { handleVoiceAppointment, handleVoiceAppointmentOutcome, handleVoiceAppointmentResponse } from "./routes/voice";
 import { handleGeocode, handlePlaceAutocomplete, handlePlaceDetails } from "./routes/google-maps";
 import {
   handleClinicCredentials,
@@ -404,6 +404,7 @@ export async function createServer(): Promise<Express> {
   app.delete("/api/vault/docs/:id", requireAuth, handleDeleteVaultDoc);
   app.post("/api/voice/appointment", handleVoiceAppointment);
   app.post("/api/voice/appointment/response", handleVoiceAppointmentResponse);
+  app.post("/api/voice/appointment/outcome", handleVoiceAppointmentOutcome);
   app.get("/api/clinics/:clinicId/reviews", handleListClinicReviews);
   app.post("/api/clinics/:clinicId/reviews", requireAuth, handleCreateClinicReview);
   app.patch("/api/clinics/:clinicId/reviews/:reviewId", requireAuth, handleUpdateClinicReview);

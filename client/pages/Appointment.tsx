@@ -111,6 +111,8 @@ type UpcomingAppointment = {
   patientName?: string;
   patientEmail?: string;
   notes?: string;
+  clinicMessage?: string;
+  declineReason?: string;
 };
 
 type HowVisitStep = {
@@ -122,6 +124,7 @@ type HowVisitStep = {
 
 const patientStatusLabels: Record<string, string> = {
   PENDING_CLINIC: "Request delivered",
+  INFO_REQUESTED: "Clinic needs more information",
   RESCHEDULE_REQUESTED: "Clinic requested reschedule",
   CONFIRMED: "Request accepted",
   DECLINED: "Request declined",
@@ -900,6 +903,8 @@ export default function Appointment() {
           patientName: appointment.patientName,
           patientEmail: appointment.patientEmail,
           notes: appointment.notes,
+          clinicMessage: appointment.clinicMessage,
+          declineReason: appointment.declineReason,
         };
       });
   }, [appointmentsData, clinics, formatDateLabel]);
@@ -1541,6 +1546,15 @@ export default function Appointment() {
                             {appointment.type}
                           </span>
                         </div>
+
+                        {appointment.clinicMessage || appointment.declineReason ? (
+                          <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+                            <p className="font-semibold text-slate-900">Clinic update</p>
+                            <p className="mt-1 leading-relaxed">
+                              {appointment.clinicMessage ?? appointment.declineReason}
+                            </p>
+                          </div>
+                        ) : null}
                       </div>
 
                       <div className="flex flex-wrap gap-3">
@@ -1626,6 +1640,28 @@ export default function Appointment() {
                   </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-5 text-sm text-slate-700">
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="text-slate-500">Status</span>
+                    <span className="font-medium text-slate-900">
+                      {t(patientStatusLabels[detailsAppointment.status] ?? "Request delivered")}
+                    </span>
+                  </div>
+                  {detailsAppointment.clinicMessage ? (
+                    <div className="flex flex-col gap-1">
+                      <span className="text-slate-500">Clinic message</span>
+                      <span className="font-medium text-slate-900">
+                        {detailsAppointment.clinicMessage}
+                      </span>
+                    </div>
+                  ) : null}
+                  {detailsAppointment.declineReason ? (
+                    <div className="flex flex-col gap-1">
+                      <span className="text-slate-500">Decline reason</span>
+                      <span className="font-medium text-slate-900">
+                        {detailsAppointment.declineReason}
+                      </span>
+                    </div>
+                  ) : null}
                   <div className="flex items-center justify-between gap-4">
                     <span className="text-slate-500">Doctor</span>
                     <span className="font-medium text-slate-900">
