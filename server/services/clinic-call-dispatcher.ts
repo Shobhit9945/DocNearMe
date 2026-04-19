@@ -125,21 +125,6 @@ const formatAppointmentDateTime = (preferredStart?: string, slot?: string) => {
   return slot ? `${localized} (${slot})` : localized;
 };
 
-const buildElevenLabsFirstMessage = (context: {
-  clinicName: string;
-  patientName: string;
-  requestedDateTime: string;
-  specialization: string;
-  doctorName: string;
-}) =>
-  [
-    "もしもし、DocDaisyです。予約確認のお電話です。",
-    `患者様のお名前は${context.patientName}様です。`,
-    `希望日時は${context.requestedDateTime}です。`,
-    `診療科は${context.specialization}、希望医師は${context.doctorName}です。`,
-    "この予約について、確定・却下・追加情報が必要・日程変更希望のいずれかでご回答ください。",
-  ].join(" ");
-
 const queueElevenLabsCall = async (
   clinic: ClinicInfo,
   appointment: Appointment,
@@ -181,18 +166,14 @@ const queueElevenLabsCall = async (
   const notes = appointment.notes ?? "";
   const baseUrl = process.env.PUBLIC_BASE_URL ?? process.env.APP_BASE_URL ?? "https://docnearme.jp";
   const finalizeUrl = `${baseUrl}/api/voice/appointment/outcome?appointmentId=${encodeURIComponent(appointmentId)}&token=${encodeURIComponent(buildVoiceToken(appointmentId))}`;
-  const firstMessage = buildElevenLabsFirstMessage({
-    clinicName,
-    patientName: appointment.patientName ?? "患者",
-    requestedDateTime,
-    specialization,
-    doctorName,
-  });
 
   const payload = {
     agent_id: agentId,
     agent_phone_number_id: agentPhoneNumberId,
     to_number: to,
+    telephony_call_config: {
+      ringing_timeout_secs: 20,
+    },
     conversation_initiation_client_data: {
       dynamic_variables: {
         source: "docnearme",
@@ -211,15 +192,6 @@ const queueElevenLabsCall = async (
         notes,
         locale: "ja-JP",
         decision_options: ["confirm", "decline", "request_additional_information", "reschedule"],
-      },
-      conversation_config_override: {
-        agent: {
-          language: "ja",
-          first_message: firstMessage,
-        },
-        conversation: {
-          text_only: false,
-        },
       },
     },
   };
