@@ -125,6 +125,21 @@ const formatAppointmentDateTime = (preferredStart?: string, slot?: string) => {
   return slot ? `${localized} (${slot})` : localized;
 };
 
+const normalizePublicBaseUrl = (value: string) => {
+  const trimmed = value.trim().replace(/\/$/, "");
+  if (!trimmed) return "https://www.docnearme.jp";
+  const withProtocol = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  try {
+    const parsed = new URL(withProtocol);
+    if (parsed.hostname === "docnearme.jp") {
+      parsed.hostname = "www.docnearme.jp";
+    }
+    return parsed.toString().replace(/\/$/, "");
+  } catch {
+    return "https://www.docnearme.jp";
+  }
+};
+
 const queueElevenLabsCall = async (
   clinic: ClinicInfo,
   appointment: Appointment,
@@ -164,8 +179,11 @@ const queueElevenLabsCall = async (
   const specialization = appointment.specialization ?? "General";
   const doctorName = appointment.doctorName ?? "Any available doctor";
   const notes = appointment.notes ?? "";
-  const baseUrl = process.env.PUBLIC_BASE_URL ?? process.env.APP_BASE_URL ?? "https://docnearme.jp";
-  const finalizeUrl = `${baseUrl}/api/voice/appointment/outcome?appointmentId=${encodeURIComponent(appointmentId)}&token=${encodeURIComponent(buildVoiceToken(appointmentId))}`;
+  const baseUrl = normalizePublicBaseUrl(
+    process.env.PUBLIC_BASE_URL ?? process.env.APP_BASE_URL ?? "https://www.docnearme.jp",
+  );
+  const finalizeToken = buildVoiceToken(appointmentId);
+  const finalizeUrl = `${baseUrl}/api/voice/appointment/outcome?appointmentId=${encodeURIComponent(appointmentId)}&token=${encodeURIComponent(finalizeToken)}`;
 
   const payload = {
     agent_id: agentId,
@@ -180,12 +198,17 @@ const queueElevenLabsCall = async (
         clinic_id: clinic.clinicId,
         clinic_name: clinicName,
         appointment_id: appointmentId,
+        appointmentId: appointmentId,
         patient_name: appointment.patientName ?? "patient",
         patientName: appointment.patientName ?? "patient",
         requested_date_time: requestedDateTime,
         requestedDateTime: requestedDateTime,
         finalize_url: finalizeUrl,
         finalizeUrl,
+        finalize_token: finalizeToken,
+        finalizeToken,
+        voice_token: finalizeToken,
+        voiceToken: finalizeToken,
         specialization,
         doctor_name: doctorName,
         doctorName,

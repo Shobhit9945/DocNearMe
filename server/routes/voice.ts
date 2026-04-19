@@ -437,6 +437,12 @@ export const handleVoiceAppointmentOutcome: RequestHandler = async (req: Request
         : normalizedOutcome;
 
     if (!appointmentId || !verifyVoiceToken(appointmentId, token)) {
+      console.warn("[clinic-call] invalid voice outcome token", {
+        appointmentId,
+        hasToken: Boolean(token),
+        tokenLength: token.length,
+        outcome,
+      });
       return res.status(401).json({ error: "Invalid voice token." });
     }
 
