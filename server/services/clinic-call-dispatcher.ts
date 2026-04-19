@@ -44,8 +44,10 @@ const getElevenLabsApiKey = () => process.env.ELEVENLABS_API_KEY ?? "";
 
 const getElevenLabsAgentId = () => process.env.ELEVENLABS_AGENT_ID ?? "";
 
+const getElevenLabsAgentPhoneNumberId = () => process.env.ELEVENLABS_AGENT_PHONE_NUMBER_ID ?? "";
+
 const getElevenLabsOutboundUrl =
-  () => process.env.ELEVENLABS_OUTBOUND_CALL_URL ?? "https://api.elevenlabs.io/v1/convai/outbound-calls";
+  () => process.env.ELEVENLABS_OUTBOUND_CALL_URL ?? "https://api.elevenlabs.io/v1/convai/twilio/outbound-call";
 
 const formatAppointmentDateTime = (preferredStart?: string, slot?: string) => {
   const dateValue = preferredStart ?? "";
@@ -64,8 +66,15 @@ const queueElevenLabsCall = async (
 ): Promise<{ queued: boolean; reason?: string }> => {
   const apiKey = getElevenLabsApiKey();
   const agentId = getElevenLabsAgentId();
-  if (!apiKey || !agentId) {
-    return { queued: false, reason: "elevenlabs_not_configured" };
+  const agentPhoneNumberId = getElevenLabsAgentPhoneNumberId();
+  if (!apiKey) {
+    return { queued: false, reason: "elevenlabs_missing_api_key" };
+  }
+  if (!agentId) {
+    return { queued: false, reason: "elevenlabs_missing_agent_id" };
+  }
+  if (!agentPhoneNumberId) {
+    return { queued: false, reason: "elevenlabs_missing_agent_phone_number_id" };
   }
 
   const rawPhone = String(clinic.phone ?? "").trim();
@@ -86,6 +95,7 @@ const queueElevenLabsCall = async (
 
   const payload = {
     agent_id: agentId,
+    agent_phone_number_id: agentPhoneNumberId,
     to_number: to,
     metadata: {
       source: "docnearme",
