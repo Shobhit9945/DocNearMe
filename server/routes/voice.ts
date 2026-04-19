@@ -428,8 +428,40 @@ const updateAppointmentOutcome = async (
 export const handleVoiceAppointmentOutcome: RequestHandler = async (req: Request, res: Response) => {
   try {
     const payload = (req.body && typeof req.body === "object" ? req.body : {}) as Record<string, unknown>;
-    const appointmentId = String(payload.appointmentId ?? req.query.appointmentId ?? "");
-    const token = String(payload.token ?? req.query.token ?? "");
+    const finalizeUrlCandidate = String(
+      payload.finalizeUrl ?? payload.finalize_url ?? payload.url ?? req.query.finalizeUrl ?? req.query.finalize_url ?? "",
+    ).trim();
+
+    let parsedFinalizeAppointmentId = "";
+    let parsedFinalizeToken = "";
+    if (finalizeUrlCandidate) {
+      try {
+        const parsed = new URL(finalizeUrlCandidate);
+        parsedFinalizeAppointmentId = (parsed.searchParams.get("appointmentId") ?? "").trim();
+        parsedFinalizeToken = (parsed.searchParams.get("token") ?? "").trim();
+      } catch {
+        // Ignore invalid finalize URL payload and continue with direct fields.
+      }
+    }
+
+    const appointmentId = String(
+      payload.appointmentId ??
+        payload.appointment_id ??
+        parsedFinalizeAppointmentId ??
+        req.query.appointmentId ??
+        req.query.appointment_id ??
+        "",
+    ).trim();
+    const token = String(
+      payload.token ??
+        payload.finalizeToken ??
+        payload.finalize_token ??
+        payload.voiceToken ??
+        payload.voice_token ??
+        parsedFinalizeToken ??
+        req.query.token ??
+        "",
+    ).trim();
     const normalizedOutcome = String(payload.outcome ?? payload.decision ?? "").trim().toLowerCase();
     const outcome =
       normalizedOutcome === "request_additional_information" || normalizedOutcome === "additional_information"
