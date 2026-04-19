@@ -774,6 +774,15 @@ export const handleRequestAppointment = async (req: Request, res: Response) => {
       phoneCallReason = callResult.queued ? undefined : callResult.reason;
       phoneCallProvider = callResult.provider;
       phoneCallFallbackUsed = Boolean(callResult.fallbackUsed);
+      if (!callResult.queued) {
+        console.warn("[appointment] clinic call notification not queued", {
+          appointmentId,
+          clinicId: clinicKey,
+          provider: callResult.provider,
+          reason: callResult.reason,
+          fallbackUsed: Boolean(callResult.fallbackUsed),
+        });
+      }
     } catch (error) {
       console.error("Failed to send clinic phone notification", error);
       phoneCallReason = "call_failed";

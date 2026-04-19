@@ -179,6 +179,13 @@ export const dispatchClinicBookingNotificationCall = async (
     return { queued: true, provider: "elevenlabs" };
   }
 
+  logger.warn("[clinic-call] elevenlabs call not queued", {
+    clinicId,
+    appointmentId,
+    reason: elevenResult.reason ?? "unknown",
+    fallbackEnabled: resolvedSettings.fallbackToTwilio,
+  });
+
   if (!resolvedSettings.fallbackToTwilio) {
     return {
       queued: false,

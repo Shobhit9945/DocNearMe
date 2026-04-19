@@ -1,5 +1,5 @@
 import "dotenv/config";
-import express, { Express } from "express";
+import express, { Express, Request } from "express";
 import cors from "cors";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
@@ -140,6 +140,35 @@ export async function createServer(): Promise<Express> {
 
   const isDev = process.env.NODE_ENV !== "production";
 
+  // Netlify runs Express behind proxies and forwards the client IP via headers.
+  app.set("trust proxy", true);
+
+  const extractClientIp = (req: Request) => {
+    const forwardedFor = req.headers["x-forwarded-for"];
+    const forwardedForHeader = Array.isArray(forwardedFor) ? forwardedFor[0] : forwardedFor;
+    const forwardedIp =
+      typeof forwardedForHeader === "string"
+        ? forwardedForHeader.split(",")[0]?.trim()
+        : "";
+    const netlifyIpHeader = req.headers["x-nf-client-connection-ip"];
+    const netlifyIp =
+      typeof netlifyIpHeader === "string"
+        ? netlifyIpHeader.trim()
+        : Array.isArray(netlifyIpHeader)
+          ? netlifyIpHeader[0]?.trim() ?? ""
+          : "";
+    const requestIp = typeof req.ip === "string" ? req.ip.trim() : "";
+    const socketIp = req.socket?.remoteAddress?.trim() ?? "";
+
+    return forwardedIp || netlifyIp || requestIp || socketIp || "unknown";
+  };
+
+  const sharedRateLimitOptions = {
+    standardHeaders: true,
+    legacyHeaders: false,
+    keyGenerator: (req: Request) => extractClientIp(req),
+  };
+
   // ── Security headers via Helmet ──
   app.use(
     helmet({
@@ -168,40 +197,35 @@ export async function createServer(): Promise<Express> {
   const globalLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
     max: 300,
-    standardHeaders: true,
-    legacyHeaders: false,
+    ...sharedRateLimitOptions,
     message: { error: "Too many requests, please try again later.", detail: "rate_limited" },
   });
 
   const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 20,
-    standardHeaders: true,
-    legacyHeaders: false,
+    ...sharedRateLimitOptions,
     message: { error: "Too many authentication attempts, please try again later.", detail: "rate_limited" },
   });
 
   const otpLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 10,
-    standardHeaders: true,
-    legacyHeaders: false,
+    ...sharedRateLimitOptions,
     message: { error: "Too many OTP requests, please try again later.", detail: "rate_limited" },
   });
 
   const otpVerifyLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 15,
-    standardHeaders: true,
-    legacyHeaders: false,
+    ...sharedRateLimitOptions,
     message: { error: "Too many verification attempts, please try again later.", detail: "rate_limited" },
   });
 
   const adminLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 30,
-    standardHeaders: true,
-    legacyHeaders: false,
+    ...sharedRateLimitOptions,
     message: { error: "Too many admin requests, please try again later.", detail: "rate_limited" },
   });
 
