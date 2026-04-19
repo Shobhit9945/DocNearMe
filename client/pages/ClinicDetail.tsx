@@ -104,7 +104,7 @@ export default function ClinicDetail() {
   }, [reviews]);
 
   useEffect(() => {
-    setHeroImageBroken(false);
+    setHeroImageMode("proxy");
   }, [clinic?.id]);
 
   useEffect(() => {
