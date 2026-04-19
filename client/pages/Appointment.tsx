@@ -395,6 +395,7 @@ export default function Appointment() {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(NAME_KEY);
     localStorage.removeItem(EMAIL_KEY);
+    localStorage.removeItem("docnearme_profile");
     setAuthSession(null);
     setAuthError(t("Session expired. Please sign in again."));
   };

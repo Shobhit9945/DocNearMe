@@ -10,9 +10,12 @@ import {
 } from "../db";
 import { computeDoctorNextAvailability } from "./clinic";
 import { getAuditRequestMeta, listAuditLogs, logAuditEvent } from "../services/audit-log";
+import { getResolvedCallSettings, saveCallSettings } from "../services/call-settings";
 import type {
   AdminAuditLogsResponse,
   AdminAuthCheckResponse,
+  AdminCallSettingsResponse,
+  AdminCallSettingsUpdateRequest,
   AdminCreateClinicRequest,
   AdminCreateClinicResponse,
   AuditAction,
@@ -155,6 +158,11 @@ const adminAuditLogsQuerySchema = z.object({
   clinicId: z.string().trim().min(1).max(120).optional(),
   patientId: z.string().trim().min(1).max(120).optional(),
   appointmentId: z.string().trim().min(1).max(120).optional(),
+});
+
+const adminCallSettingsSchema = z.object({
+  provider: z.enum(["twilio", "elevenlabs"]),
+  fallbackToTwilio: z.boolean(),
 });
 
 
@@ -594,6 +602,52 @@ export const handleAdminAuditLogs: RequestHandler = async (req, res, next) => {
         error: "Invalid audit log query.",
         detail: "validation_error",
       });
+    }
+    return next(error);
+  }
+};
+
+export const handleAdminGetCallSettings: RequestHandler = async (_req, res, next) => {
+  try {
+    const resolved = await getResolvedCallSettings();
+    const response: AdminCallSettingsResponse = {
+      provider: resolved.provider,
+      fallbackToTwilio: resolved.fallbackToTwilio,
+    };
+    return res.json(response);
+  } catch (error) {
+    return next(error);
+  }
+};
+
+export const handleAdminUpdateCallSettings: RequestHandler = async (req, res, next) => {
+  try {
+    const payload = adminCallSettingsSchema.parse(parseRequestBody(req.body)) as AdminCallSettingsUpdateRequest;
+    const updated = await saveCallSettings(payload, req.adminAuth?.username ?? "admin");
+
+    const adminUsername = req.adminAuth?.username ?? "admin";
+    await logAuditEvent({
+      action: "admin_change",
+      actorRole: "admin",
+      actorId: adminUsername,
+      actorLabel: adminUsername,
+      targetType: "system_call_settings",
+      targetId: "clinic_call_provider",
+      details: {
+        provider: updated.provider,
+        fallbackToTwilio: updated.fallbackToTwilio,
+      },
+      ...getAuditRequestMeta(req),
+    });
+
+    const response: AdminCallSettingsResponse = {
+      provider: updated.provider,
+      fallbackToTwilio: updated.fallbackToTwilio,
+    };
+    return res.json(response);
+  } catch (error) {
+    if (error instanceof ZodError) {
+      return res.status(400).json({ error: "Invalid call settings payload." });
     }
     return next(error);
   }

@@ -103,6 +103,34 @@ export default function Profile() {
   };
 
   const loadProfileFromStorage = () => {
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (!token) {
+      setProfileName("");
+      setProfileEmail("");
+      setProfilePhone("");
+      setProfileAddress("");
+      setProfileVisaType("");
+      setEmergencyContact("");
+      setEmergencyContactName("");
+      setEmergencyContactCountryIso("JP");
+      setEmergencyContactNumber("");
+      setPreferredLanguage("Japanese");
+      setNotificationsEnabled(true);
+      setInitialProfileEmail("");
+      setInitialProfilePhone("");
+      setVerifiedEmailValue("");
+      setVerifiedPhoneValue("");
+      setEmailOtpCode("");
+      setPhoneOtpCode("");
+      setEmailProofToken("");
+      setPhoneProofToken("");
+      setEmailOtpSent(false);
+      setPhoneOtpSent(false);
+      setEmailVerificationMessage(null);
+      setPhoneVerificationMessage(null);
+      return;
+    }
+
     const storedProfile = localStorage.getItem("docnearme_profile");
     const storedName = localStorage.getItem("docnearme_user_name") ?? "";
     const storedEmail = localStorage.getItem("docnearme_user_email") ?? "";
@@ -269,8 +297,10 @@ export default function Profile() {
     localStorage.removeItem("docnearme_patient_token");
     localStorage.removeItem("docnearme_user_name");
     localStorage.removeItem("docnearme_user_email");
+    localStorage.removeItem("docnearme_profile");
     setUserName(null);
     setUserEmail(null);
+    loadProfileFromStorage();
     navigate("/");
   };
 
@@ -429,6 +459,7 @@ export default function Profile() {
   const handleProfileSave = async () => {
     const token = localStorage.getItem(TOKEN_KEY);
     let didSave = false;
+    const nextVisaType = (profileVisaType || undefined) as PatientProfile["visaType"];
     const composedEmergencyContact = [
       emergencyContactName.trim(),
       `${emergencyCountry.dialCode} ${emergencyContactNumber}`.trim(),
@@ -442,7 +473,7 @@ export default function Profile() {
       email: profileEmail,
       phone: profilePhone,
       address: profileAddress,
-      visaType: profileVisaType || undefined,
+      visaType: nextVisaType,
       emergencyContact: composedEmergencyContact,
       preferredLanguage,
       notificationsEnabled,
@@ -495,7 +526,7 @@ export default function Profile() {
         email: profileEmail,
         phone: profilePhone,
         address: profileAddress,
-        visaType: profileVisaType || undefined,
+        visaType: nextVisaType,
         emergencyContact: composedEmergencyContact,
         preferredLanguage,
         notificationsEnabled,

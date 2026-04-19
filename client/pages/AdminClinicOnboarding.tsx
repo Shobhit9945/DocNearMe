@@ -3,6 +3,7 @@ import type { AdminCreateClinicRequest, AdminCreateClinicResponse, ClinicDoctor,
 import { useAddressSearch } from "@/hooks/useAddressSearch";
 import { supportedLanguages } from "@/lib/translations";
 import { AdminAuditLogsPanel } from "@/components/admin/AdminAuditLogsPanel";
+import { AdminCallSettingsPanel } from "@/components/admin/AdminCallSettingsPanel";
 import { AdminClinicList } from "@/components/admin/AdminClinicList";
 import { AdminLabelsPanel } from "@/components/admin/AdminLabelsPanel";
 import {
@@ -63,7 +64,7 @@ export default function AdminClinicOnboarding() {
   const [isChecking, setIsChecking] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [submitSuccess, setSubmitSuccess] = useState<AdminCreateClinicResponse | null>(null);
-  const [activeTab, setActiveTab] = useState<"clinics" | "onboard" | "logs" | "labels">("clinics");
+  const [activeTab, setActiveTab] = useState<"clinics" | "onboard" | "logs" | "labels" | "voice">("clinics");
 
   const [clinic, setClinic] = useState<ClinicProfile>({
     id: "",
@@ -619,6 +620,17 @@ export default function AdminClinicOnboarding() {
             >
               Audit Logs
             </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("voice")}
+              className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition ${
+                activeTab === "voice"
+                  ? "bg-white text-slate-900 shadow-sm"
+                  : "text-slate-500 hover:text-slate-700"
+              }`}
+            >
+              Voice Calls
+            </button>
           </nav>
         </header>
 
@@ -632,6 +644,10 @@ export default function AdminClinicOnboarding() {
 
         {activeTab === "logs" && (
           <AdminAuditLogsPanel username={credentials.username} password={credentials.password} />
+        )}
+
+        {activeTab === "voice" && (
+          <AdminCallSettingsPanel username={credentials.username} password={credentials.password} />
         )}
 
         {activeTab === "onboard" && (

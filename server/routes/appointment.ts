@@ -21,7 +21,7 @@ import {
 } from "../types";
 import { sendEmail } from "../services/mailer";
 import { queueClinicBookingNotificationEmail } from "../services/clinic-booking-notifications";
-import { sendClinicBookingNotificationCall } from "../services/twilio-voice";
+import { dispatchClinicBookingNotificationCall } from "../services/clinic-call-dispatcher";
 import { getAuditRequestMeta, logAuditEvent } from "../services/audit-log";
 import { findConfirmedOverlap } from "./appointment-utils";
 import { getDateKey, isClinicClosedOnDate, isSlotInFutureJst, normalizeClinicHours } from "../lib/scheduling";
@@ -766,10 +766,14 @@ export const handleRequestAppointment = async (req: Request, res: Response) => {
     queueClinicBookingNotificationEmail(clinicKey, appointmentId);
     let phoneCallQueued = false;
     let phoneCallReason: string | undefined;
+    let phoneCallProvider: "twilio" | "elevenlabs" = "twilio";
+    let phoneCallFallbackUsed = false;
     try {
-      const callResult = await sendClinicBookingNotificationCall(clinicKey, appointmentId);
+      const callResult = await dispatchClinicBookingNotificationCall(clinicKey, appointmentId);
       phoneCallQueued = callResult.queued;
       phoneCallReason = callResult.queued ? undefined : callResult.reason;
+      phoneCallProvider = callResult.provider;
+      phoneCallFallbackUsed = Boolean(callResult.fallbackUsed);
     } catch (error) {
       console.error("Failed to send clinic phone notification", error);
       phoneCallReason = "call_failed";
@@ -803,6 +807,8 @@ export const handleRequestAppointment = async (req: Request, res: Response) => {
       message: "Request received. Awaiting clinic confirmation.",
       phoneCallQueued,
       phoneCallReason,
+      phoneCallProvider,
+      phoneCallFallbackUsed,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

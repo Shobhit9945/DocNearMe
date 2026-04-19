@@ -124,6 +124,8 @@ export interface AppointmentCreateResponse {
   message: string;
   phoneCallQueued?: boolean;
   phoneCallReason?: string;
+  phoneCallProvider?: "twilio" | "elevenlabs";
+  phoneCallFallbackUsed?: boolean;
 }
 
 export interface AppointmentConfirmRequest {
@@ -738,6 +740,16 @@ export interface AdminResetPasswordResponse {
   ok: boolean;
   userId: string;
   newPassword: string;
+}
+
+export interface AdminCallSettingsResponse {
+  provider: "twilio" | "elevenlabs";
+  fallbackToTwilio: boolean;
+}
+
+export interface AdminCallSettingsUpdateRequest {
+  provider: "twilio" | "elevenlabs";
+  fallbackToTwilio: boolean;
 }
 
 export type AuditActorRole = "patient" | "clinic" | "admin" | "system";

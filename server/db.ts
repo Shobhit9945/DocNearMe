@@ -9,6 +9,7 @@ import {
   ClinicReview,
   ClinicAccount,
   ClinicDoctorRecord,
+  CallSettings,
   ClinicInfo,
   CustomLabel,
   EmailOtp,
@@ -121,7 +122,7 @@ class InMemoryCollection<T extends Record<string, unknown>> {
     return { insertedId: _id };
   }
 
-  async updateOne(filter: Record<string, unknown>, update: Record<string, unknown>) {
+  async updateOne(filter: Record<string, unknown>, update: Record<string, unknown>, _options?: Record<string, unknown>) {
     const item = this.items.find((entry) => matches(entry, filter));
     if (!item) {
       return { matchedCount: 0, modifiedCount: 0 };
@@ -189,6 +190,7 @@ export type InMemoryClinicDb = {
     clinicDoctors: InMemoryCollection<ClinicDoctorRecord>;
     clinicIntakeForms: InMemoryCollection<ClinicIntakeForm>;
     customLabels: InMemoryCollection<CustomLabel>;
+    callSettings: InMemoryCollection<CallSettings>;
   };
 };
 
@@ -217,6 +219,7 @@ const inMemoryClinicDb: InMemoryClinicDb = {
     clinicDoctors: new InMemoryCollection<ClinicDoctorRecord>([]),
     clinicIntakeForms: new InMemoryCollection<ClinicIntakeForm>([]),
     customLabels: new InMemoryCollection<CustomLabel>([]),
+    callSettings: new InMemoryCollection<CallSettings>([]),
   },
 };
 
@@ -242,7 +245,14 @@ const getPatientCollection = <T>(
 
 const getClinicCollection = <T>(
   db: Db | InMemoryClinicDb,
-  name: "clinicReviews" | "clinicAccounts" | "clinicInfo" | "clinicDoctors" | "clinicIntakeForms" | "customLabels",
+  name:
+    | "clinicReviews"
+    | "clinicAccounts"
+    | "clinicInfo"
+    | "clinicDoctors"
+    | "clinicIntakeForms"
+    | "customLabels"
+    | "callSettings",
 ) => (isMemoryClinicDb(db) ? db.collections[name] : db.collection<T>(name));
 
 // Short, serverless-friendly timeouts. Keep pools tiny.
@@ -306,6 +316,7 @@ async function prepareClinicOnce(db: Db | InMemoryClinicDb) {
   const clinicDoctors = getClinicCollection<ClinicDoctorRecord>(db, "clinicDoctors");
   const clinicIntakeForms = getClinicCollection<ClinicIntakeForm>(db, "clinicIntakeForms");
   const customLabels = getClinicCollection<CustomLabel>(db, "customLabels");
+  const callSettings = getClinicCollection<CallSettings>(db, "callSettings");
 
   await Promise.all([
     clinicReviews.createIndex({ clinicId: 1, createdAt: -1 }),
@@ -316,6 +327,7 @@ async function prepareClinicOnce(db: Db | InMemoryClinicDb) {
     clinicDoctors.createIndex({ clinicId: 1, doctorId: 1 }, { unique: true }),
     clinicIntakeForms.createIndex({ clinicId: 1 }, { unique: true }),
     customLabels.createIndex({ labelId: 1 }, { unique: true }),
+    callSettings.createIndex({ key: 1 }, { unique: true }),
   ]);
 
   await seedClinicData(db);
@@ -530,6 +542,13 @@ export async function getCustomLabelsCollection(): Promise<
   return getClinicCollection<CustomLabel>(db, "customLabels") as
     | Collection<CustomLabel>
     | InMemoryCollection<CustomLabel>;
+}
+
+export async function getCallSettingsCollection(): Promise<Collection<CallSettings> | InMemoryCollection<CallSettings>> {
+  const db = await connectToClinicDatabase();
+  return getClinicCollection<CallSettings>(db, "callSettings") as
+    | Collection<CallSettings>
+    | InMemoryCollection<CallSettings>;
 }
 
 export async function connectToClinicDatabase(): Promise<Db | InMemoryClinicDb> {

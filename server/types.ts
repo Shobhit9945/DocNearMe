@@ -348,6 +348,15 @@ export interface CustomLabel {
   updatedAt?: Date;
 }
 
+export interface CallSettings {
+  _id?: unknown;
+  key: "clinic_call";
+  provider: "twilio" | "elevenlabs";
+  fallbackToTwilio: boolean;
+  updatedAt: Date;
+  updatedBy?: string;
+}
+
 export interface ClinicDoctorRecord {
   _id?: unknown;
   clinicId: string;

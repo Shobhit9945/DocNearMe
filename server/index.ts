@@ -89,7 +89,7 @@ import {
 } from "./routes/clinic";
 import { requireClinicAuth } from "./middleware/clinic-auth";
 import { requireAdminAuth } from "./middleware/admin-auth";
-import { handleAdminAuthCheck, handleAdminAuditLogs, handleAdminClinicAccounts, handleAdminClinicList, handleAdminCreateClinic, handleAdminCreateCustomLabel, handleAdminDeleteClinic, handleAdminDeleteCustomLabel, handleAdminListCustomLabels, handleAdminResetClinicPassword, handleAdminUpdateClinic, handleAdminUpdateCustomLabel } from "./routes/admin";
+import { handleAdminAuthCheck, handleAdminAuditLogs, handleAdminClinicAccounts, handleAdminClinicList, handleAdminCreateClinic, handleAdminCreateCustomLabel, handleAdminDeleteClinic, handleAdminDeleteCustomLabel, handleAdminGetCallSettings, handleAdminListCustomLabels, handleAdminResetClinicPassword, handleAdminUpdateCallSettings, handleAdminUpdateClinic, handleAdminUpdateCustomLabel } from "./routes/admin";
 import {
   handleGetProfile,
   handleRequestProfileEmailChangeOtp,
@@ -345,6 +345,8 @@ export async function createServer(): Promise<Express> {
   app.get("/api/admin/accounts", adminLimiter, requireAdminAuth, handleAdminClinicAccounts);
   app.post("/api/admin/clinics/:id/reset-password", adminLimiter, requireAdminAuth, handleAdminResetClinicPassword);
   app.get("/api/admin/logs", adminLimiter, requireAdminAuth, handleAdminAuditLogs);
+  app.get("/api/admin/call-settings", adminLimiter, requireAdminAuth, handleAdminGetCallSettings);
+  app.patch("/api/admin/call-settings", adminLimiter, requireAdminAuth, handleAdminUpdateCallSettings);
   app.get("/api/admin/labels", adminLimiter, requireAdminAuth, handleAdminListCustomLabels);
   app.post("/api/admin/labels", adminLimiter, requireAdminAuth, handleAdminCreateCustomLabel);
   app.patch("/api/admin/labels/:labelId", adminLimiter, requireAdminAuth, handleAdminUpdateCustomLabel);
