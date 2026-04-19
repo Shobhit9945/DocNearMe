@@ -44,7 +44,11 @@ const getElevenLabsApiKey = () => process.env.ELEVENLABS_API_KEY ?? "";
 
 const getElevenLabsAgentId = () => process.env.ELEVENLABS_AGENT_ID ?? "";
 
-const getElevenLabsAgentPhoneNumberId = () => process.env.ELEVENLABS_AGENT_PHONE_NUMBER_ID ?? "";
+const getElevenLabsAgentPhoneNumberId = () =>
+  process.env.ELEVENLABS_AGENT_PHONE_NUMBER_ID ??
+  process.env.ELEVENLABS_PHONE_NUMBER_ID ??
+  process.env.ELEVENLABS_TWILIO_PHONE_NUMBER_ID ??
+  "PNa4444a07b55bb8f46d305bf8b334a67a";
 
 const getElevenLabsOutboundUrl =
   () => process.env.ELEVENLABS_OUTBOUND_CALL_URL ?? "https://api.elevenlabs.io/v1/convai/twilio/outbound-call";
