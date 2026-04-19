@@ -468,10 +468,14 @@ export const handleVoiceAppointmentOutcome: RequestHandler = async (req: Request
         ? "info_requested"
         : normalizedOutcome;
 
-    const providedWebhookSecret = String(
+    const normalizeSecret = (value: string) => value.trim().replace(/^['\"]+|['\"]+$/g, "");
+
+    const providedWebhookSecretRaw = String(
       req.get("x-docnearme-webhook-secret") ?? req.get("x-clinic-webhook-secret") ?? "",
-    ).trim();
-    const expectedWebhookSecret = String(process.env.ELEVENLABS_OUTCOME_WEBHOOK_SECRET ?? "").trim();
+    );
+    const expectedWebhookSecretRaw = String(process.env.ELEVENLABS_OUTCOME_WEBHOOK_SECRET ?? "");
+    const providedWebhookSecret = normalizeSecret(providedWebhookSecretRaw);
+    const expectedWebhookSecret = normalizeSecret(expectedWebhookSecretRaw);
     const tokenValid = Boolean(appointmentId) && verifyVoiceToken(appointmentId, token);
     const webhookSecretValid =
       Boolean(appointmentId) &&
@@ -487,6 +491,9 @@ export const handleVoiceAppointmentOutcome: RequestHandler = async (req: Request
         outcome,
         hasWebhookSecret: Boolean(providedWebhookSecret),
         webhookSecretMatched: webhookSecretValid,
+        hasExpectedWebhookSecret: Boolean(expectedWebhookSecret),
+        providedWebhookSecretLength: providedWebhookSecret.length,
+        expectedWebhookSecretLength: expectedWebhookSecret.length,
       });
       return res.status(401).json({ error: "Invalid voice token." });
     }
