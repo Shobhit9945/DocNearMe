@@ -6,6 +6,7 @@ import type {
   ClinicProfile,
   CustomLabel,
 } from "@shared/api";
+import { getOptimizedClinicImageSrc } from "@/lib/clinic-image";
 
 interface AdminClinicListProps {
   username: string;
@@ -304,7 +305,7 @@ export function AdminClinicList({ username, password }: AdminClinicListProps) {
                 <div className="flex items-center gap-3">
                   {clinic.image && (
                     <img
-                      src={clinic.image}
+                      src={getOptimizedClinicImageSrc(clinic.image)}
                       alt=""
                       className="h-10 w-10 rounded-lg object-cover"
                     />

@@ -29,6 +29,7 @@
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
     "mongodb": "^6.21.0",
+    "sharp": "^0.34.5",
     "zod": "^3.25.76"
   },
   "devDependencies": {

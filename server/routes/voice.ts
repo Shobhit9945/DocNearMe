@@ -1,12 +1,13 @@
 import { Request, Response, RequestHandler } from "express";
-import { createHash } from "crypto";
+import { createHash, createHmac, timingSafeEqual } from "crypto";
 import { ObjectId } from "mongodb";
-import { getAppointmentsCollection, getPatientsCollection } from "../db";
-import { getDateKey } from "../lib/scheduling";
+import { getAppointmentsCollection, getClinicInfoCollection, getPatientsCollection } from "../db";
+import { getDateKey, isClinicClosedOnDate, normalizeClinicHours } from "../lib/scheduling";
 import type { AppointmentStatus, AuditAction } from "@shared/api";
 import { buildVoicePrompt, verifyVoiceToken } from "../services/twilio-voice";
 import { logAuditEvent } from "../services/audit-log";
 import { sendEmail } from "../services/mailer";
+import { findConfirmedOverlap } from "./appointment-utils";
 
 const normalizeBaseUrl = (value: string) => {
   const trimmed = value.trim().replace(/\/$/, "");
@@ -138,6 +139,63 @@ const normalizeWebhookPayload = (input: unknown): Record<string, unknown> => {
   return {};
 };
 
+const WEBHOOK_SIGNATURE_WINDOW_MS = 5 * 60 * 1000;
+const processedWebhookSignatures = new Map<string, number>();
+
+const cleanupProcessedWebhookSignatures = (now = Date.now()) => {
+  for (const [key, expiresAt] of processedWebhookSignatures.entries()) {
+    if (expiresAt <= now) {
+      processedWebhookSignatures.delete(key);
+    }
+  }
+};
+
+const getWebhookSigningSecret = () =>
+  String(
+    process.env.ELEVENLABS_OUTCOME_WEBHOOK_SIGNING_SECRET ??
+      process.env.ELEVENLABS_OUTCOME_WEBHOOK_SECRET ??
+      process.env.VOICE_WEBHOOK_SECRET ??
+      "",
+  ).trim();
+
+const normalizeSignature = (value: string) => value.trim().replace(/^sha256=/i, "").toLowerCase();
+
+const buildWebhookSignature = (timestamp: string, rawBody: string, secret: string) =>
+  createHmac("sha256", secret).update(`${timestamp}.${rawBody}`).digest("hex");
+
+const verifyWebhookSignature = (timestamp: string, rawBody: string, signature: string) => {
+  const signingSecret = getWebhookSigningSecret();
+  if (!signingSecret || !timestamp || !rawBody || !signature) return { ok: false, reason: "missing_inputs" as const };
+
+  const timestampValue = Number(timestamp);
+  if (Number.isNaN(timestampValue)) return { ok: false, reason: "invalid_timestamp" as const };
+
+  const ageMs = Math.abs(Date.now() - timestampValue);
+  if (ageMs > WEBHOOK_SIGNATURE_WINDOW_MS) {
+    return { ok: false, reason: "timestamp_out_of_window" as const };
+  }
+
+  const expected = buildWebhookSignature(timestamp, rawBody, signingSecret);
+  const provided = normalizeSignature(signature);
+  const expectedBuffer = Buffer.from(expected);
+  const providedBuffer = Buffer.from(provided);
+  if (expectedBuffer.length !== providedBuffer.length) {
+    return { ok: false, reason: "signature_mismatch" as const };
+  }
+
+  const matches = timingSafeEqual(expectedBuffer, providedBuffer);
+  if (!matches) return { ok: false, reason: "signature_mismatch" as const };
+
+  const replayKey = `${timestamp}:${provided}`;
+  cleanupProcessedWebhookSignatures();
+  if (processedWebhookSignatures.has(replayKey)) {
+    return { ok: false, reason: "replay_detected" as const };
+  }
+
+  processedWebhookSignatures.set(replayKey, Date.now() + WEBHOOK_SIGNATURE_WINDOW_MS);
+  return { ok: true, reason: "ok" as const };
+};
+
 const updatePatientSummary = async (appointmentId: string, patientId: string | undefined, updates: any) => {
   if (!patientId) return;
   const patients = await getPatientsCollection();
@@ -165,6 +223,55 @@ const resolveConfirmFields = (appointment: any) => {
   const dateKey = getDateKey(new Date(confirmedStart));
   const slot = appointment.slot ?? "";
   return { confirmedStart, confirmedEnd, dateKey, slot };
+};
+
+const TERMINAL_APPOINTMENT_STATUSES = new Set<AppointmentStatus>([
+  "CONFIRMED",
+  "DECLINED",
+  "CANCELLED_BY_PATIENT",
+  "CANCELLED_BY_CLINIC",
+  "NO_SHOW",
+  "COMPLETED",
+]);
+
+const VOICE_OUTCOME_ALLOWED_SOURCE_STATUSES = new Set<AppointmentStatus>([
+  "PENDING_CLINIC",
+  "INFO_REQUESTED",
+  "RESCHEDULE_REQUESTED",
+]);
+
+const getTargetStatusForOutcome = (
+  outcome: "confirm" | "decline" | "info_requested" | "reschedule",
+): AppointmentStatus => {
+  if (outcome === "confirm") return "CONFIRMED";
+  if (outcome === "decline") return "DECLINED";
+  if (outcome === "info_requested") return "INFO_REQUESTED";
+  return "RESCHEDULE_REQUESTED";
+};
+
+const parseConfirmedRange = (appointment: any, payload: Record<string, unknown>) => {
+  const confirmedStartRaw =
+    typeof payload.confirmedStart === "string" && payload.confirmedStart.trim()
+      ? payload.confirmedStart.trim()
+      : appointment.preferredStart ?? appointment.date;
+  const confirmedEndRaw =
+    typeof payload.confirmedEnd === "string" && payload.confirmedEnd.trim()
+      ? payload.confirmedEnd.trim()
+      : appointment.preferredEnd ??
+        new Date(new Date(confirmedStartRaw).getTime() + 30 * 60 * 1000).toISOString();
+
+  const confirmedStart = new Date(confirmedStartRaw);
+  const confirmedEnd = new Date(confirmedEndRaw);
+  if (Number.isNaN(confirmedStart.getTime()) || Number.isNaN(confirmedEnd.getTime())) {
+    return null;
+  }
+
+  return {
+    confirmedStart,
+    confirmedEnd,
+    confirmedStartRaw,
+    confirmedEndRaw,
+  };
 };
 
 const applyDecision = async (appointmentId: string, appointment: any, digit: string) => {
@@ -264,6 +371,7 @@ const applyDecision = async (appointmentId: string, appointment: any, digit: str
 const updateAppointmentOutcome = async (
   appointmentId: string,
   appointment: any,
+  clinic: any,
   outcome: "confirm" | "decline" | "info_requested" | "reschedule",
   payload: Record<string, unknown>,
 ) => {
@@ -274,17 +382,42 @@ const updateAppointmentOutcome = async (
   let auditAction: AuditAction | null = null;
 
   if (outcome === "confirm") {
+    const confirmedRange = parseConfirmedRange(appointment, payload);
+    if (!confirmedRange) {
+      return { ok: false, message: "Invalid confirmed appointment time." } as const;
+    }
+
+    const normalizedHours = normalizeClinicHours(clinic?.hours);
+    const closureCheck = isClinicClosedOnDate(
+      confirmedRange.confirmedStart,
+      normalizedHours,
+      clinic?.bookingClosures,
+    );
+    if (closureCheck.closed) {
+      return {
+        ok: false,
+        message: closureCheck.reason || "Clinic is closed on the confirmed date.",
+        statusCode: 409,
+      } as const;
+    }
+
+    const conflict = await findConfirmedOverlap(
+      appointments,
+      appointment.clinicId,
+      confirmedRange.confirmedStart,
+      confirmedRange.confirmedEnd,
+      appointment._id,
+    );
+    if (conflict) {
+      return {
+        ok: false,
+        message: "Requested time is already booked.",
+        statusCode: 409,
+      } as const;
+    }
+
     auditAction = "appointment_confirmed";
-    const confirmedStart =
-      typeof payload.confirmedStart === "string" && payload.confirmedStart.trim()
-        ? payload.confirmedStart.trim()
-        : appointment.preferredStart ?? appointment.date;
-    const confirmedEnd =
-      typeof payload.confirmedEnd === "string" && payload.confirmedEnd.trim()
-        ? payload.confirmedEnd.trim()
-        : appointment.preferredEnd ??
-          new Date(new Date(confirmedStart).getTime() + 30 * 60 * 1000).toISOString();
-    const confirmedDate = new Date(confirmedStart);
+    const confirmedDate = confirmedRange.confirmedStart;
     const dateKey = getDateKey(confirmedDate);
     const slot = appointment.slot ?? confirmedDate.toLocaleTimeString("en-US", {
       hour: "2-digit",
@@ -295,9 +428,9 @@ const updateAppointmentOutcome = async (
     update = {
       ...update,
       status: "CONFIRMED",
-      confirmedStart,
-      confirmedEnd,
-      date: confirmedStart,
+      confirmedStart: confirmedRange.confirmedStartRaw,
+      confirmedEnd: confirmedRange.confirmedEndRaw,
+      date: confirmedRange.confirmedStartRaw,
       dateKey,
       slot,
       clinicMessage: null,
@@ -308,9 +441,9 @@ const updateAppointmentOutcome = async (
     patientUpdate = {
       ...patientUpdate,
       status: "CONFIRMED" as AppointmentStatus,
-      confirmedStart,
-      confirmedEnd,
-      date: confirmedStart,
+      confirmedStart: confirmedRange.confirmedStartRaw,
+      confirmedEnd: confirmedRange.confirmedEndRaw,
+      date: confirmedRange.confirmedStartRaw,
       slot,
     };
   } else if (outcome === "decline") {
@@ -469,6 +602,7 @@ const updateAppointmentOutcome = async (
 export const handleVoiceAppointmentOutcome: RequestHandler = async (req: Request, res: Response) => {
   try {
     const payload = normalizeWebhookPayload(req.body);
+    const rawBody = String((req as any)._rawBody ?? "");
     const finalizeUrlCandidate = String(
       payload.finalizeUrl ?? payload.finalize_url ?? payload.url ?? req.query.finalizeUrl ?? req.query.finalize_url ?? "",
     ).trim();
@@ -514,6 +648,12 @@ export const handleVoiceAppointmentOutcome: RequestHandler = async (req: Request
     const providedWebhookSecretRaw = String(
       req.get("x-docnearme-webhook-secret") ?? req.get("x-clinic-webhook-secret") ?? "",
     );
+    const providedWebhookSignature = String(
+      req.get("x-docnearme-webhook-signature") ?? req.get("x-clinic-webhook-signature") ?? "",
+    );
+    const providedWebhookTimestamp = String(
+      req.get("x-docnearme-webhook-timestamp") ?? req.get("x-clinic-webhook-timestamp") ?? "",
+    );
     const expectedWebhookSecretRaw = String(
       process.env.ELEVENLABS_OUTCOME_WEBHOOK_SECRET ??
         process.env.DOCNEARME_WEBHOOK_SECRET ??
@@ -530,8 +670,22 @@ export const handleVoiceAppointmentOutcome: RequestHandler = async (req: Request
       Boolean(expectedWebhookSecret) &&
       Boolean(providedWebhookSecret) &&
       providedWebhookSecret.toLowerCase() === expectedWebhookSecret.toLowerCase();
+    const webhookSignatureResult = verifyWebhookSignature(
+      providedWebhookTimestamp,
+      rawBody || JSON.stringify(payload),
+      providedWebhookSignature,
+    );
 
-    if (!appointmentId || (!tokenValid && !webhookSecretValid)) {
+    if (webhookSignatureResult.reason === "replay_detected") {
+      console.warn("[clinic-call] replayed voice webhook signature", {
+        appointmentId,
+        outcome,
+        timestamp: providedWebhookTimestamp,
+      });
+      return res.status(409).json({ error: "Replay detected." });
+    }
+
+    if (!appointmentId || (!tokenValid && !webhookSecretValid && !webhookSignatureResult.ok)) {
       console.warn("[clinic-call] invalid voice outcome token", {
         appointmentId,
         hasToken: Boolean(token),
@@ -545,12 +699,21 @@ export const handleVoiceAppointmentOutcome: RequestHandler = async (req: Request
         providedWebhookSecretFingerprint: secretFingerprint(providedWebhookSecret),
         expectedWebhookSecretFingerprint: secretFingerprint(expectedWebhookSecret),
         payloadKeys: Object.keys(payload),
+        hasWebhookSignature: Boolean(providedWebhookSignature),
+        webhookSignatureResult: webhookSignatureResult.reason,
       });
       return res.status(401).json({ error: "Invalid voice token." });
     }
 
     if (!tokenValid && webhookSecretValid) {
       console.info("[clinic-call] voice outcome accepted via webhook secret", {
+        appointmentId,
+        outcome,
+      });
+    }
+
+    if (!tokenValid && !webhookSecretValid && webhookSignatureResult.ok) {
+      console.info("[clinic-call] voice outcome accepted via webhook signature", {
         appointmentId,
         outcome,
       });
@@ -567,7 +730,44 @@ export const handleVoiceAppointmentOutcome: RequestHandler = async (req: Request
       return res.status(404).json({ error: "Appointment not found." });
     }
 
-    const result = await updateAppointmentOutcome(appointmentId, appointment, outcome as any, payload);
+    const currentStatus = appointment.status as AppointmentStatus;
+    const targetStatus = getTargetStatusForOutcome(outcome as any);
+
+    // Idempotency: if provider retries with the same final result, acknowledge without rewriting state.
+    if (currentStatus === targetStatus) {
+      console.info("[clinic-call] voice outcome idempotent replay", {
+        appointmentId,
+        outcome,
+        status: currentStatus,
+        clinicId: appointment.clinicId,
+      });
+      return res.json({ success: true, status: currentStatus, idempotent: true });
+    }
+
+    if (TERMINAL_APPOINTMENT_STATUSES.has(currentStatus)) {
+      return res.status(409).json({
+        error: "Appointment is already in a terminal state.",
+        status: currentStatus,
+      });
+    }
+
+    if (!VOICE_OUTCOME_ALLOWED_SOURCE_STATUSES.has(currentStatus)) {
+      return res.status(409).json({
+        error: "Appointment status does not allow voice outcome updates.",
+        status: currentStatus,
+      });
+    }
+
+    const clinics = await getClinicInfoCollection();
+    const clinic = await clinics.findOne({ clinicId: appointment.clinicId });
+    if (!clinic) {
+      return res.status(404).json({ error: "Clinic not found." });
+    }
+
+    const result = await updateAppointmentOutcome(appointmentId, appointment, clinic, outcome as any, payload);
+    if (!result.ok) {
+      return res.status(result.statusCode ?? 400).json({ error: result.message });
+    }
     console.info("[clinic-call] voice outcome recorded", {
       appointmentId,
       outcome,

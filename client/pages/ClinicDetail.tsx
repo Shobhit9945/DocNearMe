@@ -14,6 +14,7 @@ import { TranslatedText } from "@/components/TranslatedText";
 import { CalendarClock, Info, MapPin, Phone, Mail, Star, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { getOptimizedClinicImageSrc } from "@/lib/clinic-image";
 import type {
   ClinicReviewListResponse,
   CustomLabel,
@@ -21,7 +22,7 @@ import type {
 
 const WOUND_CARE_TOOLTIP =
   "Minor injury treatment (cuts, burns, sprains, wound dressing) during clinic hours. Not ER care.";
-const CLINIC_IMAGE_FALLBACK = "/applogo.png";
+const CLINIC_IMAGE_FALLBACK = "/applogo.avif";
 
 export default function ClinicDetail() {
   const { clinicId } = useParams<{ clinicId: string }>();
@@ -38,6 +39,9 @@ export default function ClinicDetail() {
     () => clinicDoctorsData?.doctors ?? [],
     [clinicDoctorsData?.doctors],
   );
+  const clinicImageSrc = heroImageBroken
+    ? CLINIC_IMAGE_FALLBACK
+    : getOptimizedClinicImageSrc(clinic?.image, CLINIC_IMAGE_FALLBACK);
 
   const doctorsBySpecialization = useMemo(() => {
     return clinicDoctors.reduce<Record<string, typeof clinicDoctors>>((acc, doctor) => {
@@ -135,9 +139,6 @@ export default function ClinicDetail() {
         clinic.location,
       )}&query_place_id=${encodeURIComponent(clinic.googlePlaceId)}`
     : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(clinic.location)}`;
-  const clinicImageSrc = heroImageBroken
-    ? CLINIC_IMAGE_FALLBACK
-    : clinic.image?.trim() || CLINIC_IMAGE_FALLBACK;
 
   return (
     <PageScaffold contentClassName="pb-28 lg:pb-12">

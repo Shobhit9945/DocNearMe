@@ -20,6 +20,7 @@ import { formatAvailabilityForLanguage } from "@/lib/time-format";
 import { useClinics } from "@/lib/clinic-data";
 import { formatShortAddress } from "@/lib/address";
 import { getSpecializationLabel, matchSpecialization } from "@/lib/specializations";
+import { getOptimizedClinicImageSrc } from "@/lib/clinic-image";
 import { TranslatedText } from "@/components/TranslatedText";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { Badge } from "@/components/ui/badge";
@@ -28,7 +29,7 @@ import type { CustomLabel } from "@shared/api";
 
 const WOUND_CARE_TOOLTIP =
   "Minor injury treatment (cuts, burns, sprains, wound dressing) during clinic hours. Not ER care.";
-const CLINIC_IMAGE_FALLBACK = "/applogo.png";
+const CLINIC_IMAGE_FALLBACK = "/applogo.avif";
 
 export default function Clinics() {
   const navigate = useNavigate();
@@ -200,11 +201,10 @@ export default function Clinics() {
   };
 
   const getClinicImageSrc = (clinicId: string, image?: string) => {
-    const normalized = typeof image === "string" ? image.trim() : "";
-    if (!normalized || brokenClinicImages[clinicId]) {
+    if (brokenClinicImages[clinicId]) {
       return CLINIC_IMAGE_FALLBACK;
     }
-    return normalized;
+    return getOptimizedClinicImageSrc(image, CLINIC_IMAGE_FALLBACK);
   };
 
   const markClinicImageBroken = (clinicId: string) => {

@@ -45,6 +45,10 @@ export interface AppointmentResponseItem {
   patientPhone?: string;
   patientEmail?: string;
   patientVisaType?: VisaType;
+  phoneCallQueued?: boolean;
+  phoneCallReason?: string;
+  phoneCallProvider?: "twilio" | "elevenlabs";
+  phoneCallFallbackUsed?: boolean;
   createdAt: string;
   updatedAt?: string;
 }

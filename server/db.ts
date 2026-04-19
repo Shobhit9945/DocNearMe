@@ -10,6 +10,7 @@ import {
   ClinicAccount,
   ClinicDoctorRecord,
   CallSettings,
+  OptimizedImageRecord,
   ClinicInfo,
   CustomLabel,
   EmailOtp,
@@ -191,6 +192,7 @@ export type InMemoryClinicDb = {
     clinicIntakeForms: InMemoryCollection<ClinicIntakeForm>;
     customLabels: InMemoryCollection<CustomLabel>;
     callSettings: InMemoryCollection<CallSettings>;
+    optimizedImages: InMemoryCollection<OptimizedImageRecord>;
   };
 };
 
@@ -220,6 +222,7 @@ const inMemoryClinicDb: InMemoryClinicDb = {
     clinicIntakeForms: new InMemoryCollection<ClinicIntakeForm>([]),
     customLabels: new InMemoryCollection<CustomLabel>([]),
     callSettings: new InMemoryCollection<CallSettings>([]),
+    optimizedImages: new InMemoryCollection<OptimizedImageRecord>([]),
   },
 };
 
@@ -252,7 +255,8 @@ const getClinicCollection = <T>(
     | "clinicDoctors"
     | "clinicIntakeForms"
     | "customLabels"
-    | "callSettings",
+    | "callSettings"
+    | "optimizedImages",
 ) => (isMemoryClinicDb(db) ? db.collections[name] : db.collection<T>(name));
 
 // Short, serverless-friendly timeouts. Keep pools tiny.
@@ -317,6 +321,7 @@ async function prepareClinicOnce(db: Db | InMemoryClinicDb) {
   const clinicIntakeForms = getClinicCollection<ClinicIntakeForm>(db, "clinicIntakeForms");
   const customLabels = getClinicCollection<CustomLabel>(db, "customLabels");
   const callSettings = getClinicCollection<CallSettings>(db, "callSettings");
+  const optimizedImages = getClinicCollection<OptimizedImageRecord>(db, "optimizedImages");
 
   await Promise.all([
     clinicReviews.createIndex({ clinicId: 1, createdAt: -1 }),
@@ -328,6 +333,8 @@ async function prepareClinicOnce(db: Db | InMemoryClinicDb) {
     clinicIntakeForms.createIndex({ clinicId: 1 }, { unique: true }),
     customLabels.createIndex({ labelId: 1 }, { unique: true }),
     callSettings.createIndex({ key: 1 }, { unique: true }),
+    optimizedImages.createIndex({ sourceUrlHash: 1 }, { unique: true }),
+    optimizedImages.createIndex({ updatedAt: -1 }),
   ]);
 
   await seedClinicData(db);
@@ -549,6 +556,13 @@ export async function getCallSettingsCollection(): Promise<Collection<CallSettin
   return getClinicCollection<CallSettings>(db, "callSettings") as
     | Collection<CallSettings>
     | InMemoryCollection<CallSettings>;
+}
+
+export async function getOptimizedImagesCollection(): Promise<Collection<OptimizedImageRecord> | InMemoryCollection<OptimizedImageRecord>> {
+  const db = await connectToClinicDatabase();
+  return getClinicCollection<OptimizedImageRecord>(db, "optimizedImages") as
+    | Collection<OptimizedImageRecord>
+    | InMemoryCollection<OptimizedImageRecord>;
 }
 
 export async function connectToClinicDatabase(): Promise<Db | InMemoryClinicDb> {

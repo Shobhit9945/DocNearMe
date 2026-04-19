@@ -337,7 +337,7 @@ const Index: React.FC = () => {
         setShowHowVisits(true);
       },
       image:
-        "/applogo.png",
+        "/applogo.avif",
       accent: "from-[#FAFAFE] to-[#E1F6FF]",
     },
     {
@@ -356,7 +356,7 @@ const Index: React.FC = () => {
       description: t("Ask questions and get guidance in real time."),
       cta: t("Ask DocDaisy"),
       onClick: () => navigate("/docdaisy"),
-      image: "/docdaisy.png",
+      image: "/docdaisy.avif",
       accent: "from-[#F9F7FF] to-[#E8E7FF]",
     },
   ];

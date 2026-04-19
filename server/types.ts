@@ -37,6 +37,10 @@ export interface Appointment {
   patientEmail?: string;
   patientVisaType?: string;
   sharedRecord?: SharedMedicalRecord;
+  phoneCallQueued?: boolean;
+  phoneCallReason?: string;
+  phoneCallProvider?: "twilio" | "elevenlabs";
+  phoneCallFallbackUsed?: boolean;
   notificationSentAt?: Date;
   createdAt: Date;
   updatedAt?: Date;
@@ -116,6 +120,10 @@ export interface PatientAppointmentSummary {
   specialization: string;
   doctorName?: string;
   clinicId: string;
+  phoneCallQueued?: boolean;
+  phoneCallReason?: string;
+  phoneCallProvider?: "twilio" | "elevenlabs";
+  phoneCallFallbackUsed?: boolean;
   createdAt: Date;
   updatedAt?: Date;
 }
@@ -356,6 +364,17 @@ export interface CallSettings {
   fallbackToTwilio: boolean;
   updatedAt: Date;
   updatedBy?: string;
+}
+
+export interface OptimizedImageRecord {
+  _id?: unknown;
+  sourceUrlHash: string;
+  sourceUrl: string;
+  contentType: string;
+  avifData: string;
+  byteLength: number;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface ClinicDoctorRecord {

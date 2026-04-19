@@ -3,8 +3,8 @@ const CORE_ASSETS = [
   "/",
   "/index.html",
   "/manifest.webmanifest",
-  "/dnm.png",
-  "/applogo.png",
+  "/dnm.avif",
+  "/applogo.avif",
 ];
 
 self.addEventListener("install", (event) => {

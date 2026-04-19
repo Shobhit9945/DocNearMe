@@ -7,6 +7,7 @@ import { getClinicAuthHeader } from "@/lib/clinic-auth";
 import { useTranslation } from "@/lib/i18n";
 import { useAddressSearch } from "@/hooks/useAddressSearch";
 import { normalizeClinicHours } from "@/lib/scheduling";
+import { getOptimizedClinicImageSrc } from "@/lib/clinic-image";
 import { phoneCountryOptions } from "@/lib/phone-countries";
 import type { ClinicBookingClosure, ClinicProfile, ClinicProfileUpdateRequest, CustomLabel } from "@shared/api";
 
@@ -910,7 +911,7 @@ export default function ClinicInfo() {
         </div>
         {image ? (
           <img
-            src={image}
+            src={getOptimizedClinicImageSrc(image, image)}
             alt={t("Clinic image")}
             className="w-full max-w-sm rounded-lg border border-slate-200 object-cover"
           />

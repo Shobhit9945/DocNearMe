@@ -19,7 +19,7 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({
         <div className="flex items-center gap-3">
           <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#E5DEFF] shadow-sm">
             <img
-              src="/docdaisy.png"
+              src="/docdaisy.avif"
               alt="DocDaisy"
               className="h-40 w-40 object-contain animate-daisy-spin"
             />

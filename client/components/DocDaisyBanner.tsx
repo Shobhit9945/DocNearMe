@@ -45,7 +45,7 @@ export function DocDaisyBanner({ className, onClick, onClose, variant = "button"
             <p className="text-sm text-black leading-tight">{t("Click on the banner to ask")}</p>
           </div>
           <img
-            src="/docdaisy.png"
+            src="/docdaisy.avif"
             alt="DocDaisy AI Assistant"
             className="-ml-2 w-[140px] h-[140px] rounded-[14px] object-contain flex-shrink-0 lg:w-[120px] lg:h-[120px]"
           />

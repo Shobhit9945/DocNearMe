@@ -71,6 +71,7 @@ import {
   handleUpdateVaultPassword,
 } from "./routes/vault";
 import { handleVoiceAppointment, handleVoiceAppointmentOutcome, handleVoiceAppointmentResponse } from "./routes/voice";
+import { handleOptimizedImage } from "./routes/optimized-image";
 import { handleGeocode, handlePlaceAutocomplete, handlePlaceDetails } from "./routes/google-maps";
 import {
   handleClinicCredentials,
@@ -229,6 +230,20 @@ export async function createServer(): Promise<Express> {
     message: { error: "Too many admin requests, please try again later.", detail: "rate_limited" },
   });
 
+  const appointmentTokenActionLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 40,
+    ...sharedRateLimitOptions,
+    message: { error: "Too many appointment token actions, please try again later.", detail: "rate_limited" },
+  });
+
+  const voiceWebhookLimiter = rateLimit({
+    windowMs: 5 * 60 * 1000,
+    max: 120,
+    ...sharedRateLimitOptions,
+    message: { error: "Too many voice webhook requests, please try again later.", detail: "rate_limited" },
+  });
+
   // Apply global rate limiter to all /api routes
   app.use("/api/", globalLimiter);
 
@@ -307,8 +322,8 @@ export async function createServer(): Promise<Express> {
   app.post("/api/appointments/request", requireAuth, handleRequestAppointment);
   app.patch("/api/appointments/:id/reschedule", requireAuth, handleRescheduleAppointment);
   app.patch("/api/appointments/:id/cancel", requireAuth, handleCancelAppointment);
-  app.post("/api/appointments/:id/confirm", handleConfirmAppointment);
-  app.post("/api/appointments/:id/decline", handleDeclineAppointment);
+  app.post("/api/appointments/:id/confirm", appointmentTokenActionLimiter, handleConfirmAppointment);
+  app.post("/api/appointments/:id/decline", appointmentTokenActionLimiter, handleDeclineAppointment);
   // GET state-changing routes removed for security — confirm/decline require POST
   app.get("/api/appointments", requireAdminAuth, handleListAppointments);
   app.get("/api/appointments/me", requireAuth, handleListAppointmentsForUser);
@@ -386,6 +401,7 @@ export async function createServer(): Promise<Express> {
   app.get("/api/clinics/:clinicId/doctors", handleClinicDoctors);
   app.put("/api/clinics/:clinicId", requireClinicAuth, handleUpdateClinicProfile);
   app.put("/api/clinics/:clinicId/doctors", requireClinicAuth, handleUpdateClinicDoctors);
+  app.get("/api/images/optimized", handleOptimizedImage);
   app.get("/api/medical-records/consent", requireAuth, handleGetMedicalConsent);
   app.post("/api/medical-records/consent", requireAuth, handleCreateMedicalConsent);
   app.get("/api/medical-records/key", requireAuth, handleGetMedicalRecordKey);
@@ -402,9 +418,9 @@ export async function createServer(): Promise<Express> {
   app.post("/api/vault/docs", requireAuth, handleCreateVaultDoc);
   app.patch("/api/vault/docs/:id", requireAuth, handleRenameVaultDoc);
   app.delete("/api/vault/docs/:id", requireAuth, handleDeleteVaultDoc);
-  app.post("/api/voice/appointment", handleVoiceAppointment);
-  app.post("/api/voice/appointment/response", handleVoiceAppointmentResponse);
-  app.post("/api/voice/appointment/outcome", handleVoiceAppointmentOutcome);
+  app.post("/api/voice/appointment", voiceWebhookLimiter, handleVoiceAppointment);
+  app.post("/api/voice/appointment/response", voiceWebhookLimiter, handleVoiceAppointmentResponse);
+  app.post("/api/voice/appointment/outcome", voiceWebhookLimiter, handleVoiceAppointmentOutcome);
   app.get("/api/clinics/:clinicId/reviews", handleListClinicReviews);
   app.post("/api/clinics/:clinicId/reviews", requireAuth, handleCreateClinicReview);
   app.patch("/api/clinics/:clinicId/reviews/:reviewId", requireAuth, handleUpdateClinicReview);

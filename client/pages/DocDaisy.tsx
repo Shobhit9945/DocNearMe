@@ -377,7 +377,7 @@ const DocDaisy: React.FC = () => {
             <ChevronLeft className="w-6 h-6" />
           </button>
           <img
-            src="/docdaisy.png"
+            src="/docdaisy.avif"
             alt="DocDaisy"
             className="mr-2 h-14 w-14 object-contain sm:h-20 sm:w-20 lg:h-20 lg:w-20"
           />

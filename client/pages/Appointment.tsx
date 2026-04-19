@@ -113,6 +113,10 @@ type UpcomingAppointment = {
   notes?: string;
   clinicMessage?: string;
   declineReason?: string;
+  phoneCallQueued?: boolean;
+  phoneCallReason?: string;
+  phoneCallProvider?: "twilio" | "elevenlabs";
+  phoneCallFallbackUsed?: boolean;
 };
 
 type HowVisitStep = {
@@ -133,6 +137,12 @@ const patientStatusLabels: Record<string, string> = {
   NO_SHOW: "No show",
   COMPLETED: "Visit complete",
 };
+
+const PATIENT_MUTABLE_STATUSES = new Set([
+  "PENDING_CLINIC",
+  "INFO_REQUESTED",
+  "RESCHEDULE_REQUESTED",
+]);
 
 type StepBodyProps = {
   text?: string;
@@ -905,6 +915,10 @@ export default function Appointment() {
           notes: appointment.notes,
           clinicMessage: appointment.clinicMessage,
           declineReason: appointment.declineReason,
+          phoneCallQueued: appointment.phoneCallQueued,
+          phoneCallReason: appointment.phoneCallReason,
+          phoneCallProvider: appointment.phoneCallProvider,
+          phoneCallFallbackUsed: appointment.phoneCallFallbackUsed,
         };
       });
   }, [appointmentsData, clinics, formatDateLabel]);
@@ -1511,7 +1525,9 @@ export default function Appointment() {
               </div>
             ) : hasAppointments ? (
               <div className="grid gap-4">
-                {appointments.map((appointment) => (
+                {appointments.map((appointment) => {
+                  const canModifyAppointment = PATIENT_MUTABLE_STATUSES.has(appointment.status);
+                  return (
                   <div
                     key={appointment.id}
                     className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
@@ -1555,6 +1571,22 @@ export default function Appointment() {
                             </p>
                           </div>
                         ) : null}
+                        <div className="flex flex-wrap gap-2 text-xs text-slate-500">
+                          <span className="rounded-full bg-slate-100 px-3 py-1 font-medium">
+                            {appointment.phoneCallQueued ? "Clinic call queued" : "Clinic call pending"}
+                          </span>
+                          {appointment.phoneCallProvider ? (
+                            <span className="rounded-full bg-slate-100 px-3 py-1 font-medium">
+                              {appointment.phoneCallProvider === "elevenlabs" ? "ElevenLabs" : "Twilio"}
+                              {appointment.phoneCallFallbackUsed ? " fallback" : ""}
+                            </span>
+                          ) : null}
+                          {appointment.phoneCallReason ? (
+                            <span className="rounded-full bg-slate-100 px-3 py-1 font-medium">
+                              {appointment.phoneCallReason}
+                            </span>
+                          ) : null}
+                        </div>
                       </div>
 
                       <div className="flex flex-wrap gap-3">
@@ -1572,22 +1604,27 @@ export default function Appointment() {
                         >
                           View details
                         </button>
-                        <button
-                          onClick={() => handleOpenAction(appointment, "reschedule")}
-                          className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:border-[#0089FF] hover:text-[#0089FF]"
-                        >
-                          Reschedule
-                        </button>
-                        <button
-                          onClick={() => handleOpenAction(appointment, "cancel")}
-                          className="rounded-full border border-rose-200 px-4 py-2 text-sm font-semibold text-rose-600 hover:border-rose-500 hover:text-rose-700"
-                        >
-                          Cancel
-                        </button>
+                        {canModifyAppointment ? (
+                          <>
+                            <button
+                              onClick={() => handleOpenAction(appointment, "reschedule")}
+                              className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:border-[#0089FF] hover:text-[#0089FF]"
+                            >
+                              Reschedule
+                            </button>
+                            <button
+                              onClick={() => handleOpenAction(appointment, "cancel")}
+                              className="rounded-full border border-rose-200 px-4 py-2 text-sm font-semibold text-rose-600 hover:border-rose-500 hover:text-rose-700"
+                            >
+                              Cancel
+                            </button>
+                          </>
+                        ) : null}
                       </div>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-10 text-center">
@@ -1662,6 +1699,14 @@ export default function Appointment() {
                       </span>
                     </div>
                   ) : null}
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="text-slate-500">Clinic call</span>
+                    <span className="font-medium text-slate-900">
+                      {detailsAppointment.phoneCallQueued
+                        ? `Queued via ${detailsAppointment.phoneCallProvider === "elevenlabs" ? "ElevenLabs" : "Twilio"}${detailsAppointment.phoneCallFallbackUsed ? " with fallback" : ""}`
+                        : detailsAppointment.phoneCallReason ?? "Pending"}
+                    </span>
+                  </div>
                   <div className="flex items-center justify-between gap-4">
                     <span className="text-slate-500">Doctor</span>
                     <span className="font-medium text-slate-900">

@@ -9,14 +9,14 @@
   "theme_color": "#0f172a",
   "icons": [
     {
-      "src": "/dnm.png",
+      "src": "/dnm.avif",
       "sizes": "1024x1024",
-      "type": "image/png"
+      "type": "image/avif"
     },
     {
-      "src": "/dnm.png",
+      "src": "/dnm.avif",
       "sizes": "1024x1024",
-      "type": "image/png",
+      "type": "image/avif",
       "purpose": "maskable"
     }
   ]

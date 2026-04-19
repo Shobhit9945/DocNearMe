@@ -677,13 +677,6 @@ export const handleRequestAppointment = async (req: Request, res: Response) => {
       updatedAt: record.updatedAt,
     };
 
-    await patients.updateOne(
-      { _id: patientLookupId },
-      {
-        $push: { appointments: patientAppointment },
-      },
-    );
-
     const emailAddress = record.patientEmail;
     if (emailAddress) {
       const appointmentDate = new Date(record.preferredStart);
@@ -788,7 +781,41 @@ export const handleRequestAppointment = async (req: Request, res: Response) => {
       phoneCallReason = "call_failed";
     }
 
-    const responseAppointment = serializeAppointment({ ...record, _id: appointmentId });
+    const persistedAppointment = {
+      phoneCallQueued,
+      phoneCallReason,
+      phoneCallProvider,
+      phoneCallFallbackUsed,
+      updatedAt: now,
+    };
+
+    await appointments.updateOne(
+      { _id: result.insertedId },
+      {
+        $set: persistedAppointment,
+      },
+    );
+
+    await patients.updateOne(
+      { _id: patientLookupId },
+      {
+        $push: {
+          appointments: {
+            ...patientAppointment,
+            phoneCallQueued,
+            phoneCallReason,
+            phoneCallProvider,
+            phoneCallFallbackUsed,
+          },
+        },
+      },
+    );
+
+    const responseAppointment = serializeAppointment({
+      ...record,
+      _id: appointmentId,
+      ...persistedAppointment,
+    });
 
     await logAuditEvent({
       action: "appointment_booked",
@@ -1625,6 +1652,18 @@ export const handleRescheduleAppointment = async (req: Request, res: Response) =
       return res.status(404).json({ error: "Appointment not found" });
     }
 
+    const rescheduleAllowedStatuses = new Set<AppointmentStatus>([
+      "PENDING_CLINIC",
+      "INFO_REQUESTED",
+      "RESCHEDULE_REQUESTED",
+    ]);
+    if (!rescheduleAllowedStatuses.has(appointment.status as AppointmentStatus)) {
+      return res.status(409).json({
+        error: "Appointment cannot be rescheduled in its current state",
+        status: appointment.status,
+      });
+    }
+
     const conflict = await findConfirmedOverlap(
       appointments,
       appointment.clinicId,
@@ -1781,6 +1820,18 @@ export const handleCancelAppointment = async (req: Request, res: Response) => {
 
     if (!appointment || appointment.patientId !== req.auth.id) {
       return res.status(404).json({ error: "Appointment not found" });
+    }
+
+    const cancelAllowedStatuses = new Set<AppointmentStatus>([
+      "PENDING_CLINIC",
+      "INFO_REQUESTED",
+      "RESCHEDULE_REQUESTED",
+    ]);
+    if (!cancelAllowedStatuses.has(appointment.status as AppointmentStatus)) {
+      return res.status(409).json({
+        error: "Appointment cannot be cancelled in its current state",
+        status: appointment.status,
+      });
     }
 
     const now = new Date();
