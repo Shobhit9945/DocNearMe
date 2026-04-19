@@ -213,13 +213,16 @@ export async function createServer(): Promise<Express> {
     process.env.VOICE_WEBHOOK_BASE_URL,
     "https://docnearme.jp",
     "https://www.docnearme.jp",
+    "https://admin.docnearme.jp",
+    "https://www.admin.docnearme.jp",
     "https://clinic.docnearme.jp",
     "https://www.clinic.docnearme.jp",
     "https://docnearme.app",
     "https://www.docnearme.app",
+    "https://admin.docnearme.app",
+    "https://www.admin.docnearme.app",
     "https://clinic.docnearme.app",
     "https://www.clinic.docnearme.app",
-    "https://admin.docnearme.app",
     "https://clinics.docnearme.app",
   ].filter(Boolean) as string[];
   // Only allow localhost origins in development
