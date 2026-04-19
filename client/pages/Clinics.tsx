@@ -42,6 +42,7 @@ export default function Clinics() {
     locationError,
     isFetchingLocation,
     manualLocation,
+    requestCurrentLocation,
     setManualLocation,
     clearManualLocation,
     coordinates,
@@ -137,8 +138,9 @@ export default function Clinics() {
     if (manualLocation) return "Manual address";
     if (isFetchingLocation) return "Fetching your location...";
     if (locationError) return locationError;
-    return "Updated a moment ago";
-  }, [isFetchingLocation, locationError, manualLocation]);
+    if (coordinates) return "Updated a moment ago";
+    return "Enter your address or use GPS when needed";
+  }, [coordinates, isFetchingLocation, locationError, manualLocation]);
 
   const locationLabel = useMemo(
     () => (isFetchingLocation ? t("Fetching real-time location...") : currentLocation),
@@ -273,18 +275,17 @@ export default function Clinics() {
                 >
                   {manualLocation ? t("Edit address") : t("Enter address manually")}
                 </button>
-                {manualLocation && (
-                  <button
-                    type="button"
-                    className="text-xs font-semibold text-slate-500 hover:text-slate-700"
-                    onClick={() => {
-                      clearManualLocation();
-                      setIsEditingLocation(false);
-                    }}
-                  >
-                    {t("Use GPS instead")}
-                  </button>
-                )}
+                <button
+                  type="button"
+                  className="text-xs font-semibold text-slate-500 hover:text-slate-700"
+                  onClick={() => {
+                    clearManualLocation();
+                    setIsEditingLocation(false);
+                    requestCurrentLocation();
+                  }}
+                >
+                  {manualLocation ? t("Use GPS instead") : t("Use my current location")}
+                </button>
               </div>
               {isEditingLocation && (
                 <div className="mt-2 flex flex-col gap-2 sm:flex-row">

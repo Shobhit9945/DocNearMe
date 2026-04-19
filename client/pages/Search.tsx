@@ -30,7 +30,12 @@ export default function Search() {
   const [isFiltersOpen, setIsFiltersOpen] = useState(true);
   const { data: clinicsData, isLoading: isClinicsLoading } = useClinics();
   const { data: doctorsData, isLoading: isDoctorsLoading } = useAllDoctors();
-  const { coordinates } = useLiveLocation();
+  const {
+    coordinates,
+    isFetchingLocation,
+    locationError: liveLocationError,
+    requestCurrentLocation,
+  } = useLiveLocation();
   const {
     suggestions: locationSuggestions,
     isLoading: isLocationLoading,
@@ -318,6 +323,22 @@ export default function Search() {
                   {locationError ? (
                     <span className="text-xs text-red-500">{locationError}</span>
                   ) : null}
+                  {liveLocationError ? (
+                    <span className="text-xs text-red-500">{t(liveLocationError)}</span>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLocationCoordinates(null);
+                      setSelectedLocationLabel("");
+                      setLocationError("");
+                      requestCurrentLocation();
+                    }}
+                    disabled={isFetchingLocation}
+                    className="self-start rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold text-[#1648CE] hover:border-[#1648CE] hover:bg-[#E8F3FF] disabled:cursor-not-allowed disabled:opacity-70"
+                  >
+                    {isFetchingLocation ? t("Fetching your location...") : t("Use my current location")}
+                  </button>
                 </label>
                 <label className="flex flex-col gap-2 text-sm font-semibold text-slate-700">
                   {t("Search term")}
