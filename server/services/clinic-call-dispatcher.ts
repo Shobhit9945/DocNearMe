@@ -216,7 +216,7 @@ const queueElevenLabsCall = async (
       },
       conversation_config_override: {
         agent: {
-          language: "ja-JP",
+          language: "ja",
           first_message:
             "もしもし、DocDaisyです。予約の確認をお願いします。内容をお伝えしますので、確認・却下・追加情報・日程変更のいずれかでお返事ください。",
           prompt: {
