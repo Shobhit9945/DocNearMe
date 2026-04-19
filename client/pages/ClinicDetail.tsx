@@ -14,7 +14,7 @@ import { TranslatedText } from "@/components/TranslatedText";
 import { CalendarClock, Info, MapPin, Phone, Mail, Star, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { getOptimizedClinicImageSrc } from "@/lib/clinic-image";
+import { getClinicImageCandidates } from "@/lib/clinic-image";
 import type {
   ClinicReviewListResponse,
   CustomLabel,
@@ -30,7 +30,7 @@ export default function ClinicDetail() {
   const { t, language } = useTranslation();
   const { data: clinicData, isLoading: isLoadingClinic } = useClinicProfile(clinicId);
   const clinic = clinicData?.clinic;
-  const [heroImageBroken, setHeroImageBroken] = useState(false);
+  const [heroImageMode, setHeroImageMode] = useState<"proxy" | "direct" | "logo">("proxy");
   const [allLabels, setAllLabels] = useState<CustomLabel[]>([]);
   const { data: googlePlaceDetails } = useGooglePlaceDetails(clinic?.googlePlaceId);
 
@@ -39,9 +39,17 @@ export default function ClinicDetail() {
     () => clinicDoctorsData?.doctors ?? [],
     [clinicDoctorsData?.doctors],
   );
-  const clinicImageSrc = heroImageBroken
-    ? CLINIC_IMAGE_FALLBACK
-    : getOptimizedClinicImageSrc(clinic?.image, CLINIC_IMAGE_FALLBACK);
+  const clinicImageCandidates = getClinicImageCandidates(clinic?.image, CLINIC_IMAGE_FALLBACK);
+  const clinicImageSrc =
+    heroImageMode === "logo"
+      ? CLINIC_IMAGE_FALLBACK
+      : heroImageMode === "direct"
+        ? clinicImageCandidates.original || CLINIC_IMAGE_FALLBACK
+        : clinicImageCandidates.optimized || CLINIC_IMAGE_FALLBACK;
+
+  useEffect(() => {
+    setHeroImageMode("proxy");
+  }, [clinic?.image]);
 
   const doctorsBySpecialization = useMemo(() => {
     return clinicDoctors.reduce<Record<string, typeof clinicDoctors>>((acc, doctor) => {
@@ -281,7 +289,13 @@ export default function ClinicDetail() {
               className="h-48 w-full object-cover"
               loading="lazy"
               referrerPolicy="no-referrer"
-              onError={() => setHeroImageBroken(true)}
+              onError={() => {
+                setHeroImageMode((prev) => {
+                  if (prev === "proxy" && clinicImageCandidates.isExternal) return "direct";
+                  if (prev !== "logo") return "logo";
+                  return prev;
+                });
+              }}
             />
           </div>
         </div>

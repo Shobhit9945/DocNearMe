@@ -18,3 +18,28 @@ export const getOptimizedClinicImageSrc = (value?: string, fallback?: string) =>
   if (!isExternalHttpImage(normalized)) return normalized;
   return `${OPTIMIZED_IMAGE_PROXY_PREFIX}${encodeURIComponent(normalized)}`;
 };
+
+export const getClinicImageCandidates = (value?: string, fallback?: string) => {
+  const normalized = typeof value === "string" ? value.trim() : "";
+  if (!normalized) {
+    return {
+      optimized: fallback ?? "",
+      original: fallback ?? "",
+      isExternal: false,
+    };
+  }
+
+  if (!isExternalHttpImage(normalized)) {
+    return {
+      optimized: normalized,
+      original: normalized,
+      isExternal: false,
+    };
+  }
+
+  return {
+    optimized: `${OPTIMIZED_IMAGE_PROXY_PREFIX}${encodeURIComponent(normalized)}`,
+    original: normalized,
+    isExternal: true,
+  };
+};

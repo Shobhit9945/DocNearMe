@@ -20,7 +20,7 @@ import { formatAvailabilityForLanguage } from "@/lib/time-format";
 import { useClinics } from "@/lib/clinic-data";
 import { formatShortAddress } from "@/lib/address";
 import { getSpecializationLabel, matchSpecialization } from "@/lib/specializations";
-import { getOptimizedClinicImageSrc } from "@/lib/clinic-image";
+import { getClinicImageCandidates } from "@/lib/clinic-image";
 import { TranslatedText } from "@/components/TranslatedText";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { Badge } from "@/components/ui/badge";
@@ -36,7 +36,7 @@ export default function Clinics() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [showFilters, setShowFilters] = useState(false);
   const [minRating, setMinRating] = useState(0);
-  const [brokenClinicImages, setBrokenClinicImages] = useState<Record<string, true>>({});
+  const [clinicImageMode, setClinicImageMode] = useState<Record<string, "proxy" | "direct" | "logo">>({});
   const {
     currentLocation,
     locationError,
@@ -201,16 +201,30 @@ export default function Clinics() {
   };
 
   const getClinicImageSrc = (clinicId: string, image?: string) => {
-    if (brokenClinicImages[clinicId]) {
+    const mode = clinicImageMode[clinicId] ?? "proxy";
+    const candidates = getClinicImageCandidates(image, CLINIC_IMAGE_FALLBACK);
+
+    if (mode === "logo") {
       return CLINIC_IMAGE_FALLBACK;
     }
-    return getOptimizedClinicImageSrc(image, CLINIC_IMAGE_FALLBACK);
+    if (mode === "direct") {
+      return candidates.original || CLINIC_IMAGE_FALLBACK;
+    }
+    return candidates.optimized || CLINIC_IMAGE_FALLBACK;
   };
 
-  const markClinicImageBroken = (clinicId: string) => {
-    setBrokenClinicImages((prev) => {
-      if (prev[clinicId]) return prev;
-      return { ...prev, [clinicId]: true };
+  const markClinicImageBroken = (clinicId: string, image?: string) => {
+    setClinicImageMode((prev) => {
+      const currentMode = prev[clinicId] ?? "proxy";
+      const candidates = getClinicImageCandidates(image, CLINIC_IMAGE_FALLBACK);
+
+      if (currentMode === "proxy" && candidates.isExternal) {
+        return { ...prev, [clinicId]: "direct" };
+      }
+      if (currentMode !== "logo") {
+        return { ...prev, [clinicId]: "logo" };
+      }
+      return prev;
     });
   };
 
@@ -441,7 +455,7 @@ export default function Clinics() {
                         className="h-full w-full object-cover"
                         loading="lazy"
                         referrerPolicy="no-referrer"
-                        onError={() => markClinicImageBroken(clinic.id)}
+                        onError={() => markClinicImageBroken(clinic.id, clinic.image)}
                       />
                     </div>
                     <div className="flex flex-1 min-h-0 flex-col gap-4 p-5">
