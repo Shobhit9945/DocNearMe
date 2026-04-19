@@ -452,6 +452,12 @@ export const handleVoiceAppointmentOutcome: RequestHandler = async (req: Request
     }
 
     const result = await updateAppointmentOutcome(appointmentId, appointment, outcome as any, payload);
+    console.info("[clinic-call] voice outcome recorded", {
+      appointmentId,
+      outcome,
+      status: result.status,
+      clinicId: appointment.clinicId,
+    });
     return res.json({ success: true, status: result.status });
   } catch (error) {
     console.error("[clinic-call] voice outcome error", error);
