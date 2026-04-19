@@ -147,7 +147,25 @@ const getApp = () => {
   );
 };
 
-if ("serviceWorker" in navigator) {
+const shouldRegisterServiceWorker = () => {
+  const hostname = window.location.hostname;
+  const pathname = window.location.pathname;
+
+  if (
+    hostname.startsWith("clinic.") ||
+    hostname.startsWith("www.clinic.") ||
+    hostname.startsWith("admin.") ||
+    hostname.startsWith("www.admin.") ||
+    pathname.startsWith("/clinic") ||
+    pathname.startsWith("/admin")
+  ) {
+    return false;
+  }
+
+  return true;
+};
+
+if ("serviceWorker" in navigator && shouldRegisterServiceWorker()) {
   window.addEventListener("load", () => {
     navigator.serviceWorker.register("/sw.js").catch((error) => {
       console.error("Service worker registration failed:", error);

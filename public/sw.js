@@ -1,4 +1,4 @@
-const CACHE_NAME = "docnearme-pwa-v1";
+const CACHE_NAME = "docnearme-pwa-v2";
 const CORE_ASSETS = [
   "/",
   "/index.html",
@@ -44,7 +44,11 @@ self.addEventListener("fetch", (event) => {
       fetch(request)
         .then((response) => {
           const responseClone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put("/", responseClone));
+          caches.open(CACHE_NAME).then((cache) => {
+            if (response.ok) {
+              cache.put("/", responseClone);
+            }
+          });
           return response;
         })
         .catch(() => caches.match("/"))
@@ -56,12 +60,22 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
+  // Avoid caching hashed JS/CSS chunks to prevent stale module imports after deploys.
+  if (url.pathname.startsWith("/assets/")) {
+    event.respondWith(fetch(request));
+    return;
+  }
+
   event.respondWith(
     caches.match(request).then((cached) =>
       cached ||
       fetch(request).then((response) => {
         const responseClone = response.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(request, responseClone));
+        caches.open(CACHE_NAME).then((cache) => {
+          if (response.ok) {
+            cache.put(request, responseClone);
+          }
+        });
         return response;
       })
     )
