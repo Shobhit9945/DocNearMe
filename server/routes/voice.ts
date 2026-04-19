@@ -1,4 +1,5 @@
 import { Request, Response, RequestHandler } from "express";
+import { createHash } from "crypto";
 import { ObjectId } from "mongodb";
 import { getAppointmentsCollection, getPatientsCollection } from "../db";
 import { getDateKey } from "../lib/scheduling";
@@ -96,6 +97,46 @@ const extractDigits = (value: unknown) => {
 
 const resolveAppointmentLookup = (appointmentId: string) =>
   (ObjectId.isValid(appointmentId) ? new ObjectId(appointmentId) : appointmentId) as any;
+
+const normalizeWebhookPayload = (input: unknown): Record<string, unknown> => {
+  if (!input) return {};
+
+  if (Buffer.isBuffer(input)) {
+    return normalizeWebhookPayload(input.toString("utf8"));
+  }
+
+  if (typeof input === "string") {
+    const trimmed = input.trim();
+    if (!trimmed) return {};
+
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        return parsed as Record<string, unknown>;
+      }
+    } catch {
+      // Not JSON, continue with urlencoded parsing.
+    }
+
+    const params = new URLSearchParams(trimmed);
+    const entries = Array.from(params.entries());
+    if (entries.length > 0) {
+      const out: Record<string, unknown> = {};
+      for (const [key, value] of entries) {
+        out[key] = value;
+      }
+      return out;
+    }
+
+    return { raw: trimmed };
+  }
+
+  if (typeof input === "object" && !Array.isArray(input)) {
+    return input as Record<string, unknown>;
+  }
+
+  return {};
+};
 
 const updatePatientSummary = async (appointmentId: string, patientId: string | undefined, updates: any) => {
   if (!patientId) return;
@@ -427,7 +468,7 @@ const updateAppointmentOutcome = async (
 
 export const handleVoiceAppointmentOutcome: RequestHandler = async (req: Request, res: Response) => {
   try {
-    const payload = (req.body && typeof req.body === "object" ? req.body : {}) as Record<string, unknown>;
+    const payload = normalizeWebhookPayload(req.body);
     const finalizeUrlCandidate = String(
       payload.finalizeUrl ?? payload.finalize_url ?? payload.url ?? req.query.finalizeUrl ?? req.query.finalize_url ?? "",
     ).trim();
@@ -479,11 +520,13 @@ export const handleVoiceAppointmentOutcome: RequestHandler = async (req: Request
         process.env.ELEVENLABS_WEBHOOK_SECRET ??
         "",
     );
+    const secretFingerprint = (value: string) =>
+      value ? createHash("sha256").update(value).digest("hex").slice(0, 10) : "";
+
     const providedWebhookSecret = normalizeSecret(providedWebhookSecretRaw);
     const expectedWebhookSecret = normalizeSecret(expectedWebhookSecretRaw);
     const tokenValid = Boolean(appointmentId) && verifyVoiceToken(appointmentId, token);
     const webhookSecretValid =
-      Boolean(appointmentId) &&
       Boolean(expectedWebhookSecret) &&
       Boolean(providedWebhookSecret) &&
       providedWebhookSecret.toLowerCase() === expectedWebhookSecret.toLowerCase();
@@ -499,6 +542,8 @@ export const handleVoiceAppointmentOutcome: RequestHandler = async (req: Request
         hasExpectedWebhookSecret: Boolean(expectedWebhookSecret),
         providedWebhookSecretLength: providedWebhookSecret.length,
         expectedWebhookSecretLength: expectedWebhookSecret.length,
+        providedWebhookSecretFingerprint: secretFingerprint(providedWebhookSecret),
+        expectedWebhookSecretFingerprint: secretFingerprint(expectedWebhookSecret),
         payloadKeys: Object.keys(payload),
       });
       return res.status(401).json({ error: "Invalid voice token." });
